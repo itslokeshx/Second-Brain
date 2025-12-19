@@ -1,43 +1,76 @@
-# Second Brain
+# Second Brain 🧠
 
-A comprehensive web-based Pomodoro timer and task management application designed to help you stay focused and organized.
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Status](https://img.shields.io/badge/status-active-success.svg)
+![Web Access](https://img.shields.io/badge/web-PWA-orange)
 
-## Features
+**Second Brain** is a comprehensive personal productivity dashboard designed to help you organize your time and tasks. Merging the focus-enhancing power of a Pomodoro timer with a robust task management system, it serves as your digital cognitive extension.
 
-- **Pomodoro Timer**: Customizable work/break intervals to maximize productivity.
-- **Task Management**: Organize tasks into projects, set priorities, and track deadlines.
-- **Reports**: Visualize your focus time and task completion history.
-- **Background Sounds**: White noise and ambient sounds to block out distractions.
-- **Data Sync**: (Optional) Account synchronization features.
+## ✨ Features
 
-## Installation & Usage
+- **🍅 Pomodoro Timer**: Customizable work/break intervals to maximize your focus efficiency.
+- **✅ Task Management**: Create tasks, set priorities, and organize them into projects.
+- **🎧 Ambient Soundscapes**: Built-in white noise and background sounds (Rain, Forest, Cafe) to block distractions.
+- **📊 Productivity Reports**: Visualize your focus hours and task completion trends.
+- **🌍 Internationalization**: Multi-language support.
 
-> [!IMPORTANT]
-> **Audio Playback Requirement**: Due to modern browser security policies (CORS), audio files will not play if you open `index.html` directly from your file system. You **must** run a local web server.
+## 🚀 Live Demo
+
+Deployed on Netlify: **[Insert Your Netlify Link Here]**
+
+## 🛠️ Installation & Local Development
+
+Due to modern browser security policies (CORS), this application **cannot** be run by simply opening `index.html` file. It requires a local web server to load audio assets correctly.
 
 ### Prerequisites
-- Python 3 (pre-installed on most Linux/macOS systems)
-- Or any other static file server (e.g., `http-server` via npm, VS Code Live Server)
 
-### Running Locally
+- **Python 3** (Pre-installed on macOS/Linux)
+- OR **Node.js** (optional, if you prefer `http-server`)
 
-1. Open your terminal in the project directory.
-2. Start a simple HTTP server using Python:
+### Quick Start (Python)
 
-   ```bash
-   python3 -m http.server 8008
-   ```
+1.  Clone the repository:
+    ```bash
+    git clone https://github.com/yourusername/second-brain.git
+    cd second-brain
+    ```
 
-3. Open your browser and navigate to:
-   
-   [http://localhost:8008](http://localhost:8008)
+2.  Start the local server:
+    ```bash
+    python3 -m http.server 8008
+    ```
 
-## Technologies
+3.  Open code in your browser:
+    [http://localhost:8008](http://localhost:8008)
 
-- **HTML5**: semantic structure.
-- **CSS3**: Custom styling (`main.css`).
-- **JavaScript**: Core logic (`main.js`) handling timer, tasks, and audio.
+## 📂 Project Structure
 
-## License
+```
+second-brain/
+├── assets/
+│   ├── audio/      # Background sounds & alarms
+│   └── ...
+├── i18n/           # Translation files
+├── js/
+│   ├── main.js     # Application logic
+│   └── ...
+├── main.css        # Styling
+└── index.html      # Entry point
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1.  Fork the Project
+2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4.  Push to the Branch (`git push origin feature/AmazingFeature`)
+5.  Open a Pull Request
+
+## 📄 License
 
 Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+*Built with ❤️ for productivity enthusiasts.*
