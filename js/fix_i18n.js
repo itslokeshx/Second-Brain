@@ -21,7 +21,7 @@
 
     OldXHR.prototype.send = function (data) {
         // Check if this request is for an i18n text file
-        if (this._interceptUrl && this._interceptUrl.match(/i18n\/strings.*\.txt/)) {
+        if (this._interceptUrl && this._interceptUrl.match(/i18n\/strings.*\.(txt|properties)/)) {
             console.log("[Fix] Intercepting XHR request for:", this._interceptUrl);
 
             // Convert JSON object back to properties file format (key=value)
