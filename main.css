@@ -234,11 +234,11 @@
     background-repeat: no-repeat;
     background-position: center;
     background-size: 24px 24px;
-    background-image: url(img/header-notification.png);
+    background-image: url(assets/img/header-notification.png);
 }
 
 .HomeHeader-notification-1IP0o.HomeHeader-highlight-3Qzhn span {
-    background-image: url(img/header-notification-highlight.png);
+    background-image: url(assets/img/header-notification-highlight.png);
 }
 
 .HomeHeader-popover-trigger-2QZW_ {
@@ -474,7 +474,7 @@
     float: left;
     height: 24px;
     width: 24px;
-    background: center no-repeat url(img/project-new.png);
+    background: center no-repeat url(assets/img/project-new.png);
     background-size: 24px 24px;
 }
 
@@ -487,13 +487,13 @@
 
 .ProjectNewItem-tag-7tt3p {
     width: 24px;
-    background: top no-repeat url(img/tag-new.png);
+    background: top no-repeat url(assets/img/tag-new.png);
     background-size: 24px 24px;
 }
 
 .ProjectNewItem-folder-3d1KU {
     width: 36px;
-    background: top right no-repeat url(img/folder-new.png);
+    background: top right no-repeat url(assets/img/folder-new.png);
     background-size: 24px 24px;
 }
 
@@ -640,7 +640,7 @@
     background-size: 24px 24px;
     background-position: center;
     background-repeat: no-repeat;
-    background-image: url(img/new-task-project-selected.png);
+    background-image: url(assets/img/new-task-project-selected.png);
 }.DeadlineItem-root-1IPDY {
     height: 44px;
     line-height: 44px;
@@ -656,7 +656,7 @@
     background-position: center;
     background-repeat: no-repeat;
     background-size: 24px 24px;
-    background-image: url(img/detail-deadline.png);
+    background-image: url(assets/img/detail-deadline.png);
 }
 
 .DeadlineItem-title-2Lle5 {
@@ -758,7 +758,7 @@
     transition: all 250ms ease-out;
     background-position: center;
     background-repeat: no-repeat;
-    background-image: url(img/folder-expanded-indicator.png);
+    background-image: url(assets/img/folder-expanded-indicator.png);
 }
 
 .ProjectItem-collapsed-3jDO5 {
@@ -780,7 +780,7 @@
 
 .ProjectItem-customized-pWHe2.ProjectItem-root-1iGkr:hover .ProjectItem-menu-1IALY {
     display: block;
-    background-image: url(img/project-hover-menu.png);
+    background-image: url(assets/img/project-hover-menu.png);
 }
 
 .ProjectItem-history-2_ybe .ProjectItem-estimatedTime-1FiA2,
@@ -981,7 +981,7 @@
     width: 10px;
     height: 14px;
     margin-right: 2px;
-    background-image: url(img/login-error.png);
+    background-image: url(assets/img/login-error.png);
     background-position: center;
     background-repeat: no-repeat;
     background-size: 10px 10px;
@@ -1159,19 +1159,19 @@
 }
 
 .TaskRegion-pomodoroAdd-1oZlN {
-    background-image: url(img/pomo-new.png);
+    background-image: url(assets/img/pomo-new.png);
 }
 
 .TaskRegion-pomodoroAddDark-2Cfg5 {
-    background-image: url(img/pomo-new-dark.png);
+    background-image: url(assets/img/pomo-new-dark.png);
 }
 
 .TaskRegion-sortMenu-1o6h6 {
-    background-image: url(img/tsk-sort.png);
+    background-image: url(assets/img/tsk-sort.png);
 }
 
 .TaskRegion-sortMenuDark-WRxkw {
-    background-image: url(img/tsk-sort-dark.png);
+    background-image: url(assets/img/tsk-sort-dark.png);
 }
 
 /*.scrollWrapper {*/
@@ -1232,11 +1232,11 @@
 }
 
 .TaskRegion-indicatorLight-2kjbg {
-    background-image: url(img/tsk_finished_indicator.png);
+    background-image: url(assets/img/tsk_finished_indicator.png);
 }
 
 .TaskRegion-indicatorDark-ZWbgm {
-    background-image: url(img/tsk_finished_indicator_dark.png);
+    background-image: url(assets/img/tsk_finished_indicator_dark.png);
 }
 
 .TaskRegion-indicator-3yc_y.TaskRegion-show-1DPsR {
@@ -1284,11 +1284,11 @@
 }
 
 .TaskRegion-emptyImgLight-1FFaC {
-    background-image: url(img/tsk_empty.png);
+    background-image: url(assets/img/tsk_empty.png);
 }
 
 .TaskRegion-emptyImgDark-1qmiR {
-    background-image: url(img/tsk_empty_dark.png);
+    background-image: url(assets/img/tsk_empty_dark.png);
 }
 
 .TaskRegion-emptyTitle-1En-U {
@@ -1306,11 +1306,11 @@
 }
 
 .TaskRegion-emptySearchResultImgLight-Pe2p3 {
-    background-image: url(img/search-empty-image.png);
+    background-image: url(assets/img/search-empty-image.png);
 }
 
 .TaskRegion-emptySearchResultImgDark-1GhjF {
-    background-image: url(img/search-empty-image-dark.png);
+    background-image: url(assets/img/search-empty-image-dark.png);
 }
 
 .TaskRegion-emptyTitleOnly-3briM {
@@ -1385,7 +1385,7 @@
 .SearchItem-searchIcon-1jYIq {
     width: 24px;
     height: 24px;
-    background-image: url(img/search-icon.png);
+    background-image: url(assets/img/search-icon.png);
     background-size: 24px 24px;
     background-repeat: no-repeat;
     background-position: center;
@@ -1525,7 +1525,7 @@
     background-position: center;
     background-repeat: no-repeat;
     background-size: 24px 24px;
-    background-image: url(img/detail-reminder.png);
+    background-image: url(assets/img/detail-reminder.png);
 }
 
 .ReminderItem-title-1Q7Go {
@@ -1646,7 +1646,7 @@
     background-position: center;
     background-repeat: no-repeat;
     background-size: 24px 24px;
-    background-image: url(img/detail-repetition.png);
+    background-image: url(assets/img/detail-repetition.png);
 }
 
 .RepetitionItem-title-28R70 {
@@ -1795,7 +1795,7 @@
     background-position: center;
     background-repeat: no-repeat;
     background-size: 24px 24px;
-    background-image: url(img/detail-project.png);
+    background-image: url(assets/img/detail-project.png);
 }
 
 .ProjectItem-title-1tbzl {
@@ -1842,19 +1842,19 @@
 }
 
 .TaskPriorityMenuItem-none-3SZt7 {
-    background-image: url(img/task_priority_none.png);
+    background-image: url(assets/img/task_priority_none.png);
 }
 
 .TaskPriorityMenuItem-low-11k1y {
-    background-image: url(img/task_priority_low.png);
+    background-image: url(assets/img/task_priority_low.png);
 }
 
 .TaskPriorityMenuItem-middle-1vo7a {
-    background-image: url(img/task_priority_middle.png);
+    background-image: url(assets/img/task_priority_middle.png);
 }
 
 .TaskPriorityMenuItem-high-1SOM7 {
-    background-image: url(img/task_priority_high.png);
+    background-image: url(assets/img/task_priority_high.png);
 }
 
 .TaskPriorityMenuItem-selected-2VIqn {
@@ -1892,7 +1892,7 @@
     background-size: 6px 9px;
     background-repeat: no-repeat;
     background-position: right;
-    background-image: url(img/detail-repetition-arrow.png);
+    background-image: url(assets/img/detail-repetition-arrow.png);
     padding-right: 12px;
     background-color: var(--bg-popup);
 }
@@ -1966,7 +1966,7 @@
     background-size: 6px 9px;
     background-repeat: no-repeat;
     background-position: right 4px center;
-    background-image: url(img/detail-repetition-arrow.png);
+    background-image: url(assets/img/detail-repetition-arrow.png);
 
     padding-right: 14px;
     background-color: var(--bg-popup);
@@ -2128,10 +2128,10 @@
 }
 
 .TaskItem-subtask-1jn80 {
-    background-image: url(img/task-subtask.png);
+    background-image: url(assets/img/task-subtask.png);
 }
 .TaskItem-remark-sf2VH {
-    background-image: url(img/task-remark.png);
+    background-image: url(assets/img/task-remark.png);
 }
 
 .TaskItem-deadline-2bOpg {
@@ -2258,11 +2258,11 @@
 }
 
 .TaskItem-actualPomodoro-2mUH6 {
-    background-image: url(img/task-pomo-actual.png);
+    background-image: url(assets/img/task-pomo-actual.png);
 }
 
 .TaskItem-estimatedPomodoro-37ziA {
-    background-image: url(img/task-pomo-estimate.png);
+    background-image: url(assets/img/task-pomo-estimate.png);
 }.ProjectBlankItem-root-ZDgeI {
     padding: 1px 1px 1px 7px;
     height: 38px;
@@ -2669,22 +2669,22 @@
 .FloatTimer-start-3nvWr,
 .FloatTimer-continue-1g6mM,
 .FloatTimer-startRest-29wtU {
-    background-image: url(img/timer-start.png);
+    background-image: url(assets/img/timer-start.png);
 }
 
 .FloatTimer-actions-YG_w6 .FloatTimer-stop-1zDyB {
     /*width: 18px;*/
     margin-left: 6px;
     /*background-size: 18px 18px;*/
-    background-image: url(img/timer-stop.png);
+    background-image: url(assets/img/timer-stop.png);
 }
 
 .FloatTimer-completeRest-2OJcD {
-    background-image: url(img/timer-complete.png);
+    background-image: url(assets/img/timer-complete.png);
 }
 
 .FloatTimer-pause-27B29 {
-    background-image: url(img/timer-pause.png);
+    background-image: url(assets/img/timer-pause.png);
 }.AccountSettings-root-3_0iJ {
     height: 100%;
     margin-top: 16px;
@@ -2880,22 +2880,22 @@
 }
 
 .Timer-rest-2SsDP.Timer-win-1WUpz {
-    background-image: url(img/timer-bg-mountain.jpg);
+    background-image: url(assets/img/timer-bg-mountain.jpg);
     background-position: center
 }
 
 .Timer-rest-2SsDP.Timer-notWin-2bgyV {
-    background-image: url(img/timer-bg-mountain.jpg);
+    background-image: url(assets/img/timer-bg-mountain.jpg);
     background-position: center
 }
 
 .Timer-work-33kH9.Timer-win-1WUpz {
-    background-image: url(img/timer-bg-mountain.jpg);
+    background-image: url(assets/img/timer-bg-mountain.jpg);
     background-position: center
 }
 
 .Timer-work-33kH9.Timer-notWin-2bgyV {
-    background-image: url(img/timer-bg-starrysky.jpg);
+    background-image: url(assets/img/timer-bg-starrysky.jpg);
     background-position: center
 }.PomodoroSettings-root-3c_7N {
     height: 100%;
@@ -6386,16 +6386,16 @@
 }
 
 .ContextMenuItem-parentIconLight--H91E {
-    background-image: url(img/menu-triangle.png);
+    background-image: url(assets/img/menu-triangle.png);
 }
 
 .ContextMenuItem-parentIconDark-2Gst1 {
-    background-image: url(img/menu-triangle-dark.png);
+    background-image: url(assets/img/menu-triangle-dark.png);
 }
 
 .ContextMenuItem-disabled-1jRN0 .ContextMenuItem-parentIcon-1BLdY,
 .ContextMenuItem-root-3CnBC.ContextMenuItem-disabled-1jRN0:hover .ContextMenuItem-parentIcon-1BLdY {
-    background-image: url(img/menu-triangle-disabled.png);
+    background-image: url(assets/img/menu-triangle-disabled.png);
 }
 
 .ContextMenuItem-checkedIcon-1rJyb {
@@ -6408,7 +6408,7 @@
     background-repeat: no-repeat;
     background-position: center;
     background-size: 24px 24px;
-    background-image: url(img/new-task-project-selected.png);
+    background-image: url(assets/img/new-task-project-selected.png);
 }
 
 .ContextMenuItem-disabled-1jRN0 {
@@ -6416,7 +6416,7 @@
 }
 
 .ContextMenuItem-disabled-1jRN0 .ContextMenuItem-triangle-onHEJ {
-    background-image: url(img/menu-triangle-disabled.png);
+    background-image: url(assets/img/menu-triangle-disabled.png);
 }.ProjectEditer-root-3ocqC {
     padding: 16px 20px;
     width: 312px;
@@ -6699,7 +6699,7 @@
     width: 20px;
     height: 20px;
     margin-right: 7px;
-    background: center/contain no-repeat url(img/project-new.png);
+    background: center/contain no-repeat url(assets/img/project-new.png);
     text-indent: -9999px;
     overflow: hidden;
 }
@@ -7013,7 +7013,7 @@
     background-position: center;
     background-repeat: no-repeat;
     background-size: 24px 24px;
-    background-image: url(img/detail-pomodoro.png);
+    background-image: url(assets/img/detail-pomodoro.png);
 }
 
 .PomodoroItem-title-1iIP- {
@@ -7063,7 +7063,7 @@
 }
 
 .PomodoroItem-actualPomo-3ay1O {
-    background-image: url(img/task-pomo-actual.png);
+    background-image: url(assets/img/task-pomo-actual.png);
     margin-right: 1px;
 }
 
@@ -7106,7 +7106,7 @@
 
 
 .PomodoroItem-estimatedPomo-24jOW {
-    background-image: url(img/task-pomo-estimate.png);
+    background-image: url(assets/img/task-pomo-estimate.png);
 }
 
 .PomodoroItem-estimatedPomoNum-BaLFC {
@@ -7205,7 +7205,7 @@
     background-size: 6px 9px;
     background-repeat: no-repeat;
     background-position: right;
-    background-image: url(img/detail-repetition-arrow.png);
+    background-image: url(assets/img/detail-repetition-arrow.png);
     padding-right: 12px;
     background-color: var(--bg-popup);
     color: var(--text-title);
@@ -7358,7 +7358,7 @@
 }
 
 .SubtaskItem-actualPomodoro-33Jdv {
-    background-image: url(img/task-pomo-actual.png);
+    background-image: url(assets/img/task-pomo-actual.png);
 }.PomodoroInput-root-2omez {
     /*border: 1px solid transparent;*/
     padding: 16px 18px 16px 16px;
@@ -7521,7 +7521,7 @@
     background-size: 16px 16px;
     background-repeat: no-repeat;
     background-position: center;
-    background-image: url(img/tag-add32.png);
+    background-image: url(assets/img/tag-add32.png);
 }
 
 .TagSelector-add-fXLpL .TagSelector-name-2VoXj {
@@ -7558,7 +7558,7 @@
     width: 16px;
     height: 34px;
     vertical-align: middle;
-    -webkit-mask-image: url(img/tag-small.png);
+    -webkit-mask-image: url(assets/img/tag-small.png);
     -webkit-mask-size: 16px 16px;
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-position: center;
@@ -7575,12 +7575,12 @@
 
 .TagSelector-indicator-1lRsV {
     width: 24px;
-    background: center no-repeat url(img/tag-unchecked.png);
+    background: center no-repeat url(assets/img/tag-unchecked.png);
     background-size: 24px 24px;
 }
 
 .TagSelector-checked-1Q4iY {
-    background-image: url(img/folder_project_checked.png);
+    background-image: url(assets/img/folder_project_checked.png);
 }
 
 .TagSelector-operations-19CTt {
@@ -7625,7 +7625,7 @@
     background-position: center;
     background-repeat: no-repeat;
     background-size: 24px 24px;
-    background-image: url(img/pomo-starttime.png);
+    background-image: url(assets/img/pomo-starttime.png);
 }
 
 .StartTimeItem-title-Yxvnj {
@@ -7663,7 +7663,7 @@
     display: inline-block;
     width: 18px;
     height: 18px;
-    background: center no-repeat url(img/tag-add.png);
+    background: center no-repeat url(assets/img/tag-add.png);
     background-size: 18px 18px;
 }
 
@@ -7691,7 +7691,7 @@
     background-position: center;
     background-repeat: no-repeat;
     background-size: 24px 24px;
-    background-image: url(img/pomo-task.png);
+    background-image: url(assets/img/pomo-task.png);
 }
 
 .TaskItem-title-ExdvI {
@@ -7719,7 +7719,7 @@
     background-position: right;
     background-repeat: no-repeat;
     background-size: 10px 10px;
-    background-image: url(img/detail-subtask-delete.png);
+    background-image: url(assets/img/detail-subtask-delete.png);
 }
 
 .TaskItem-hidden-2o5CG {
@@ -7838,7 +7838,7 @@
     background-position: center;
     background-size: 24px 24px;
     background-repeat: no-repeat;
-    background-image: url(img/new-task-project-selected.png);
+    background-image: url(assets/img/new-task-project-selected.png);
 }
 
 .TaskInput-notask-dfZlx {
@@ -7907,7 +7907,7 @@
     background-position: center;
     background-size: 24px 24px;
     background-repeat: no-repeat;
-    background-image: url(img/new-task-project-selected.png);
+    background-image: url(assets/img/new-task-project-selected.png);
 }.IntervalInput-root-20tJk {
     width: 190px;
     padding: 8px 0;
@@ -7948,7 +7948,7 @@
     background-position: left;
     background-size: 24px 24px;
     background-repeat: no-repeat;
-    background-image: url(img/new-task-project-selected.png);
+    background-image: url(assets/img/new-task-project-selected.png);
 }.IntervalItem-root-3qJip {
     height: 42px;
     line-height: 42px;
@@ -7964,7 +7964,7 @@
     background-position: center;
     background-repeat: no-repeat;
     background-size: 24px 24px;
-    background-image: url(img/detail-pomodoro.png);
+    background-image: url(assets/img/detail-pomodoro.png);
 }
 
 .IntervalItem-title-1sc4o {
@@ -8086,7 +8086,7 @@
     background-repeat: no-repeat;
     background-position: center;
     background-size: 16px 16px;
-    background-image: url(img/detail-pomo-estimation.png);
+    background-image: url(assets/img/detail-pomo-estimation.png);
 }
 
 .PomodoroSelection-minus-3aVYe {
@@ -8099,11 +8099,11 @@
 }
 
 .PomodoroSelection-minusLight-2KzpV {
-    background-image: url(img/pomo-minus-icon.png);
+    background-image: url(assets/img/pomo-minus-icon.png);
 }
 
 .PomodoroSelection-minusDark-3E1Lc {
-    background-image: url(img/pomo-minus-icon-dark.png);
+    background-image: url(assets/img/pomo-minus-icon-dark.png);
 }
 
 .PomodoroSelection-plus-1HspA {
@@ -8116,11 +8116,11 @@
 }
 
 .PomodoroSelection-plusLight-evWNR {
-    background-image: url(img/pomo-plus-icon.png);
+    background-image: url(assets/img/pomo-plus-icon.png);
 }
 
 .PomodoroSelection-plusDark-2dUgd {
-    background-image: url(img/pomo-plus-icon-dark.png);
+    background-image: url(assets/img/pomo-plus-icon-dark.png);
 }
 
 .PomodoroSelection-valueWidth-17QYM {
@@ -8208,11 +8208,11 @@
 }
 
 .ProjectInput-indicatorLight-2JLio {
-    background-image: url(img/menu-triangle.png);
+    background-image: url(assets/img/menu-triangle.png);
 }
 
 .ProjectInput-indicatorDark-3Fd8N {
-    background-image: url(img/menu-triangle-dark.png);
+    background-image: url(assets/img/menu-triangle-dark.png);
 }.TagItem-root-32rnW {
     padding: 4px 12px 16px 12px;
     border-bottom: 1px solid var(--split);
@@ -8367,11 +8367,11 @@
 }
 
 .HistoryTaskItem-actualPomodoro-2JG98 {
-    background-image: url(img/task-pomo-actual.png);
+    background-image: url(assets/img/task-pomo-actual.png);
 }
 
 .HistoryTaskItem-estimatedPomodoro-ls0w_ {
-    background-image: url(img/task-pomo-estimate.png);
+    background-image: url(assets/img/task-pomo-estimate.png);
 }.HistoryPomodoroItem-root-3VMap {
     height: 50px;
     margin-top: 4px;
@@ -8403,7 +8403,7 @@
     width: 20px;
     height: 100%;
     vertical-align: middle;
-    background-image: url(img/pomo.png);
+    background-image: url(assets/img/pomo.png);
 }
 
 .HistoryPomodoroItem-finishedDate-306qz {
@@ -8634,7 +8634,7 @@
     width: 24px;
     height: 24px;
     flex-shrink: 0;
-    background-image: url(img/new-task-project-selected.png);
+    background-image: url(assets/img/new-task-project-selected.png);
     background-repeat: no-repeat;
     background-position: center;
     background-size: 24px 24px;
@@ -8783,19 +8783,19 @@
 }
 
 .CalendarView-navPrevLight-1Phvc {
-    background-image: url(img/report-duration-pre.png);
+    background-image: url(assets/img/report-duration-pre.png);
 }
 
 .CalendarView-navPrevDark-2NZRg {
-    background-image: url(img/report-duration-pre-dark.png);
+    background-image: url(assets/img/report-duration-pre-dark.png);
 }
 
 .CalendarView-navNextLight-1uT8- {
-    background-image: url(img/report-duration-next.png);
+    background-image: url(assets/img/report-duration-next.png);
 }
 
 .CalendarView-navNextDark-1He-F {
-    background-image: url(img/report-duration-next-dark.png);
+    background-image: url(assets/img/report-duration-next-dark.png);
 }
 
 .CalendarView-todayButton-2-jac {
@@ -8819,7 +8819,7 @@
 .CalendarView-taskToggleIcon-1VlzR {
     width: 16px;
     height: 16px;
-    background-image: url(img/project-tasks.png);
+    background-image: url(assets/img/project-tasks.png);
     background-repeat: no-repeat;
     background-size: 16px 16px;
     background-position: center;
@@ -8926,7 +8926,7 @@
     border-radius: 10px;
     border: 1px solid var(--line, rgba(0, 0, 0, 0.08));
     background-color: var(--bg-main);
-    background-image: url(img/detail-close.png);
+    background-image: url(assets/img/detail-close.png);
     background-repeat: no-repeat;
     background-position: center;
     background-size: 14px 14px;
@@ -9002,7 +9002,7 @@
 .TagContextMenuSelector-icon-3zSJP {
     width: 16px;
     height: 34px;
-    -webkit-mask-image: url(img/tag-small.png);
+    -webkit-mask-image: url(assets/img/tag-small.png);
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-size: 16px 16px;
     -webkit-mask-position: center;
@@ -9022,7 +9022,7 @@
     background-position: center;
     background-size: 24px 24px;
     background-repeat: no-repeat;
-    background-image: url(img/folder_project_checked.png);
+    background-image: url(assets/img/folder_project_checked.png);
 }
 
 .TagContextMenuSelector-unchecked-1QgXJ {
@@ -9030,7 +9030,7 @@
     background-position: center;
     background-size: 24px 24px;
     background-repeat: no-repeat;
-    background-image: url(img/tag-unchecked.png);
+    background-image: url(assets/img/tag-unchecked.png);
 }.TaskDragLayer-layer-2z-5E {
     position: fixed;
     top: 0;
@@ -9680,7 +9680,7 @@
 .TaskNewItem-add-1zQPr {
     width: 32px;
     height: 24px;
-    background: left no-repeat url(img/tsk-new.png);
+    background: left no-repeat url(assets/img/tsk-new.png);
     background-size: 25px 24px;
 }
 
@@ -9738,11 +9738,11 @@
 }
 
 .TaskNewItem-pomodoroLight-2WIaF {
-    background-image: url(img/detail-pomo-blank.png);
+    background-image: url(assets/img/detail-pomo-blank.png);
 }
 
 .TaskNewItem-pomodoroDark-dvDfW {
-    background-image: url(img/detail-pomo-blank-dark.png);
+    background-image: url(assets/img/detail-pomo-blank-dark.png);
 }
 
 .TaskNewItem-estimatedPomodoro-1OA_w {
@@ -9754,7 +9754,7 @@
     background-repeat: no-repeat;
     background-position: center;
     background-size: 20px 20px;
-    background-image: url(img/detail-pomo-estimation.png);
+    background-image: url(assets/img/detail-pomo-estimation.png);
 }
 
 .TaskNewItem-estimatedPomodoroNum-26KJY {
@@ -9772,7 +9772,7 @@
     background-repeat: no-repeat;
     background-position: center;
     background-size: 14px 20px;
-    background-image: url(img/tsk-pomo-selection-trigger.png);
+    background-image: url(assets/img/tsk-pomo-selection-trigger.png);
 }
 
 .TaskNewItem-separator-2s1Pf {
@@ -9945,11 +9945,11 @@
 }
 
 .FullscreenTimer-bgmImg-OzI-I {
-    background-image: url(img/tmr_bgm.png);
+    background-image: url(assets/img/tmr_bgm.png);
 }
 
 .FullscreenTimer-flipClockImg-1UAcb {
-    background-image: url(img/tmr_flipclock.png);
+    background-image: url(assets/img/tmr_flipclock.png);
 }
 
 .FullscreenTimer-taskPlaceholder-_G-nL {
@@ -10106,11 +10106,11 @@
     background-position: center;
     background-size: 12px 18px;
     background-repeat: no-repeat;
-    background-image: url(img/timer-scale.png);
+    background-image: url(assets/img/timer-scale.png);
 }
 
 .FullscreenTimer-scale-CL567.FullscreenTimer-highlight-3SDiS {
-    background-image: url(img/timer-scale-highlight.png);
+    background-image: url(assets/img/timer-scale-highlight.png);
 }
 
 .FullscreenTimer-countdown-3IUFG {
@@ -10326,7 +10326,7 @@
     width: 18px;
     height: 18px;
     display: none;
-    background-image: url(img/setting-play.png);
+    background-image: url(assets/img/setting-play.png);
     background-repeat: no-repeat;
     background-position: center;
     background-size: 14px 14px;
@@ -10474,11 +10474,11 @@
 }
 
 .CalendarTaskList-actualIcon-3t_Fw {
-    background-image: url(img/task-pomo-actual.png);
+    background-image: url(assets/img/task-pomo-actual.png);
 }
 
 .CalendarTaskList-estimatedIcon-ofPRB {
-    background-image: url(img/task-pomo-estimate.png);
+    background-image: url(assets/img/task-pomo-estimate.png);
 }
 
 .CalendarTaskList-value-1Lapw {
@@ -10751,7 +10751,7 @@
     background-repeat: no-repeat;
     background-size: 24px 24px;
     background-position: center;
-    background-image: url(img/folder-expanded-indicator.png);
+    background-image: url(assets/img/folder-expanded-indicator.png);
     transition: -webkit-transform 150ms linear;
     transition: transform 150ms linear;
     transition: transform 150ms linear, -webkit-transform 150ms linear;
@@ -10845,11 +10845,11 @@
 }
 
 .TodayTaskItem-actualPomodoro-2WrZO {
-    background-image: url(img/task-pomo-actual.png);
+    background-image: url(assets/img/task-pomo-actual.png);
 }
 
 .TodayTaskItem-estimatedPomodoro-1hO-K {
-    background-image: url(img/task-pomo-estimate.png);
+    background-image: url(assets/img/task-pomo-estimate.png);
 }.TodayDetailItem-root-1f39X {
     position: absolute;
     right: 0;
@@ -11091,7 +11091,7 @@
 }
 
 .TodaySubtaskItem-actualPomodoro-2zLGe {
-    background-image: url(img/task-pomo-actual.png);
+    background-image: url(assets/img/task-pomo-actual.png);
 }.WidgetItem-root-3KhY2 {
     display: flex;
     height: 50px;
@@ -11103,11 +11103,11 @@
     background-size: 24px 24px;
     background-position: center;
     background-repeat: no-repeat;
-    background-image: url(img/folder_project_unchecked.png);
+    background-image: url(assets/img/folder_project_unchecked.png);
 }
 
 .WidgetItem-checked-1cq1D {
-    background-image: url(img/folder_project_checked.png);
+    background-image: url(assets/img/folder_project_checked.png);
 }
 
 .WidgetItem-operation-Ykur7 {
@@ -11116,7 +11116,7 @@
     background-size: 24px 24px;
     background-position: center;
     background-repeat: no-repeat;
-    background-image: url(img/drag_flag.png);
+    background-image: url(assets/img/drag_flag.png);
     cursor: move;
 }
 
@@ -11236,19 +11236,19 @@
 
 
 .ProjectChart-nextLight-raxXs {
-    background-image: url(img/report-duration-next.png);
+    background-image: url(assets/img/report-duration-next.png);
 }
 
 .ProjectChart-nextDark-2grGM {
-    background-image: url(img/report-duration-next-dark.png);
+    background-image: url(assets/img/report-duration-next-dark.png);
 }
 
 .ProjectChart-preLight-3_073 {
-    background-image: url(img/report-duration-pre.png);
+    background-image: url(assets/img/report-duration-pre.png);
 }
 
 .ProjectChart-preDark-qZlWI {
-    background-image: url(img/report-duration-pre-dark.png);
+    background-image: url(assets/img/report-duration-pre-dark.png);
 }
 
 .ProjectChart-content-2EuSV {
@@ -11425,7 +11425,7 @@
     background-repeat: no-repeat;
     background-size: 24px 25px;
     background-position: center;
-    background-image: url(img/new-task-project-selected.png);
+    background-image: url(assets/img/new-task-project-selected.png);
 }
 
 .TimerModeSelector-checked-3UbxK {
@@ -11693,24 +11693,24 @@
 }
 
 .FlipClock-timerActionStart-1A_UJ {
-    background-image: url(img/fullscreen-play.png);
+    background-image: url(assets/img/fullscreen-play.png);
 }
 
 .FlipClock-timerActionPause-3PxRE {
-    background-image: url(img/fullscreen-pause.png);
+    background-image: url(assets/img/fullscreen-pause.png);
 }
 
 .FlipClock-timerActionStop-oTm11 {
-    background-image: url(img/fullscreen-stop.png);
+    background-image: url(assets/img/fullscreen-stop.png);
 }
 
 .FlipClock-timerActionComplete-TQITN {
-    background-image: url(img/fullscreen-complete-break.png);
+    background-image: url(assets/img/fullscreen-complete-break.png);
 }
 
 .FlipClock-close-20zox {
     /*background-color: #fff;*/
-    background-image: url(img/fullscreen-close.png);
+    background-image: url(assets/img/fullscreen-close.png);
     background-position: center;
     background-repeat: no-repeat;
     background-size: 24px 24px;
@@ -11755,11 +11755,11 @@
     background-size: 12px 9px;
     background-position: center;
     background-repeat: no-repeat;
-    background-image: url(img/widget_show.png);
+    background-image: url(assets/img/widget_show.png);
 }
 
 .WidgetView-expanded-nHYoP .WidgetView-indicator-1bJ-c {
-    background-image: url(img/widget_hide.png);
+    background-image: url(assets/img/widget_hide.png);
 }
 
 .WidgetView-content-nmmZ0 {
@@ -11801,7 +11801,7 @@
     background-size: 16px 16px;
     background-repeat: no-repeat;
     background-position: left;
-    background-image: url(img/add_widget.png);
+    background-image: url(assets/img/add_widget.png);
 }
 
 .WidgetView-edit-1h9GQ {
@@ -11951,28 +11951,28 @@
 
 .DailyGoal-next-2G9BS {
     float: right;
-    background-image: url(img/report-duration-next.png);
+    background-image: url(assets/img/report-duration-next.png);
 }
 
 .DailyGoal-nextLight-O5Vzt {
-    background-image: url(img/report-duration-next.png);
+    background-image: url(assets/img/report-duration-next.png);
 }
 
 .DailyGoal-nextDark-1Nw53 {
-    background-image: url(img/report-duration-next-dark.png);
+    background-image: url(assets/img/report-duration-next-dark.png);
 }
 
 .DailyGoal-pre-2V2qR {
     float: left;
-    background-image: url(img/report-duration-pre.png);
+    background-image: url(assets/img/report-duration-pre.png);
 }
 
 .DailyGoal-preLight-RLMjc {
-    background-image: url(img/report-duration-pre.png);
+    background-image: url(assets/img/report-duration-pre.png);
 }
 
 .DailyGoal-preDark-3gqOt {
-    background-image: url(img/report-duration-pre-dark.png);
+    background-image: url(assets/img/report-duration-pre-dark.png);
 }
 
 .DailyGoal-calendar-2yNp5 {
@@ -12297,11 +12297,11 @@
 }
 
 .FocusTime-nextLight-2hSxT {
-    background-image: url(img/report-duration-next.png);
+    background-image: url(assets/img/report-duration-next.png);
 }
 
 .FocusTime-nextDark-2gU8v {
-    background-image: url(img/report-duration-next-dark.png);
+    background-image: url(assets/img/report-duration-next-dark.png);
 }
 
 
@@ -12310,11 +12310,11 @@
 }
 
 .FocusTime-preLight-1xisT {
-    background-image: url(img/report-duration-pre.png);
+    background-image: url(assets/img/report-duration-pre.png);
 }
 
 .FocusTime-preDark-32VXE {
-    background-image: url(img/report-duration-pre-dark.png);
+    background-image: url(assets/img/report-duration-pre-dark.png);
 }
 
 .FocusTime-content-45ycL {
@@ -12533,7 +12533,7 @@
     background-size: 20px 20px;
     background-position: right;
     background-repeat: no-repeat;
-    background-image: url(img/project-delete.png);
+    background-image: url(assets/img/project-delete.png);
 }.BarChart-root-wpLh1 {
     height: 400px;
     padding: 20px 20px 20px 20px;
@@ -12580,27 +12580,27 @@
 
 .BarChart-next-mWblk {
     margin-left: 4px;
-    background-image: url(img/report-duration-next.png);
+    background-image: url(assets/img/report-duration-next.png);
 }
 
 .BarChart-pre-3lels {
-    background-image: url(img/report-duration-pre.png);
+    background-image: url(assets/img/report-duration-pre.png);
 }
 
 .BarChart-nextLight-2jVVx {
-    background-image: url(img/report-duration-next.png);
+    background-image: url(assets/img/report-duration-next.png);
 }
 
 .BarChart-nextDark-121ju {
-    background-image: url(img/report-duration-next-dark.png);
+    background-image: url(assets/img/report-duration-next-dark.png);
 }
 
 .BarChart-preLight-pIjBu {
-    background-image: url(img/report-duration-pre.png);
+    background-image: url(assets/img/report-duration-pre.png);
 }
 
 .BarChart-preDark-3pU25 {
-    background-image: url(img/report-duration-pre-dark.png);
+    background-image: url(assets/img/report-duration-pre-dark.png);
 }
 
 .BarChart-granularity-33AMg {
@@ -12948,8 +12948,8 @@ th {
 }
 @font-face {
   font-family: 'Glyphicons Halflings';
-  src: url(font/glyphicons-halflings-regular.eot);
-  src: url(font/glyphicons-halflings-regular.eot?#iefix) format('embedded-opentype'), url(font/glyphicons-halflings-regular.woff2) format('woff2'), url(font/glyphicons-halflings-regular.woff) format('woff'), url(font/glyphicons-halflings-regular.ttf) format('truetype'), url(img/glyphicons-halflings-regular.svg#glyphicons_halflingsregular) format('svg');
+  src: url(assets/font/glyphicons-halflings-regular.eot);
+  src: url(assets/font/glyphicons-halflings-regular.eot?#iefix) format('embedded-opentype'), url(assets/font/glyphicons-halflings-regular.woff2) format('woff2'), url(assets/font/glyphicons-halflings-regular.woff) format('woff'), url(assets/font/glyphicons-halflings-regular.ttf) format('truetype'), url(assets/img/glyphicons-halflings-regular.svg#glyphicons_halflingsregular) format('svg');
 }
 .glyphicon {
   position: relative;
@@ -19347,4 +19347,4 @@ button.close {
   .hidden-print {
     display: none !important;
   }
-}@font-face{font-family:'HelveticaNeue-Light';src:url(font/HelveticaNeueLight.otf);font-weight:100;font-style:normal}@font-face{font-family:'impact';src:url(font/impact.otf);font-style:normal;font-weight:300}@font-face{font-family:'DINCond';src:url(font/DINCond-Medium.otf);font-weight:300;font-style:normal}@font-face{font-family:'DINCond-Black';src:url(font/DINCond-Black.otf);font-weight:300;font-style:normal}*{padding:0;margin:0;box-sizing:border-box;cursor:default}ul{margin:0}li{list-style:none}html{font-size:14px;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;height:100%;width:100%;min-height:570px;min-width:1000px;-ms-overflow-style:none}body{font-family:"Inter","Segoe UI",-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR","PingFang SC","Microsoft YaHei","Noto Sans SC","Helvetica Neue",Helvetica,Arial,sans-serif;font-synthesis:none;font-size:1em;height:100%;width:100%}html[lang^="zh-Hant"] body,html[lang^="zh-TW"] body,html[lang^="zh-HK"] body,html[lang^="zh-MO"] body,body:lang(zh-Hant),body:lang(zh-TW),body:lang(zh-HK),body:lang(zh-MO){font-family:"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, "PingFang TC", "PingFang HK", "Microsoft JhengHei", "Noto Sans TC", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Hiragino Sans", "Yu Gothic", "Meiryo", "Noto Sans JP", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", "Helvetica Neue", Helvetica, Arial, sans-serif}.small-font{font-size:12px}.larger1-font{font-size:16px}*::-webkit-input-placeholder{color:#aeaeae;font-size:12px;line-height:20px}::-webkit-scrollbar{width:6px;height:8px;background-color:rgba(0,0,0,0)}::-webkit-scrollbar-track{border-radius:10px;background-color:rgba(0,0,0,0)}::-webkit-scrollbar-thumb{border-radius:10px;-webkit-box-shadow:inset 0 0 6px rgba(0,0,0,0.3);background-color:var(--shadow-popup)}main{height:100%;width:100%;position:relative;padding-top:50px;overflow:hidden}.datepicker{margin:0 auto;width:220px;height:220px;text-align:center;padding-top:4px;font-size:12px}.datepicker table{width:100%;height:100%;border-collapse:separate}.datepicker table thead tr{font-weight:normal;color:var(--text-title)}.datepicker table thead tr th{text-align:center;font-weight:normal;color:var(--text-title)}.datepicker table>tbody>tr>td,.datepicker table>thead>tr>th{padding:0}.datepicker table thead tr:first-child{height:0}.datepicker table thead tr:last-child{height:42px}.datepicker table thead tr:last-child th{color:#999;font-size:0.8333em;font-weight:normal}.datepicker .day{cursor:pointer;width:31px;height:25px;line-height:26px;color:var(--text-title);padding:0}.datepicker .day.disabled{cursor:default}.datepicker .day.old,.datepicker .day.new{color:var(--text-desc)}.datepicker .day.today{color:var(--theme-red)}.datepicker .day.active{color:#fff;background-repeat:no-repeat;background-position:center;background-size:24px 24px;background-image:url(img/calendar-day-active.png)}.datepicker .prev{text-indent:-9999px;line-height:24px;background-position:center;background-repeat:no-repeat;background-size:24px 24px;background-image:url(img/calendar-month-prev.png)}.datepicker .next{text-indent:-9999px;line-height:24px;background-position:center;background-repeat:no-repeat;background-size:24px 24px;background-image:url(img/calendar-month-next.png)}.popover-content{padding:0}.popover{border:none;box-shadow:0 0 20px 1px var(--shadow-popup);border-radius:8px;padding:0;background-color:var(--bg-popup)}.popover.bottom>.arrow:after{display:none}.popover.bottom>.arrow{border-radius:3px;border-color:var(--bg-popup) var(--bg-popup) transparent transparent;box-shadow:2px -2px 2px -2px var(--shadow-popup);border-width:7px;-webkit-transform:rotate(-45deg);transform:rotate(-45deg)}.popover.bottom>.arrow{margin-left:-7px;top:-6px}body{--theme-red: #FD5553;--theme-red-light: #FD55531A;--split: #f4f4f4;--border: #e5e5e5;--border-input: #e5e5e5;--shadow-split: rgba(224, 224, 224, 0.5);--shadow-popup: rgba(197, 197, 197, 0.5);--bg-main: #fff;--bg-main-timer: #28282dE6;--bg-table: #f7f7fa;--bg-item: #ffffff;--bg-item-timer: #333337;--bg-even-item: #f4f4f4;--bg-popup: #fff;--bg-hover: #f5f5f5;--bg-hover-pomodoro-selector: #ebebeb;--bg-item-selected: #f5f5f5;--bg-item-selected-popup: #f5f5f5;--bg-input: #fff;--bg-search-input: #EFEFF2;--bg-popup-edge-area: rgba(0, 0, 0, 0.3);--bg-button: #F3F4F6;--bg-segment: #F3F4F6;--bg-segment-selected: #fff;--bg-project-chart-table: #fafafa;--bg-goal-circle: #F3F3F7;--bg-forest-level: #ffffffA1;--bg-group-exit: #0000001f;--text-title: #525252;--text-desc: #aeaeae;--text-estimated-pomodoro-red: #ffd9d8;--text-overdue: #dd4b39;--text-error: #eb4d45;--text-task-blue: #0091FF;--text-forest-green: #4c9d56;--text-forest-badge: #cf8a00;--timer-bgi-brightness: 1}body.dark{--theme-red: #FD5553;--theme-red-light: #FD55531A;--split: rgba(255, 255, 255, 0.08);--border: rgba(255, 255, 255, 0.18);--border-input: #393942;--shadow-split: #0e0d12;--shadow-popup: #0e0d12;--bg-main: #1a1a20;--bg-main-timer: #28282dE6;--bg-table: #0e0d12;--bg-item: #1a1a20;--bg-item-timer: #2e2e32;--bg-even-item: #222226;--bg-popup: #2d2d37;--bg-hover: rgba(255, 255, 255, 0.09);--bg-hover-pomodoro-selector: #5d5d62;--bg-item-selected: #2f2f34;--bg-item-selected-popup: #45454c;--bg-input: #24242a;--bg-search-input: #24242a;--bg-popup-edge-area: rgba(0, 0, 0, 0.63);--bg-button: #383842;--bg-segment: #26252b;--bg-segment-selected: #39383e;--bg-project-chart-table: #0f0f14;--bg-goal-circle: #0D0C10;--bg-forest-level: #ffffffA1;--bg-group-exit: #ffffff33;--text-title: #e8e8eb;--text-desc: #8f8f91;--text-estimated-pomodoro-red: #ffd9d8;--text-overdue: #dd4b39;--text-error: #eb4d45;--text-task-blue: #0091FF;--text-forest-green: #4c9d56;--text-forest-badge: #cf8a00;--timer-bgi-brightness: 0.7}.ftd-slider-track{margin-top:3px;height:4px;border-radius:2px;background-color:var(--split)}.ftd-slider-track-0{background-color:#fd5553}.ftd-slider-thumb{width:10px;height:10px;border-radius:6px;background-color:#fd5553;outline:2px solid #fff}.ftd-slider-thumb-active{outline:1px solid #fff}
+}@font-face{font-family:'HelveticaNeue-Light';src:url(assets/font/HelveticaNeueLight.otf);font-weight:100;font-style:normal}@font-face{font-family:'impact';src:url(assets/font/impact.otf);font-style:normal;font-weight:300}@font-face{font-family:'DINCond';src:url(assets/font/DINCond-Medium.otf);font-weight:300;font-style:normal}@font-face{font-family:'DINCond-Black';src:url(assets/font/DINCond-Black.otf);font-weight:300;font-style:normal}*{padding:0;margin:0;box-sizing:border-box;cursor:default}ul{margin:0}li{list-style:none}html{font-size:14px;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;height:100%;width:100%;min-height:570px;min-width:1000px;-ms-overflow-style:none}body{font-family:"Inter","Segoe UI",-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic","Meiryo","Noto Sans JP","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR","PingFang SC","Microsoft YaHei","Noto Sans SC","Helvetica Neue",Helvetica,Arial,sans-serif;font-synthesis:none;font-size:1em;height:100%;width:100%}html[lang^="zh-Hant"] body,html[lang^="zh-TW"] body,html[lang^="zh-HK"] body,html[lang^="zh-MO"] body,body:lang(zh-Hant),body:lang(zh-TW),body:lang(zh-HK),body:lang(zh-MO){font-family:"Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, "PingFang TC", "PingFang HK", "Microsoft JhengHei", "Noto Sans TC", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Hiragino Sans", "Yu Gothic", "Meiryo", "Noto Sans JP", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", "Helvetica Neue", Helvetica, Arial, sans-serif}.small-font{font-size:12px}.larger1-font{font-size:16px}*::-webkit-input-placeholder{color:#aeaeae;font-size:12px;line-height:20px}::-webkit-scrollbar{width:6px;height:8px;background-color:rgba(0,0,0,0)}::-webkit-scrollbar-track{border-radius:10px;background-color:rgba(0,0,0,0)}::-webkit-scrollbar-thumb{border-radius:10px;-webkit-box-shadow:inset 0 0 6px rgba(0,0,0,0.3);background-color:var(--shadow-popup)}main{height:100%;width:100%;position:relative;padding-top:50px;overflow:hidden}.datepicker{margin:0 auto;width:220px;height:220px;text-align:center;padding-top:4px;font-size:12px}.datepicker table{width:100%;height:100%;border-collapse:separate}.datepicker table thead tr{font-weight:normal;color:var(--text-title)}.datepicker table thead tr th{text-align:center;font-weight:normal;color:var(--text-title)}.datepicker table>tbody>tr>td,.datepicker table>thead>tr>th{padding:0}.datepicker table thead tr:first-child{height:0}.datepicker table thead tr:last-child{height:42px}.datepicker table thead tr:last-child th{color:#999;font-size:0.8333em;font-weight:normal}.datepicker .day{cursor:pointer;width:31px;height:25px;line-height:26px;color:var(--text-title);padding:0}.datepicker .day.disabled{cursor:default}.datepicker .day.old,.datepicker .day.new{color:var(--text-desc)}.datepicker .day.today{color:var(--theme-red)}.datepicker .day.active{color:#fff;background-repeat:no-repeat;background-position:center;background-size:24px 24px;background-image:url(assets/img/calendar-day-active.png)}.datepicker .prev{text-indent:-9999px;line-height:24px;background-position:center;background-repeat:no-repeat;background-size:24px 24px;background-image:url(assets/img/calendar-month-prev.png)}.datepicker .next{text-indent:-9999px;line-height:24px;background-position:center;background-repeat:no-repeat;background-size:24px 24px;background-image:url(assets/img/calendar-month-next.png)}.popover-content{padding:0}.popover{border:none;box-shadow:0 0 20px 1px var(--shadow-popup);border-radius:8px;padding:0;background-color:var(--bg-popup)}.popover.bottom>.arrow:after{display:none}.popover.bottom>.arrow{border-radius:3px;border-color:var(--bg-popup) var(--bg-popup) transparent transparent;box-shadow:2px -2px 2px -2px var(--shadow-popup);border-width:7px;-webkit-transform:rotate(-45deg);transform:rotate(-45deg)}.popover.bottom>.arrow{margin-left:-7px;top:-6px}body{--theme-red: #FD5553;--theme-red-light: #FD55531A;--split: #f4f4f4;--border: #e5e5e5;--border-input: #e5e5e5;--shadow-split: rgba(224, 224, 224, 0.5);--shadow-popup: rgba(197, 197, 197, 0.5);--bg-main: #fff;--bg-main-timer: #28282dE6;--bg-table: #f7f7fa;--bg-item: #ffffff;--bg-item-timer: #333337;--bg-even-item: #f4f4f4;--bg-popup: #fff;--bg-hover: #f5f5f5;--bg-hover-pomodoro-selector: #ebebeb;--bg-item-selected: #f5f5f5;--bg-item-selected-popup: #f5f5f5;--bg-input: #fff;--bg-search-input: #EFEFF2;--bg-popup-edge-area: rgba(0, 0, 0, 0.3);--bg-button: #F3F4F6;--bg-segment: #F3F4F6;--bg-segment-selected: #fff;--bg-project-chart-table: #fafafa;--bg-goal-circle: #F3F3F7;--bg-forest-level: #ffffffA1;--bg-group-exit: #0000001f;--text-title: #525252;--text-desc: #aeaeae;--text-estimated-pomodoro-red: #ffd9d8;--text-overdue: #dd4b39;--text-error: #eb4d45;--text-task-blue: #0091FF;--text-forest-green: #4c9d56;--text-forest-badge: #cf8a00;--timer-bgi-brightness: 1}body.dark{--theme-red: #FD5553;--theme-red-light: #FD55531A;--split: rgba(255, 255, 255, 0.08);--border: rgba(255, 255, 255, 0.18);--border-input: #393942;--shadow-split: #0e0d12;--shadow-popup: #0e0d12;--bg-main: #1a1a20;--bg-main-timer: #28282dE6;--bg-table: #0e0d12;--bg-item: #1a1a20;--bg-item-timer: #2e2e32;--bg-even-item: #222226;--bg-popup: #2d2d37;--bg-hover: rgba(255, 255, 255, 0.09);--bg-hover-pomodoro-selector: #5d5d62;--bg-item-selected: #2f2f34;--bg-item-selected-popup: #45454c;--bg-input: #24242a;--bg-search-input: #24242a;--bg-popup-edge-area: rgba(0, 0, 0, 0.63);--bg-button: #383842;--bg-segment: #26252b;--bg-segment-selected: #39383e;--bg-project-chart-table: #0f0f14;--bg-goal-circle: #0D0C10;--bg-forest-level: #ffffffA1;--bg-group-exit: #ffffff33;--text-title: #e8e8eb;--text-desc: #8f8f91;--text-estimated-pomodoro-red: #ffd9d8;--text-overdue: #dd4b39;--text-error: #eb4d45;--text-task-blue: #0091FF;--text-forest-green: #4c9d56;--text-forest-badge: #cf8a00;--timer-bgi-brightness: 0.7}.ftd-slider-track{margin-top:3px;height:4px;border-radius:2px;background-color:var(--split)}.ftd-slider-track-0{background-color:#fd5553}.ftd-slider-thumb{width:10px;height:10px;border-radius:6px;background-color:#fd5553;outline:2px solid #fff}.ftd-slider-thumb-active{outline:1px solid #fff}

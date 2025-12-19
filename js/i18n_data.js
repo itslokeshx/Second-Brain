@@ -1,5 +1,5 @@
 window.I18N_DATA = {
-    "app_name": "Focus To-Do",
+    "app_name": "Second Brain",
     "app_language": "en",
     "cmm_ok": "OK",
     "cmm_cancel": "Cancel",

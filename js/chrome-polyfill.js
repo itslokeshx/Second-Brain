@@ -10,7 +10,14 @@ if (!window.chrome) {
 // Mock chrome.runtime
 if (!chrome.runtime) {
     chrome.runtime = {
-        getURL: (path) => path,
+        getURL: (path) => {
+            if (!path) return path;
+            if (path.indexOf('assets/') === 0) return path;
+            if (path.indexOf('img/') === 0 || path.indexOf('/img/') === 0) return 'assets/img/' + path.replace(/^[\/]?img\//, '');
+            if (path.indexOf('audio/') === 0 || path.indexOf('/audio/') === 0) return 'assets/audio/' + path.replace(/^[\/]?audio\//, '');
+            if (path.indexOf('font/') === 0 || path.indexOf('/font/') === 0) return 'assets/font/' + path.replace(/^[\/]?font\//, '');
+            return path;
+        },
         getManifest: () => ({ version: "1.0.0" }),
         sendMessage: (message, callback) => {
             console.log("Mock sendMessage:", message);
