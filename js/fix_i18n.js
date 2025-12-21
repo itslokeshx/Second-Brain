@@ -7,7 +7,7 @@
 
     if (!window.I18N_DATA) {
         console.warn("[Fix] window.I18N_DATA is missing. Interceptor inactive.");
-        return;
+        // We still want to allow non-i18n requests to pass through even if I18N_DATA is missing
     }
 
     var OldXHR = window.XMLHttpRequest;
@@ -20,9 +20,11 @@
     };
 
     OldXHR.prototype.send = function (data) {
+        var url = this._interceptUrl || '';
+
         // Check if this request is for an i18n text file
-        if (this._interceptUrl && this._interceptUrl.match(/i18n\/strings.*\.(txt|properties)/)) {
-            console.log("[Fix] Intercepting XHR request for:", this._interceptUrl);
+        if (url && url.match(/i18n\/strings.*\.(txt|properties)/) && window.I18N_DATA) {
+            console.log("[Fix] Intercepting XHR request for:", url);
 
             // Convert JSON object back to properties file format (key=value)
             var responseText = "";
@@ -51,6 +53,9 @@
             }, 10);
 
             return;
+        } else {
+            // ✅ CRITICAL: Let authentication and API requests pass through unchanged
+            // console.log('[Fix] Passing through non-i18n request:', url);
         }
 
         return oldSend.apply(this, arguments);

@@ -10,6 +10,29 @@
 <body>
     <div id="root" style="height: 100%; width: 100%;"></div>
     <div id="modal-root"></div>
+
+    <div id="modal-root"></div>
+
+    <!-- Hidden Elements to prevent auth-ui.js crash -->
+    <div style="display: none;">
+        <span id="username-display"></span>
+        <button id="auth-btn">Login / Sync</button>
+        <div id="auth-modal">
+            <div id="login-form">
+                <input id="login-email"><input id="login-password"><button id="btn-login"></button>
+                <p id="login-error"></p>
+                <div id="show-register"></div>
+            </div>
+            <div id="register-form">
+                <input id="reg-username"><input id="reg-email"><input id="reg-password"><button
+                    id="btn-register"></button>
+                <p id="reg-error"></p>
+                <div id="show-login"></div>
+            </div>
+            <span class="close-modal"></span>
+        </div>
+    </div>
+
     <div>
         <div id="task-deadline-width" class="small-font"
             style="display: inline-block; position: absolute; top: -10000px"></div>
@@ -460,13 +483,19 @@
             "gen_project_management": "Projects",
             "db_upgrading": "Updating...",
             "db_downloading": "Downloading...",
-            "db_not_terminate": "Please do not end the application!"
         };
     </script>
+    <script type="text/javascript" src="js/network-interceptor.js"></script>
     <script type="text/javascript" src="js/fix_i18n.js"></script>
     <script type="text/javascript" src="js/i18n.js"></script>
     <script type="text/javascript" src="js/chrome-polyfill.js"></script>
+    <script type="text/javascript" src="js/session-manager.js"></script>
     <script type="text/javascript" src="js/main.js"></script>
+
+
+
+    <script type="text/javascript" src="js/sync-service.js"></script>
+    <script type="text/javascript" src="js/auth-ui.js"></script>
 </body>
 
 </html>
