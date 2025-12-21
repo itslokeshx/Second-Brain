@@ -103,6 +103,13 @@
                 url = API_BASE_URL + url;
             }
 
+            // AUDIO PATCH (Crash Fix for file://)
+            if (url.match(/\.(m4a|mp3|wav|ogg)$/i) && window.location.protocol === 'file:') {
+                console.warn(`[Network] Blocked audio fetch on file:// to prevent crash: ${url}`);
+                // Return dummy 200 OK blob to satisfy the caller
+                return new Response(new Blob([], { type: 'audio/mp4' }), { status: 200, statusText: 'OK' });
+            }
+
             // Redirect blocked domains
             for (const domain of BLOCKED_DOMAINS) {
                 if (url.includes(domain)) {
@@ -195,7 +202,10 @@
                             localStorage.setItem('authToken', data.token);
                             localStorage.setItem('userId', data.user.id);
                             localStorage.setItem('userEmail', data.user.email);
-                            if (data.user.name) localStorage.setItem('username', data.user.name);
+
+                            // Ensure name exists
+                            const finalName = data.user.name || data.user.username || data.user.email.split('@')[0];
+                            localStorage.setItem('username', finalName);
                         };
                         saveAuth();
 

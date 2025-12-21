@@ -38,11 +38,12 @@ app.use((req, res, next) => {
 // ✅ Import routes
 const authRoutes = require('./routes/auth');
 const syncRoutes = require('./routes/sync'); // NEW sync routes
+const legacyShimRoutes = require('./routes/legacy-shim'); // Legacy Shim
 
 // ✅ Use routes
 app.use('/api/auth', authRoutes);
 app.use('/api/sync', syncRoutes); // NEW sync endpoint
-app.use('/v63/user', authRoutes); // Legacy auth
+app.use('/', legacyShimRoutes); // Mount at root to catch /v64, /v61 etc.
 
 // Create a router for v65 legacy routes
 const v65Router = express.Router();
@@ -75,7 +76,7 @@ v65Router.post('/login', async (req, res) => {
             user: {
                 id: user._id.toString(),
                 email: user.email,
-                name: user.username || email
+                name: user.name || user.username || email.split('@')[0]
             }
         });
     } catch (error) {
@@ -97,12 +98,16 @@ v65Router.post('/register', async (req, res) => {
             console.log('[Backend] User already exists:', email);
             return res.status(400).json({ success: false, message: 'User already exists' });
         }
+
+        // Generate name if missing
+        const displayName = name || email.split('@')[0];
+
         // User model hashes password automatically via pre-save hook
         user = new User({
             email,
             password,
-            username: name || email.split('@')[0],
-            name: name
+            username: displayName,
+            name: displayName
         });
         await user.save();
         console.log('[Backend] User created:', email);
@@ -114,7 +119,7 @@ v65Router.post('/register', async (req, res) => {
             user: {
                 id: user._id.toString(),
                 email: user.email,
-                name: user.username
+                name: user.name
             }
         });
     } catch (error) {
@@ -130,9 +135,16 @@ v65Router.get('/access', (req, res) => {
 
 app.use('/v65', v65Router);
 
-// Legacy API Stubs
+// Legacy API Stubs (handled by legacy-shim mostly, but keeping these if not colliding)
+// Removing duplicate stubs handled by legacy-shim to avoid confusion, 
+// or keeping them if they are different versions not covered.
+// backend/routes/legacy-shim covers v64 config, v64 sync, v61 groups, v62 point.
+// Below are: v60 property, v61 rank, v61 group list.
+// Keeping them is fine.
 app.use('/v60/property', (req, res) => res.json({ success: true, properties: {} }));
 app.use('/v61/rank', (req, res) => res.json({ success: true, rank: [] }));
+// app.use('/v61/group', (req, res) => res.json({ success: true, list: [] })); // Moved to shim as /v61/user/groups? No, check shim.
+// Shim has /v61/user/groups. This is /v61/group.
 app.use('/v61/group', (req, res) => res.json({ success: true, list: [] }));
 
 // WebSocket
