@@ -5,30 +5,32 @@ const User = require('../models/User');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-please-change';
 
-// Helper to handle both 'account' and 'email' fields
-const getCredentials = (body) => {
-    return {
-        email: body.email || body.username || body.account,
-        password: body.password || body.pwd
-    };
-};
-
-// --- AUTH ---
+// --- AUTH HANDLERS ---
 
 router.post('/v63/user/login', async (req, res) => {
     try {
-        const { email, password } = getCredentials(req.body);
-        if (!email || !password) return res.status(400).json({ success: false, message: 'Missing credentials' });
+        // Legacy frontend uses 'account', modern uses 'email'
+        const email = req.body.email || req.body.username || req.body.account;
+        const password = req.body.password || req.body.pwd;
+
+        if (!email || !password) {
+            // Legacy expects status -1 for errors
+            return res.json({ status: -1, errMsg: 'Missing credentials' });
+        }
 
         const user = await User.findOne({ email });
         if (!user || !(await user.matchPassword(password))) {
-            return res.status(401).json({ success: false, message: 'Invalid credentials' });
+            return res.json({ status: -1, errMsg: 'Invalid credentials' });
         }
 
         const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '30d' });
-        const safeName = user.name || user.username || email.split('@')[0];
 
+        // Ensure name is clean (no symbols)
+        const safeName = user.name || email.split('@')[0];
+
+        // CRITICAL: status: 0 is required for legacy success
         res.json({
+            status: 0,
             success: true,
             token: token,
             user: {
@@ -40,53 +42,66 @@ router.post('/v63/user/login', async (req, res) => {
             }
         });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        console.error("Login Error", err);
+        res.json({ status: -1, errMsg: err.message });
     }
-});
-
-router.post('/v63/user/logout', (req, res) => {
-    res.json({ success: true, message: 'Logged out' });
 });
 
 router.post('/v63/user/register', async (req, res) => {
     try {
-        const { email, password } = getCredentials(req.body);
-        if (!email || !password) return res.status(400).json({ success: false, message: 'Missing credentials' });
+        const email = req.body.email || req.body.username || req.body.account;
+        const password = req.body.password || req.body.pwd;
+
+        if (!email || !password) return res.json({ status: -1, errMsg: 'Missing info' });
 
         let user = await User.findOne({ email });
-        if (user) return res.status(400).json({ success: false, message: 'User exists' });
+        if (user) return res.json({ status: -1, errMsg: 'User exists' });
 
         const name = req.body.name || email.split('@')[0];
         user = await User.create({ email, password, name, username: name });
         const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '30d' });
 
         res.json({
+            status: 0,
             success: true,
             token: token,
             user: { id: user._id, name, email }
         });
     } catch (err) {
-        res.status(500).json({ success: false, message: err.message });
+        res.json({ status: -1, errMsg: err.message });
     }
 });
 
-// --- SYNC & STUBS (Fixing the Infinite Spinner) ---
+router.post('/v63/user/logout', (req, res) => {
+    res.json({ status: 0, success: true });
+});
 
-// The legacy app expects this EXACT structure to stop spinning
+// --- CRITICAL SYNC FIX ---
+// This route stops the infinite spinner by providing the exact arrays main.js iterates over.
 router.all('/v64/sync', (req, res) => {
+    // Legacy app uses Unix Timestamp in SECONDS, not milliseconds
+    const now = Math.floor(Date.now() / 1000);
     res.json({
+        status: 0,           // REQUIRED: Legacy success code
         success: true,
-        server_now: Date.now(),
-        update_time: Date.now(),
+        timestamp: now,
+        server_now: now,
+        update_time: now,
+        projects: [],        // REQUIRED: Even if empty
+        tasks: [],           // REQUIRED
+        subtasks: [],        // REQUIRED
+        pomodoros: [],       // REQUIRED
+        project_member: [],
         list: []
     });
 });
 
-router.get('/v64/user/config', (req, res) => res.json({ success: true, config: {} }));
-router.get('/v61/user/groups', (req, res) => res.json({ success: true, list: [] }));
-router.get('/v61/group/more', (req, res) => res.json({ success: true }));
-router.get('/v62/user/point', (req, res) => res.json({ success: true, points: 0 }));
-router.all('/v63/exception-report', (req, res) => res.json({ success: true }));
-router.all('/v63/user', (req, res) => res.json({ success: true }));
+// --- STUBS (Prevent 404 Crashes) ---
+router.get('/v64/user/config', (req, res) => res.json({ status: 0, success: true, config: {} }));
+router.get('/v61/user/groups', (req, res) => res.json({ status: 0, success: true, list: [] }));
+router.get('/v61/group/more', (req, res) => res.json({ status: 0, success: true }));
+router.get('/v62/user/point', (req, res) => res.json({ status: 0, success: true, points: 0 }));
+router.all('/v63/exception-report', (req, res) => res.json({ status: 0, success: true }));
+router.all('/v63/user', (req, res) => res.json({ status: 0, success: true }));
 
 module.exports = router;
