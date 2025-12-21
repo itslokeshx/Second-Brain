@@ -38,12 +38,13 @@ app.use((req, res, next) => {
 // ✅ Import routes
 const authRoutes = require('./routes/auth');
 const syncRoutes = require('./routes/sync'); // NEW sync routes
-const legacyShimRoutes = require('./routes/legacy-shim'); // Legacy Shim
+const legacyRoutes = require('./routes/legacy-routes'); // NEW: Bulletproof Legacy Routes
 
-// ✅ Use routes
+// ✅ Use routes - Mount legacy routes FIRST to catch specific paths
+app.use('/', legacyRoutes);
+
 app.use('/api/auth', authRoutes);
 app.use('/api/sync', syncRoutes); // NEW sync endpoint
-app.use('/', legacyShimRoutes); // Mount at root to catch /v64, /v61 etc.
 
 // Create a router for v65 legacy routes
 const v65Router = express.Router();
