@@ -18,56 +18,100 @@ const authMiddleware = async (req, res, next) => {
     }
 };
 
-// ✅ SYNC ALL DATA (Update User Document)
-router.post('/all', authMiddleware, async (req, res) => {
-    console.log('[Sync] Sync requested for user:', req.userId);
+// ============================================================================
+// GRANULAR SYNC ROUTES (Matches Frontend sync-service.js)
+// ============================================================================
 
+// 1. Sync Projects
+router.post('/projects', authMiddleware, async (req, res) => {
+    console.log('[Sync] Projects sync requested');
     try {
-        const { projects, tasks, pomodoroLogs, settings } = req.body;
-        const userId = req.userId;
-
-        // Construct update object
-        const updateData = {
-            lastSyncTime: new Date()
-        };
-
-        if (projects) updateData.projects = projects;
-        if (tasks) updateData.tasks = tasks;
-        if (pomodoroLogs) updateData.pomodoroLogs = pomodoroLogs;
-        if (settings) updateData.settings = settings;
-
-        // Update User document directly
-        const updatedUser = await User.findByIdAndUpdate(
-            userId,
-            { $set: updateData },
-            { new: true, upsert: true } // Return updated doc
-        ).lean();
-
-        if (!updatedUser) {
-            return res.status(404).json({ success: false, message: 'User not found' });
-        }
-
-        console.log('[Sync] User document updated successfully');
-
-        res.json({
-            success: true,
-            message: 'Sync completed',
-            projectsSynced: projects ? projects.length : 0,
-            tasksSynced: tasks ? tasks.length : 0,
-            logsSynced: pomodoroLogs ? pomodoroLogs.length : 0,
-            serverData: {
-                projects: updatedUser.projects || [],
-                tasks: updatedUser.tasks || [],
-                pomodoroLogs: updatedUser.pomodoroLogs || [],
-                settings: updatedUser.settings || {}
-            }
-        });
-
+        const { projects } = req.body;
+        // Update the user's projects array
+        await User.findByIdAndUpdate(
+            req.userId,
+            {
+                $set: { projects: projects || [] },
+                $currentDate: { lastSyncTime: true }
+            },
+            { new: true, upsert: true }
+        );
+        res.json({ success: true, syncTime: new Date() });
     } catch (error) {
-        console.error('[Sync] Error:', error);
-        res.status(500).json({ success: false, message: 'Sync failed: ' + error.message });
+        console.error('[Sync] Projects failed:', error);
+        res.status(500).json({ success: false, message: error.message });
     }
 });
+
+// 2. Sync Tasks
+router.post('/tasks', authMiddleware, async (req, res) => {
+    console.log('[Sync] Tasks sync requested');
+    try {
+        const { tasks } = req.body;
+        await User.findByIdAndUpdate(
+            req.userId,
+            {
+                $set: { tasks: tasks || [] },
+                $currentDate: { lastSyncTime: true }
+            },
+            { new: true, upsert: true }
+        );
+        res.json({ success: true, syncTime: new Date() });
+    } catch (error) {
+        console.error('[Sync] Tasks failed:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// 3. Sync Logs (Pomodoros)
+// Frontend sends to /api/sync/logs or /api/sync/pomodoroLogs? 
+// User prompt says: "/api/sync/logs" in Diagnosis, but also "logs (pomodoroLogs)" in example. 
+// Standard apps often use /logs. I will map /logs to pomodoroLogs.
+router.post('/logs', authMiddleware, async (req, res) => {
+    console.log('[Sync] Logs sync requested');
+    try {
+        const { logs, pomodoroLogs } = req.body;
+        const dataToSave = logs || pomodoroLogs || [];
+
+        await User.findByIdAndUpdate(
+            req.userId,
+            {
+                $set: { pomodoroLogs: dataToSave },
+                $currentDate: { lastSyncTime: true }
+            },
+            { new: true, upsert: true }
+        );
+        res.json({ success: true, syncTime: new Date() });
+    } catch (error) {
+        console.error('[Sync] Logs failed:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// 4. Sync Settings
+router.post('/settings', authMiddleware, async (req, res) => {
+    console.log('[Sync] Settings sync requested');
+    try {
+        const { settings } = req.body;
+        // Ensure settings object has correct structure/defaults if needed, or trust frontend
+        await User.findByIdAndUpdate(
+            req.userId,
+            {
+                $set: { settings: settings || {} },
+                $currentDate: { lastSyncTime: true }
+            },
+            { new: true, upsert: true }
+        );
+        res.json({ success: true, syncTime: new Date() });
+    } catch (error) {
+        console.error('[Sync] Settings failed:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ============================================================================
+// SHARED / LEGACY ROUTES
+// ============================================================================
 
 // ✅ GET ALL USER DATA (Initial load)
 router.get('/load', authMiddleware, async (req, res) => {
@@ -95,6 +139,31 @@ router.get('/load', authMiddleware, async (req, res) => {
     } catch (error) {
         console.error('[Sync] Load error:', error);
         res.status(500).json({ success: false, message: 'Failed to load data: ' + error.message });
+    }
+});
+
+// Fallback for /all (just in case SessionManager still calls it, 
+// though sync-service.js seems to be the active one now according to user logs)
+router.post('/all', authMiddleware, async (req, res) => {
+    console.log('[Sync] Full sync (fallback) requested');
+    try {
+        const { projects, tasks, pomodoroLogs, settings } = req.body;
+
+        let update = { lastSyncTime: new Date() };
+        if (projects) update.projects = projects;
+        if (tasks) update.tasks = tasks;
+        if (pomodoroLogs) update.pomodoroLogs = pomodoroLogs;
+        if (settings) update.settings = settings;
+
+        await User.findByIdAndUpdate(
+            req.userId,
+            { $set: update },
+            { new: true, upsert: true }
+        );
+        res.json({ success: true, message: 'Full sync completed' });
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 

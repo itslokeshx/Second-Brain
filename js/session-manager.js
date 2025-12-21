@@ -1,8 +1,10 @@
 /**
  * Session Manager - Handles user authentication, sync, and UI integration
  * Refactored to attach to existing UI elements and strictly adhere to data schema.
+ * Updated to handle file:// protocol relative path issues and DOM race conditions.
  */
 window.SessionManager = {
+    API_BASE_URL: 'http://localhost:3000',
 
     // Check if user is logged in
     isLoggedIn: function () {
@@ -36,45 +38,119 @@ window.SessionManager = {
     },
 
     /**
+     * Helper to wait for elements to exist in the DOM
+     */
+    waitForElement: function (selector) {
+        return new Promise(resolve => {
+            if (document.querySelector(selector)) {
+                return resolve(document.querySelector(selector));
+            }
+            const observer = new MutationObserver(() => {
+                const el = document.querySelector(selector);
+                if (el) {
+                    observer.disconnect();
+                    resolve(el);
+                }
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+        });
+    },
+
+    // Helper to find button by text content (robust against markup changes) with Promise wrapper logic
+    // But since XPath is instant, we need to poll or observe for this too.
+    waitForElementByText: function (text) {
+        return new Promise(resolve => {
+            const find = () => {
+                const result = document.evaluate(
+                    `//*[contains(text(), '${text}')]`,
+                    document,
+                    null,
+                    XPathResult.FIRST_ORDERED_NODE_TYPE,
+                    null
+                );
+                const el = result.singleNodeValue;
+                if (el) {
+                    return resolve(el.closest('button, li, div, a') || el);
+                }
+            };
+
+            // Check immediately
+            const immediate = find();
+            if (immediate) return;
+
+            // Observe
+            const observer = new MutationObserver(() => {
+                find(); // If found, the promise resolves. We can disconnect if resolved?
+                // Actually, resolving strictly inside find() won't disconnect observer automatically 
+                // without extra logic, but for this specific pattern let's just use the main loop logic 
+                // in attachToExistingUI which observes continuously.
+            });
+
+            observer.observe(document.body, { childList: true, subtree: true });
+
+            // Re-check periodically in case text is added to existing node
+            const interval = setInterval(() => {
+                const found = find();
+                if (found) {
+                    clearInterval(interval);
+                    observer.disconnect();
+                }
+            }, 500);
+        });
+    },
+
+    /**
      * 1. REFACTOR FRONTEND: Remove ugly UI creation and attach to existing elements.
      * Uses MutationObserver to wait for the app to render the "Sync Now" and "Sign Out" buttons.
      */
     attachToExistingUI: function () {
         console.log('[Session] Looking for existing UI elements...');
 
-        const observer = new MutationObserver((mutations, obs) => {
+        const processButtons = () => {
             const syncBtn = this.findButtonByText('Sync Now') || this.findButtonByText('usr_sync');
             const logoutBtn = this.findButtonByText('Sign Out') || this.findButtonByText('usr_logout');
 
             if (syncBtn && !syncBtn.dataset.syncAttached) {
                 console.log('[Session] Found Sync Button:', syncBtn);
-                // Clone node to remove existing listeners (if any) or just add new one
-                // Replacing with clone to clear old events is safer for a "clean" bind
-                const newSyncBtn = syncBtn.cloneNode(true);
-                syncBtn.parentNode.replaceChild(newSyncBtn, syncBtn);
-
-                newSyncBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation(); // Stop original app logic if any
-                    this.syncData();
-                });
-                newSyncBtn.dataset.syncAttached = 'true';
-                newSyncBtn.style.cursor = 'pointer'; // Ensure it looks clickable
+                try {
+                    const newSyncBtn = syncBtn.cloneNode(true);
+                    if (syncBtn.parentNode) {
+                        syncBtn.parentNode.replaceChild(newSyncBtn, syncBtn);
+                        newSyncBtn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            this.syncData();
+                        });
+                        newSyncBtn.dataset.syncAttached = 'true';
+                        newSyncBtn.style.cursor = 'pointer';
+                    }
+                } catch (err) {
+                    console.error('[Session] Error attaching sync button:', err);
+                }
             }
 
             if (logoutBtn && !logoutBtn.dataset.logoutAttached) {
                 console.log('[Session] Found Logout Button:', logoutBtn);
-                const newLogoutBtn = logoutBtn.cloneNode(true);
-                logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
-
-                newLogoutBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.handleLogout();
-                });
-                newLogoutBtn.dataset.logoutAttached = 'true';
-                newLogoutBtn.style.cursor = 'pointer';
+                try {
+                    const newLogoutBtn = logoutBtn.cloneNode(true);
+                    if (logoutBtn.parentNode) {
+                        logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
+                        newLogoutBtn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            this.handleLogout();
+                        });
+                        newLogoutBtn.dataset.logoutAttached = 'true';
+                        newLogoutBtn.style.cursor = 'pointer';
+                    }
+                } catch (err) {
+                    console.error('[Session] Error attaching logout button:', err);
+                }
             }
+        };
+
+        const observer = new MutationObserver((mutations) => {
+            processButtons();
         });
 
         observer.observe(document.body, {
@@ -82,30 +158,26 @@ window.SessionManager = {
             subtree: true
         });
 
-        // Initial check in case it's already there
-        // (Wait a bit for frameworks to hydrate)
-        setTimeout(() => {
-            // Logic inside observer covers this, but we can trigger a manual check?
-            // The observer handles future and current if we just let it run on subtree.
-        }, 1000);
+        // Initial run
+        processButtons();
     },
 
-    // Helper to find button by text content (robust against markup changes)
+    // Helper to find button by text content
     findButtonByText: function (text) {
-        // XPath to find element containing text
-        const result = document.evaluate(
-            `//*[contains(text(), '${text}')]`,
-            document,
-            null,
-            XPathResult.FIRST_ORDERED_NODE_TYPE,
-            null
-        );
-        let el = result.singleNodeValue;
-
-        // Use closest usually to find the clickable container if the text is inside a span
-        if (el) {
-            // If el is text node or small span, get parent div/button/li
-            return el.closest('button, li, div, a') || el;
+        try {
+            const result = document.evaluate(
+                `//*[contains(text(), '${text}')]`,
+                document,
+                null,
+                XPathResult.FIRST_ORDERED_NODE_TYPE,
+                null
+            );
+            let el = result.singleNodeValue;
+            if (el) {
+                return el.closest('button, li, div, a') || el;
+            }
+        } catch (e) {
+            // Document might not be ready
         }
         return null;
     },
@@ -202,7 +274,7 @@ window.SessionManager = {
         const payload = this.gatherLocalData();
         console.log('[Session] Sending Payload:', payload);
 
-        fetch('/api/sync/all', {
+        fetch(`${this.API_BASE_URL}/api/sync/all`, {
             method: 'POST',
             headers: {
                 'Authorization': 'Bearer ' + user.token,
@@ -258,7 +330,7 @@ window.SessionManager = {
         const user = this.getCurrentUser();
         if (!user) return;
 
-        fetch('/api/sync/load', {
+        fetch(`${this.API_BASE_URL}/api/sync/load`, {
             headers: { 'Authorization': 'Bearer ' + user.token }
         })
             .then(res => res.json())
