@@ -4,51 +4,24 @@
     JSON.parse = function (text) {
         if (!text) return {};
         if (typeof text === 'object') return text;
-        try {
-            return originalParse(text);
-        } catch (e) {
-            console.warn('[JSON Patch] Parsing failed, returning safe object.');
-            return { success: true };
-        }
+        try { return originalParse(text); }
+        catch (e) { return { success: true }; }
     };
 
-    // 2. Nuclear Cleanup (Runs ONCE to fix Symbol corruption)
-    if (!sessionStorage.getItem('FIX_APPLIED_V2')) {
-        console.warn('[Init] Wiping LocalStorage to fix corruption...');
-        localStorage.clear();
-        sessionStorage.clear();
-        sessionStorage.setItem('FIX_APPLIED_V2', 'true');
-        console.log('[Init] Storage wiped. Ready for fresh login.');
-    }
-
     const TARGET_HOST = 'http://localhost:3000';
-    const BLOCKED_DOMAINS = ['focustodo.net', 'www.focustodo.net', 'api.focustodo.net'];
+    const BLOCKED = ['focustodo.net', 'www.focustodo.net', 'api.focustodo.net'];
 
-    // 3. Notification Helper
-    function showNotification(message, type = 'success') {
-        const div = document.createElement('div');
-        div.style.cssText = `
-            position: fixed; top: 20px; right: 20px; padding: 15px;
-            background: ${type === 'success' ? '#4CAF50' : '#f44336'};
-            color: white; z-index: 99999; border-radius: 5px; font-family: sans-serif;
-        `;
-        div.innerText = message;
-        document.body.appendChild(div);
-        setTimeout(() => div.remove(), 3000);
-    }
-
-    // 4. Interceptor Logic
+    // 2. Interceptor Logic
     const originalOpen = XMLHttpRequest.prototype.open;
     const originalSend = XMLHttpRequest.prototype.send;
 
     XMLHttpRequest.prototype.open = function (method, url, ...args) {
         this._interceptedUrl = url;
         let newUrl = url;
-        // Redirect logic
         if (typeof url === 'string') {
             if (url.startsWith('/')) newUrl = TARGET_HOST + url;
             else {
-                for (const d of BLOCKED_DOMAINS) {
+                for (const d of BLOCKED) {
                     if (url.includes(d)) {
                         newUrl = url.replace(/https?:\/\/[^\/]+/, TARGET_HOST);
                         break;
@@ -64,26 +37,25 @@
             const url = this.responseURL || this._interceptedUrl;
             if (!url) return;
 
-            // Handle Audio 404s silently
-            if (this.status === 404 && (url.endsWith('.m4a') || url.endsWith('.mp3'))) {
-                console.warn('[Network] Audio missing, ignoring:', url);
-                return;
-            }
-
-            // Handle Auth Success
+            // --- CRITICAL FIX: Login Success Handler ---
             if ((url.includes('/login') || url.includes('/register')) && this.status === 200) {
                 try {
                     const data = JSON.parse(this.responseText);
                     if (data.success && data.token) {
+                        const u = data.user;
+                        // Populate MODERN keys
                         localStorage.setItem('authToken', data.token);
-                        localStorage.setItem('userId', data.user.id);
-                        // Save Name explicitly to prevent Symbols
-                        localStorage.setItem('username', data.user.name || 'User');
+                        localStorage.setItem('userId', u.id);
 
-                        showNotification('Login Successful!');
+                        // Populate LEGACY keys (Fixes Symbol Language)
+                        localStorage.setItem('cookie.ACCT', u.email);
+                        localStorage.setItem('cookie.NAME', u.name);
+                        localStorage.setItem('cookie.UID', u.id);
 
-                        // Small delay then reload to apply fresh state
-                        setTimeout(() => window.location.reload(), 1000);
+                        console.log('[Network] Auth Data & Legacy Keys Saved.');
+
+                        // Force reload to apply changes
+                        setTimeout(() => window.location.reload(), 500);
                     }
                 } catch (e) { console.error(e); }
             }
@@ -91,5 +63,5 @@
         return originalSend.apply(this, args);
     };
 
-    console.log('[Network] Interceptor V2 Loaded. Storage Cleaned.');
+    console.log('[Network] Interceptor Active. Legacy Keys Patch applied.');
 })();
