@@ -151,6 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const response = await fetch(`${apiUrl}/api/auth/login`, {
                 method: 'POST',
+                credentials: 'include', // ✅ Force cookies to persist session
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
             });
@@ -197,6 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const response = await fetch(`${apiUrl}/api/auth/register`, {
                 method: 'POST',
+                credentials: 'include', // ✅ Force cookies to persist session
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: username, email, password })
             });

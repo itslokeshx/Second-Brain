@@ -19,7 +19,7 @@ const session = require('express-session');
 const MongoStore = require('connect-mongo').MongoStore; // Fix for v6+ import
 
 app.use(session({
-    name: 'JSESSIONID', // Use legacy name
+    name: 'secondbrain.sid', // Avoid conflict with legacy JSESSIONID
     secret: process.env.SESSION_SECRET || 'second-brain-secret-key-2025',
     resave: false,
     saveUninitialized: false,
@@ -81,6 +81,11 @@ function buildLegacyResponse(user, jsessionId, overrides = {}) {
         acct: user.email,
         uid: user._id.toString(),
         name: user.name || user.username,
+        user: { // ✅ Modern frontend expects this nested object
+            id: user._id.toString(),
+            email: user.email,
+            name: user.name || user.username
+        },
         jsessionId: jsessionId,
         expiredDate: now + (30 * 24 * 60 * 60 * 1000), // 30 days
         timestamp: now,
@@ -121,10 +126,12 @@ app.post('/v63/user/register', async (req, res) => {
         // 1. GENERATE jsessionId (express-session handles this, we just use req.sessionID)
         const jsessionId = req.sessionID;
 
-        // 2. STORE server-side
-        req.session.userId = user._id.toString();
-        req.session.email = user.email;
-        req.session.username = user.name;
+        // 2. STORE server-side (Unified Session Object)
+        req.session.user = {
+            id: user._id.toString(),
+            email: user.email,
+            username: user.name
+        };
 
         await new Promise((resolve, reject) => {
             req.session.save((err) => {
@@ -133,7 +140,7 @@ app.post('/v63/user/register', async (req, res) => {
             });
         });
 
-        // express-session sets the cookie automatically with name 'JSESSIONID'
+        // express-session sets the cookie automatically
 
         // 4. RETURN in JSON
         res.json(buildLegacyResponse(user, jsessionId));
@@ -169,9 +176,11 @@ app.post('/v63/user/login', async (req, res) => {
             }
 
             // 2. STORE server-side
-            req.session.userId = user._id.toString();
-            req.session.email = user.email;
-            req.session.username = user.name;
+            req.session.user = {
+                id: user._id.toString(),
+                email: user.email,
+                username: user.name
+            };
 
             req.session.save((err) => {
                 if (err) {
@@ -207,15 +216,15 @@ app.get('/v64/user/config', async (req, res) => {
     }
 
     console.log(`[Config] Checking session: ${req.sessionID}`);
-    console.log(`[Config] Session data:`, req.session);
+    // console.log(`[Config] Session data:`, req.session); 
 
-    if (!req.session.userId) {
+    if (!req.session.user || !req.session.user.id) {
         console.log('[Config] No valid session found');
         return res.json({ status: 1, success: false });
     }
 
     try {
-        const user = await User.findById(req.session.userId).maxTimeMS(5000);
+        const user = await User.findById(req.session.user.id).maxTimeMS(5000);
 
         if (!user) {
             return res.json({ status: 1, success: false, message: 'User not found' });
@@ -224,7 +233,7 @@ app.get('/v64/user/config', async (req, res) => {
         res.json({
             status: 0,
             success: true,
-            uid: req.session.userId,
+            uid: req.session.user.id,
             acct: user.email,
             name: user.name,
             portrait: "",
@@ -248,13 +257,13 @@ app.get('/v64/user/config', async (req, res) => {
 
 // ✅ TASK 5: Fix /v64/sync
 app.post('/v64/sync', async (req, res) => {
-    // Use req.session.userId directly
-    if (!req.session.userId) {
+    // Use req.session.user.id directly
+    if (!req.session.user || !req.session.user.id) {
         return res.json({ status: 1, success: false, message: 'Not authenticated' });
     }
 
     // Retrieve session data from req.session
-    const userId = req.session.userId;
+    const userId = req.session.user.id;
     const userEmail = req.session.email;
     const userName = req.session.username;
     const jsessionId = req.sessionID;
@@ -305,13 +314,13 @@ async function syncCollection(model, items, userId) {
 }
 
 const granularSyncHandler = async (req, res) => {
-    if (!req.session.userId) {
+    if (!req.session.user || !req.session.user.id) {
         return res.status(401).json({ success: false, message: 'Not authenticated' });
     }
-    const userId = req.session.userId;
+    const userId = req.session.user.id;
     const { projects, tasks, logs, settings } = req.body;
 
-    console.log(`[Granular Sync] User: ${req.session.email} | proj:${projects?.length || 0} task:${tasks?.length || 0} log:${logs?.length || 0}`);
+    console.log(`[Granular Sync] User: ${req.session.user.email} | proj:${projects?.length || 0} task:${tasks?.length || 0} log:${logs?.length || 0}`);
 
     try {
         let syncedCount = 0;
@@ -348,14 +357,14 @@ const granularSyncHandler = async (req, res) => {
 
 // ✅ NEW ENDPOINT: Bulk sync all data (MongoDB Atlas only)
 app.post('/api/sync/all', async (req, res) => {
-    if (!req.session.userId) {
+    if (!req.session.user || !req.session.user.id) {
         return res.json({ success: false, message: 'Not authenticated' });
     }
 
-    const userId = req.session.userId;
+    const userId = req.session.user.id;
     const { projects = [], tasks = [], pomodoroLogs = [], settings = {} } = req.body || {};
 
-    console.log(`[Sync All] ${req.session.email}: ${projects.length} P, ${tasks.length} T, ${pomodoroLogs.length} L`);
+    console.log(`[Sync All] ${req.session.user.email}: ${projects.length} P, ${tasks.length} T, ${pomodoroLogs.length} L`);
 
     try {
         // Persist Projects to MongoDB
