@@ -168,15 +168,19 @@ app.post('/v63/user/login', async (req, res) => {
 // ✅ TASK 4: Implement /v64/user/config (AUTH BOOTSTRAP)
 // Helper: Resolve Session ID from ALL possible sources
 function resolveSessionId(req) {
-    return (
-        req.cookies?.JSESSIONID ||
-        req.headers['x-jsessionid'] ||
-        req.headers['x-session-id'] ||
-        req.body?.jsessionId ||
-        req.body?.session ||
-        req.query?.jsessionId ||
-        null
-    );
+    // Check for legacy JSESSIONID cookie or custom headers
+    if (req.cookies?.JSESSIONID) return req.cookies.JSESSIONID;
+    if (req.headers['x-jsessionid']) return req.headers['x-jsessionid'];
+    if (req.headers['x-session-id']) return req.headers['x-session-id'];
+    if (req.body?.jsessionId) return req.body.jsessionId;
+    if (req.body?.session) return req.body.session;
+    if (req.query?.jsessionId) return req.query.jsessionId;
+    // New: Authorization header with Bearer token
+    const authHeader = req.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        return authHeader.slice(7).trim();
+    }
+    return null;
 }
 
 // ✅ TASK 4: Implement /v64/user/config (AUTH BOOTSTRAP)
@@ -248,7 +252,14 @@ app.post('/v64/sync', async (req, res) => {
         pomodoros: [],
         schedules: [],
         project_member: [],
-        list: []
+        list: [],
+        project_count: 0,
+        task_count: 0,
+        subtask_count: 0,
+        pomodoro_count: 0,
+        schedule_count: 0,
+        project_member_count: 0,
+        list_count: 0
     });
 });
 
@@ -262,6 +273,24 @@ const syncHandler = (req, res) => {
         ...req.body // Echo back whatever was sent or needed
     });
 };
+
+// ✅ NEW ENDPOINT: Bulk sync all data
+app.post('/api/sync/all', async (req, res) => {
+    const jsessionId = resolveSessionId(req);
+    if (!jsessionId || !global.sessions.has(jsessionId)) {
+        return res.json({ success: false, message: 'Invalid session' });
+    }
+    const { projects = [], tasks = [], pomodoroLogs = [] } = req.body || {};
+    console.log('[Sync All] Received sync payload for session', jsessionId);
+    // TODO: Persist to MongoDB
+    res.json({
+        success: true,
+        message: 'Sync successful',
+        projectsSynced: projects.length,
+        tasksSynced: tasks.length,
+        logsSynced: pomodoroLogs.length
+    });
+});
 
 app.post('/api/sync/projects', syncHandler);
 app.post('/api/sync/tasks', syncHandler);
