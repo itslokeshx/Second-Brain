@@ -200,32 +200,36 @@ app.get('/v64/user/config', async (req, res) => {
 
     const session = global.sessions.get(jsessionId);
 
-    // Validate against DB
-    const user = await User.findById(session.uid);
-    if (!user) {
-        return res.json({ status: 1, success: false });
-    }
+    try {
+        const user = await User.findById(session.uid).maxTimeMS(5000);
 
-    res.json({
-        status: 0,
-        success: true,
-        uid: session.uid,
-        acct: user.email,
-        name: user.name,
-        // ✅ Added missing fields to prevent frontend errors
-        portrait: "",
-        avatar: "",
-        avatarTimestamp: Date.now(),
-        email: user.email, // ✅ Explicit email field
-        verifyUser: 1, // Legacy verification flag
-        proEndTime: Date.now() + (365 * 24 * 60 * 60 * 1000), // Fake PRO status
-        jsessionId,
-        config: {
-            theme: 'dark',
-            language: 'en',
-            autoSync: true
+        if (!user) {
+            return res.json({ status: 1, success: false, message: 'User not found' });
         }
-    });
+
+        res.json({
+            status: 0,
+            success: true,
+            uid: session.uid,
+            acct: user.email,
+            name: user.name,
+            portrait: "",
+            avatar: "",
+            avatarTimestamp: Date.now(),
+            email: user.email,
+            verifyUser: 1,
+            proEndTime: Date.now() + (365 * 24 * 60 * 60 * 1000),
+            jsessionId,
+            config: {
+                theme: 'dark',
+                language: 'en',
+                autoSync: true
+            }
+        });
+    } catch (err) {
+        console.error('[Config] Error:', err.message);
+        res.status(500).json({ status: 1, success: false, message: 'Database error' });
+    }
 });
 
 // ✅ TASK 5: Fix /v64/sync
@@ -279,21 +283,20 @@ const syncHandler = (req, res) => {
     });
 };
 
-// ✅ NEW ENDPOINT: Bulk sync all data
+// ✅ NEW ENDPOINT: Bulk sync all data (MongoDB Atlas only)
 app.post('/api/sync/all', async (req, res) => {
     const jsessionId = resolveSessionId(req);
     if (!jsessionId || !global.sessions.has(jsessionId)) {
-        return res.json({ success: false, message: 'Invalid session' });
+        return res.json({ success: false, message: 'Not authenticated' });
     }
 
     const session = global.sessions.get(jsessionId);
+    const { projects = [], tasks = [], pomodoroLogs = [], settings = {} } = req.body || {};
 
-    // Extract payload
-    const { projects = [], tasks = [], pomodoroLogs = [] } = req.body || {};
-    console.log(`[Sync All] Processing sync for ${session.email}: ${projects.length} P, ${tasks.length} T, ${pomodoroLogs.length} L`);
+    console.log(`[Sync All] ${session.email}: ${projects.length} P, ${tasks.length} T, ${pomodoroLogs.length} L`);
 
     try {
-        // Persist Projects
+        // Persist Projects to MongoDB
         if (projects.length > 0) {
             const ops = projects.map(p => ({
                 updateOne: {
@@ -305,7 +308,7 @@ app.post('/api/sync/all', async (req, res) => {
             await Project.bulkWrite(ops);
         }
 
-        // Persist Tasks
+        // Persist Tasks to MongoDB
         if (tasks.length > 0) {
             const ops = tasks.map(t => ({
                 updateOne: {
@@ -317,7 +320,7 @@ app.post('/api/sync/all', async (req, res) => {
             await Task.bulkWrite(ops);
         }
 
-        // Persist Logs
+        // Persist Logs to MongoDB
         if (pomodoroLogs.length > 0) {
             const ops = pomodoroLogs.map(l => ({
                 updateOne: {
@@ -331,15 +334,15 @@ app.post('/api/sync/all', async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Sync successful',
+            message: 'Synced to MongoDB Atlas',
             projectsSynced: projects.length,
             tasksSynced: tasks.length,
             logsSynced: pomodoroLogs.length
         });
 
     } catch (err) {
-        console.error('[Sync All] Persistence Error:', err);
-        res.json({ success: false, message: 'Sync persistence failed' });
+        console.error('[Sync All] Error:', err);
+        res.status(500).json({ success: false, message: err.message });
     }
 });
 
@@ -354,11 +357,39 @@ app.get('/v65/access', (req, res) => res.json({ success: true }));
 app.get('/v60/property', (req, res) => res.json({ success: true, properties: {} }));
 app.get('/v62/user/point', (req, res) => res.json({ success: true, point: 0 })); // Added missing point endpoint
 
-// DB Connection
+// DB Connection - MongoDB Atlas REQUIRED
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/second-brain';
-mongoose.connect(MONGODB_URI)
-    .then(() => console.log('✅ MongoDB Connected'))
-    .catch(err => console.error('❌ MongoDB Connection Error:', err));
+
+if (!process.env.MONGODB_URI) {
+    console.error('❌ MONGODB_URI not set in .env file!');
+    console.error('Please configure MongoDB Atlas connection string in .env');
+    process.exit(1);
+}
+
+// Disable buffering to fail fast
+mongoose.set('bufferCommands', false);
+mongoose.set('bufferTimeoutMS', 5000);
+
+mongoose.connect(MONGODB_URI, {
+    serverSelectionTimeoutMS: 10000,
+    socketTimeoutMS: 45000
+})
+    .then(() => {
+        console.log('✅ MongoDB Atlas Connected');
+    })
+    .catch(err => {
+        console.error('❌ MongoDB Atlas Connection Failed:', err.message);
+        console.error('Cannot start server without database connection');
+        process.exit(1);
+    });
+
+mongoose.connection.on('disconnected', () => {
+    console.error('❌ MongoDB disconnected - server may be unstable');
+});
+
+mongoose.connection.on('reconnected', () => {
+    console.log('✅ MongoDB reconnected');
+});
 
 app.listen(PORT, () => {
     console.log(`✅ Server running on http://localhost:${PORT}`);
