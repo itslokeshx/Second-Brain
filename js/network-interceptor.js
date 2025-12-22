@@ -60,11 +60,18 @@
                         const cleanName = String(u.name || u.email.split('@')[0]).trim();
                         localStorage.setItem('userName', cleanName);
 
+                        // ✅ CRITICAL: Set cookies for main.js to read
+                        // The legacy main.js reads from document.cookie, not localStorage
+                        document.cookie = `NAME=${cleanName}; path=/; max-age=31536000`;
+                        document.cookie = `ACCT=${u.email}; path=/; max-age=31536000`;
+                        document.cookie = `UID=${u.id}; path=/; max-age=31536000`;
+
                         console.log('[Network] Stored user data:', {
                             email: u.email,
                             name: cleanName,
                             id: u.id
                         });
+                        console.log('[Network] Set cookies: NAME, ACCT, UID');
 
                         // Force Reload to render correct name
                         setTimeout(() => window.location.reload(), 500);

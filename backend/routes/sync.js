@@ -145,6 +145,140 @@ router.post('/all', authMiddleware, async (req, res) => {
     }
 });
 
+// ✅ GRANULAR SYNC ENDPOINTS (Required by frontend SyncService)
+
+// 1. Projects
+router.post('/projects', authMiddleware, async (req, res) => {
+    try {
+        const { projects } = req.body;
+        const userId = req.userId;
+        let syncedCount = 0;
+
+        if (projects && Array.isArray(projects)) {
+            for (const project of projects) {
+                await Project.findOneAndUpdate(
+                    { userId, id: project.id },
+                    { userId, ...project, updatedAt: new Date() },
+                    { upsert: true, new: true }
+                );
+                syncedCount++;
+            }
+        }
+
+        // Return latest projects to client
+        const latestProjects = await Project.find({ userId }).select('-_id -__v -userId').lean();
+
+        res.json({
+            success: true,
+            projects: latestProjects,
+            syncTime: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('[Sync Projects] Error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// 2. Tasks
+router.post('/tasks', authMiddleware, async (req, res) => {
+    try {
+        const { tasks } = req.body;
+        const userId = req.userId;
+        let syncedCount = 0;
+
+        if (tasks && Array.isArray(tasks)) {
+            for (const task of tasks) {
+                await Task.findOneAndUpdate(
+                    { userId, id: task.id },
+                    { userId, ...task, updatedAt: new Date() },
+                    { upsert: true, new: true }
+                );
+                syncedCount++;
+            }
+        }
+
+        const latestTasks = await Task.find({ userId }).select('-_id -__v -userId').lean();
+
+        res.json({
+            success: true,
+            tasks: latestTasks,
+            syncTime: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('[Sync Tasks] Error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// 3. Logs (Pomodoro)
+router.post('/logs', authMiddleware, async (req, res) => {
+    try {
+        const { logs } = req.body; // Frontend sends 'logs' locally, but collection is pomodorologs
+        const userId = req.userId;
+        let syncedCount = 0;
+
+        if (logs && Array.isArray(logs)) {
+            for (const log of logs) {
+                await PomodoroLog.findOneAndUpdate(
+                    { userId, id: log.id },
+                    { userId, ...log },
+                    { upsert: true, new: true }
+                );
+                syncedCount++;
+            }
+        }
+
+        const latestLogs = await PomodoroLog.find({ userId }).select('-_id -__v -userId').lean();
+
+        res.json({
+            success: true,
+            logs: latestLogs,
+            syncTime: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('[Sync Logs] Error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// 4. Settings
+router.post('/settings', authMiddleware, async (req, res) => {
+    try {
+        const { settings } = req.body;
+        const userId = req.userId;
+
+        if (settings) {
+            await Settings.findOneAndUpdate(
+                { userId },
+                {
+                    userId,
+                    BgMusic: settings.bgMusic || '',
+                    Volume: settings.volume || 50,
+                    TimerSettings: settings.timerSettings || {},
+                    updatedAt: new Date()
+                },
+                { upsert: true, new: true }
+            );
+        }
+
+        const latestSettings = await Settings.findOne({ userId }).select('-_id -__v -userId').lean();
+
+        // Transform back to frontend format if needed
+        const responseSettings = latestSettings ? {
+            bgMusic: latestSettings.BgMusic,
+            volume: latestSettings.Volume,
+            timerSettings: latestSettings.TimerSettings
+        } : {};
+
+        res.json({
+            success: true,
+            settings: responseSettings
+        });
+    } catch (error) {
+        console.error('[Sync Settings] Error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
 // ✅ LOAD ALL DATA FROM SERVER
 router.get('/load', authMiddleware, async (req, res) => {
     console.log('[Sync Load] Loading data for user:', req.userId);

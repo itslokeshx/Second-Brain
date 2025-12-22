@@ -1,13 +1,14 @@
 /**
- * Enhanced Session Manager with Proper Username Display and Sync
- * Fixes: Username encoding issue, sync time calculation, manual sync
+ * Session Manager - Simplified to use existing UI
+ * Wires up existing sync and logout buttons instead of creating new ones
  */
 
 window.SessionManager = {
     init: function () {
-        console.log('[Session] Initializing Enhanced Manager...');
+        console.log('[Session] Initializing Session Manager...');
         this.setupGlobalLogoutDelegation();
         this.checkLoginStatus();
+        // Note: Sync button is handled by sync-button-handler.js
     },
 
     checkLoginStatus: function () {
@@ -16,8 +17,8 @@ window.SessionManager = {
         const userName = localStorage.getItem('userName');
 
         if (token && userEmail) {
-            console.log('[Session] User session active:', userEmail);
-            this.showLoggedInUI({ email: userEmail, name: userName, token });
+            console.log('[Session] User session active:', userEmail, '(' + userName + ')');
+            // Just log, don't create UI - the app has its own username display
         } else {
             console.log('[Session] No active session');
         }
@@ -31,159 +32,47 @@ window.SessionManager = {
         };
     },
 
-    showLoggedInUI: function (user) {
-        console.log('[Session] User data:', user);
+    wireExistingSyncButton: function () {
+        console.log('[Session] Looking for existing sync button to wire up...');
 
-        // ✅ CRITICAL: Ensure name is clean text
-        let displayName = user.name || user.email || 'User';
+        // Wait a bit for the UI to render
+        setTimeout(() => {
+            // Try to find the existing sync button in the app's UI
+            const syncSelectors = [
+                'button[title*="sync" i]',
+                'button[title*="Sync" i]',
+                '.sync-button',
+                '#sync-btn',
+                '[data-sync]',
+                '.header-sync'
+            ];
 
-        // Convert to plain string and remove any encoding
-        displayName = String(displayName).trim();
+            let syncBtn = null;
+            for (const selector of syncSelectors) {
+                syncBtn = document.querySelector(selector);
+                if (syncBtn) {
+                    console.log('[Session] Found existing sync button:', selector);
+                    break;
+                }
+            }
 
-        // If name is empty or looks encoded, use email username
-        if (!displayName || displayName.length < 2 || displayName.includes('�')) {
-            displayName = user.email.split('@')[0];
-        }
+            if (syncBtn) {
+                // Clone to remove existing handlers
+                const newBtn = syncBtn.cloneNode(true);
+                syncBtn.parentNode.replaceChild(newBtn, syncBtn);
 
-        console.log('[Session] Display name will be:', displayName);
+                // Add our sync handler
+                newBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.manualSync();
+                });
 
-        this.addUserInfoToUI({ ...user, name: displayName });
-    },
-
-    addUserInfoToUI: function (user) {
-        console.log('[Session] Adding user info to UI:', user);
-
-        // Remove existing
-        const existing = document.getElementById('user-info-section');
-        if (existing) existing.remove();
-
-        // Create new
-        const userInfoDiv = document.createElement('div');
-        userInfoDiv.id = 'user-info-section';
-        userInfoDiv.style.cssText = `
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px 16px;
-            background: white;
-            border: 2px solid #4CAF50;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            z-index: 99999;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        `;
-
-        // ✅ Create structure
-        userInfoDiv.innerHTML = `
-            <div style="display: flex; flex-direction: column; align-items: flex-end;">
-                <div id="username-display" style="
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: #333;
-                    margin-bottom: 2px;
-                "></div>
-                <div id="sync-status" style="
-                    font-size: 11px;
-                    color: #666;
-                "></div>
-            </div>
-            <button id="sync-button-new" style="
-                background: #4CAF50;
-                color: white;
-                border: none;
-                padding: 8px 16px;
-                border-radius: 6px;
-                cursor: pointer;
-                font-size: 13px;
-                font-weight: 500;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-            ">
-                <span>🔄</span>
-                <span>Sync Now</span>
-            </button>
-            <button id="logout-button-new" style="
-                background: #f44336;
-                color: white;
-                border: none;
-                padding: 8px 16px;
-                border-radius: 6px;
-                cursor: pointer;
-                font-size: 13px;
-                font-weight: 500;
-            ">
-                Logout
-            </button>
-        `;
-
-        document.body.appendChild(userInfoDiv);
-
-        // ✅ Set username as textContent (prevents encoding issues)
-        document.getElementById('username-display').textContent = user.name;
-
-        // ✅ Update sync status
-        this.updateSyncStatus();
-
-        // ✅ Attach event listeners
-        document.getElementById('sync-button-new').addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('[Session] Sync button clicked');
-            this.manualSync();
-        });
-
-        document.getElementById('logout-button-new').addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.logout();
-        });
-
-        console.log('[Session] ✅ User info UI added');
-    },
-
-    updateSyncStatus: function () {
-        const statusEl = document.getElementById('sync-status');
-        if (!statusEl) return;
-
-        const lastSyncTime = localStorage.getItem('lastSyncTime');
-
-        if (!lastSyncTime) {
-            statusEl.textContent = 'Never synced';
-            statusEl.style.color = '#999';
-            return;
-        }
-
-        // ✅ Calculate time difference correctly
-        const lastSync = new Date(lastSyncTime);
-        const now = new Date();
-        const diffMs = now - lastSync;
-        const diffMins = Math.floor(diffMs / 60000);
-
-        let statusText;
-        let color;
-
-        if (diffMins < 1) {
-            statusText = 'Just synced';
-            color = '#4CAF50';
-        } else if (diffMins < 60) {
-            statusText = `Synced ${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
-            color = '#4CAF50';
-        } else if (diffMins < 1440) { // Less than 24 hours
-            const hours = Math.floor(diffMins / 60);
-            statusText = `Synced ${hours} hour${hours > 1 ? 's' : ''} ago`;
-            color = '#FF9800';
-        } else {
-            const days = Math.floor(diffMins / 1440);
-            statusText = `Synced ${days} day${days > 1 ? 's' : ''} ago`;
-            color = '#f44336';
-        }
-
-        statusEl.textContent = statusText;
-        statusEl.style.color = color;
+                console.log('[Session] ✅ Wired existing sync button');
+            } else {
+                console.warn('[Session] Could not find existing sync button');
+            }
+        }, 2000);
     },
 
     manualSync: function () {
@@ -193,23 +82,6 @@ window.SessionManager = {
         if (!user || !user.token) {
             alert('❌ Not logged in');
             return;
-        }
-
-        const syncButton = document.getElementById('sync-button-new');
-        const statusEl = document.getElementById('sync-status');
-
-        if (!syncButton) {
-            alert('❌ Sync button not found');
-            return;
-        }
-
-        // Update UI
-        const originalHTML = syncButton.innerHTML;
-        syncButton.innerHTML = '<span>⏳</span><span>Syncing...</span>';
-        syncButton.disabled = true;
-        if (statusEl) {
-            statusEl.textContent = 'Syncing...';
-            statusEl.style.color = '#FF9800';
         }
 
         // Get data from localStorage
@@ -254,9 +126,6 @@ window.SessionManager = {
                     // Save sync time
                     localStorage.setItem('lastSyncTime', new Date().toISOString());
 
-                    // Update UI
-                    this.updateSyncStatus();
-
                     // Show success
                     alert(`✅ Sync Successful!\n\nProjects: ${data.projectsSynced}\nTasks: ${data.tasksSynced}\nLogs: ${data.logsSynced}`);
                 } else {
@@ -265,15 +134,7 @@ window.SessionManager = {
             })
             .catch(error => {
                 console.error('[Session] ❌ Sync error:', error);
-                if (statusEl) {
-                    statusEl.textContent = 'Sync failed';
-                    statusEl.style.color = '#f44336';
-                }
                 alert('❌ Sync failed: ' + error.message);
-            })
-            .finally(() => {
-                syncButton.innerHTML = originalHTML;
-                syncButton.disabled = false;
             });
     },
 

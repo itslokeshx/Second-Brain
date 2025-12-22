@@ -113,10 +113,10 @@ app.post('/v63/user/login', async (req, res) => {
         console.log('[Login] Body keys:', Object.keys(req.body || {}));
         console.log('[Login] =========================');
 
-        const { email, password, username, acct } = req.body;
+        const { email, password, username, account } = req.body;
 
-        // Support multiple field names (email, username, acct)
-        const loginEmail = email || username || acct;
+        // Support multiple field names (account is what frontend sends)
+        const loginEmail = email || username || account;
 
         console.log('[Login] Attempting login:', loginEmail);
 
