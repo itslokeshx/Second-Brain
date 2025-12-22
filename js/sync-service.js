@@ -1,289 +1,85 @@
-class MongoDBSyncService {
-    constructor(apiUrl) {
-        this.apiUrl = apiUrl;
-        this.userId = localStorage.getItem('userId');
-        this.token = localStorage.getItem('authToken');
-        this.syncInProgress = false;
-        this.isIgnoringUpdates = false; // Flag to prevent infinite loops
-
-        // Clean up any known corrupted data on init
-        this.cleanCorruptedData();
+// ✅ DUAL-MODE SYNC SERVICE (Cookie + Token)
+class SyncService {
+    constructor() {
+        this.baseURL = 'http://localhost:3000';
+        console.log('[Sync] Service initialized - Dual-mode auth');
     }
 
-    // Helper to safely parse JSON and handle corrupted data
-    safeParse(key, defaultValue) {
-        const raw = localStorage.getItem(key);
-        if (!raw) return defaultValue;
-
-        if (raw === '[object Object]') {
-            console.warn(`[SyncService] Found corrupted data for key "${key}". Clearing it.`);
-            localStorage.removeItem(key);
-            return defaultValue;
+    // ✅ GUARANTEED AUTHENTICATED FETCH
+    async authenticatedFetch(url, options = {}) {
+        // Check authentication
+        if (!window.SessionManager || !window.SessionManager.currentUser) {
+            throw new Error('Not authenticated');
         }
 
-        try {
-            return JSON.parse(raw);
-        } catch (e) {
-            console.error(`[SyncService] Failed to parse key "${key}". Clearing it. Error:`, e);
-            localStorage.removeItem(key);
-            return defaultValue;
-        }
-    }
-
-    cleanCorruptedData() {
-        const keysToCheck = ['customProjects', 'tasks', 'pomodoroLogs', 'TimerSettings', 'settings'];
-        keysToCheck.forEach(key => {
-            const val = localStorage.getItem(key);
-            if (val === '[object Object]') {
-                console.log(`[Cleanup] Removing corrupted key: ${key}`);
-                localStorage.removeItem(key);
-            }
-        });
-    }
-
-    getHeaders() {
-        return {
+        // ✅ MERGE AUTH HEADERS
+        const headers = {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.token}`
+            ...window.SessionManager.getAuthHeaders(), // Token if available
+            ...(options.headers || {})
         };
-    }
 
-    isAuthenticated() {
-        return !!this.token && !!this.userId;
-    }
+        const fetchOptions = {
+            ...options,
+            credentials: 'include', // ✅ Always try cookies
+            headers: headers
+        };
 
-    async syncAll() {
-        if (!this.isAuthenticated()) return;
-        if (this.syncInProgress) {
-            console.log('Sync already in progress...');
-            return;
+        console.log('[Sync] Request:', url);
+        console.log('[Sync] Headers:', headers);
+
+        const response = await fetch(url, fetchOptions);
+
+        if (response.status === 401) {
+            console.error('[Sync] 401 Unauthorized - re-checking session');
+            await window.SessionManager.checkLoginStatus();
+            throw new Error('Authentication expired');
         }
 
-        if (!navigator.onLine) {
-            console.log('Offline. Skipping sync.');
-            return;
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
-        this.syncInProgress = true;
-        console.log('Starting MongoDB Sync...');
+        return response.json();
+    }
 
+    // Sync all data
+    async syncAll(data) {
         try {
-            await this.syncProjects();
-            await this.syncTasks();
-            await this.syncLogs();
-            await this.syncSettings();
-            console.log('✅ MongoDB Sync Complete');
+            const result = await this.authenticatedFetch(`${this.baseURL}/api/sync/all`, {
+                method: 'POST',
+                body: JSON.stringify(data)
+            });
+            console.log('[Sync] ✅ Success:', result);
+            return result;
         } catch (error) {
-            console.error('❌ MongoDB Sync Failed:', error);
-        } finally {
-            this.syncInProgress = false;
+            console.error('[Sync] ❌ Failed:', error);
+            throw error;
         }
     }
 
-    // --- Projects ---
-    async syncProjects() {
-        const key = 'customProjects';
-        const syncTimeKey = 'lastProjectSync';
-
-        const localData = this.safeParse(key, []);
-        const lastSyncTime = localStorage.getItem(syncTimeKey);
-
-        const response = await fetch(`${this.apiUrl}/api/sync/projects`, {
+    // Sync projects
+    async syncProjects(projects) {
+        return this.authenticatedFetch(`${this.baseURL}/v64/sync`, {
             method: 'POST',
-            credentials: 'include', // ✅ Force cookies
-            headers: this.getHeaders(),
-            body: JSON.stringify({
-                projects: localData,
-                lastSyncTime: lastSyncTime
-            })
+            body: JSON.stringify({ projects })
         });
-
-        if (!response.ok) throw new Error('Project sync failed');
-
-        const data = await response.json();
-        if (data.success && data.projects) {
-            const merged = this.mergeProjects(localData, data.projects);
-            this.isIgnoringUpdates = true;
-            localStorage.setItem(key, JSON.stringify(merged));
-            localStorage.setItem(syncTimeKey, data.syncTime);
-            this.isIgnoringUpdates = false;
-        }
     }
 
-    mergeProjects(local, server) {
-        // Simple merge: server updates overwrite local if ID matches, new server items added
-        // Since we send ALL local items every time (upstream), server handles the merge logic mostly.
-        // But here we need to incorporate Downstream changes (new/updated from server)
-
-        const localMap = new Map(local.map(p => [p.id, p]));
-
-        server.forEach(serverProject => {
-            // Overwrite/Add local with server version
-            localMap.set(serverProject.id, serverProject);
-        });
-
-        return Array.from(localMap.values());
-    }
-
-    // --- Tasks ---
-    async syncTasks() {
-        const key = 'tasks';
-        const syncTimeKey = 'lastTaskSync';
-
-        const localData = this.safeParse(key, []);
-        const lastSyncTime = localStorage.getItem(syncTimeKey);
-
-        const response = await fetch(`${this.apiUrl}/api/sync/tasks`, {
+    // Sync tasks
+    async syncTasks(tasks) {
+        return this.authenticatedFetch(`${this.baseURL}/v64/sync`, {
             method: 'POST',
-            credentials: 'include', // ✅ Force cookies
-            headers: this.getHeaders(),
-            body: JSON.stringify({
-                tasks: localData,
-                lastSyncTime: lastSyncTime
-            })
+            body: JSON.stringify({ tasks })
         });
-
-        if (!response.ok) throw new Error('Task sync failed');
-
-        const data = await response.json();
-        if (data.success && data.tasks) {
-            const merged = this.mergeTasks(localData, data.tasks);
-            this.isIgnoringUpdates = true;
-            localStorage.setItem(key, JSON.stringify(merged));
-            localStorage.setItem(syncTimeKey, data.syncTime);
-            this.isIgnoringUpdates = false;
-        }
     }
 
-    mergeTasks(local, server) {
-        const localMap = new Map(local.map(t => [t.id, t]));
-        server.forEach(serverTask => {
-            localMap.set(serverTask.id, serverTask);
-        });
-        return Array.from(localMap.values());
-    }
-
-    // --- Logs ---
-    async syncLogs() {
-        const key = 'pomodoroLogs';
-        const syncTimeKey = 'lastLogSync';
-
-        const localData = this.safeParse(key, []);
-        const lastSyncTime = localStorage.getItem(syncTimeKey);
-
-        const response = await fetch(`${this.apiUrl}/api/sync/logs`, {
-            method: 'POST',
-            credentials: 'include', // ✅ Force cookies
-            headers: this.getHeaders(),
-            body: JSON.stringify({
-                logs: localData,
-                lastSyncTime: lastSyncTime
-            })
-        });
-
-        if (!response.ok) throw new Error('Log sync failed');
-
-        const data = await response.json();
-        if (data.success && data.logs) {
-            // Logs are append only usually, just add missing ones
-            const merged = this.mergeLogs(localData, data.logs);
-            this.isIgnoringUpdates = true;
-            localStorage.setItem(key, JSON.stringify(merged));
-            localStorage.setItem(syncTimeKey, data.syncTime);
-            this.isIgnoringUpdates = false;
-        }
-    }
-
-    mergeLogs(local, server) {
-        const localMap = new Map(local.map(l => [l.id, l]));
-        server.forEach(serverLog => {
-            if (!localMap.has(serverLog.id)) {
-                localMap.set(serverLog.id, serverLog);
-            }
-        });
-        return Array.from(localMap.values());
-    }
-
-    // --- Settings ---
-    async syncSettings() {
-        const payload = {
-            bgMusic: localStorage.getItem('BgMusic'),
-            volume: Number(localStorage.getItem('Volume')),
-            timerSettings: this.safeParse('TimerSettings', {})
-        };
-
-        const response = await fetch(`${this.apiUrl}/api/sync/settings`, {
-            method: 'POST',
-            credentials: 'include', // ✅ Force cookies
-            headers: this.getHeaders(),
-            body: JSON.stringify({ settings: payload })
-        });
-
-        if (!response.ok) throw new Error('Settings sync failed');
-
-        const data = await response.json();
-        if (data.success && data.settings) {
-            const s = data.settings;
-            this.isIgnoringUpdates = true;
-            if (s.bgMusic) localStorage.setItem('BgMusic', s.bgMusic);
-            if (s.volume !== undefined) localStorage.setItem('Volume', s.volume);
-            if (s.timerSettings && Object.keys(s.timerSettings).length > 0) {
-                localStorage.setItem('TimerSettings', JSON.stringify(s.timerSettings));
-            }
-            this.isIgnoringUpdates = false;
-        }
+    // Check if authenticated
+    isAuthenticated() {
+        return window.SessionManager && window.SessionManager.currentUser !== null;
     }
 }
 
-// Initialize globally
-const API_URL = 'http://localhost:3000';
-window.syncService = new MongoDBSyncService(API_URL);
-
-// Auto-sync interval (every 5 minutes)
-setInterval(() => {
-    if (window.syncService) {
-        window.syncService.syncAll();
-    }
-}, 5 * 60 * 1000);
-
-// Sync when coming online
-window.addEventListener('online', () => {
-    if (window.syncService) {
-        console.log('Online detected, syncing...');
-        window.syncService.syncAll();
-    }
-});
-
-// Intercept localStorage.setItem to trigger instant syncs
-(function () {
-    const originalSetItem = localStorage.setItem;
-
-    // Debounce helpers to prevent spamming the API
-    let timeoutProjects, timeoutTasks, timeoutLogs, timeoutSettings;
-
-    localStorage.setItem = function (key, value) {
-        // Call original
-        originalSetItem.apply(this, arguments);
-
-        // Trigger Sync based on key
-        if (!window.syncService || !window.syncService.isAuthenticated()) return;
-        if (window.syncService.isIgnoringUpdates) return; // Prevent loop
-
-        if (key === 'customProjects') {
-            clearTimeout(timeoutProjects);
-            timeoutProjects = setTimeout(() => window.syncService.syncProjects(), 2000); // 2s debounce
-        }
-        else if (key === 'tasks') {
-            clearTimeout(timeoutTasks);
-            timeoutTasks = setTimeout(() => window.syncService.syncTasks(), 2000);
-        }
-        else if (key === 'pomodoroLogs') {
-            clearTimeout(timeoutLogs);
-            timeoutLogs = setTimeout(() => window.syncService.syncLogs(), 2000);
-        }
-        else if (['TimerSettings', 'BgMusic', 'Volume', 'settings'].includes(key)) {
-            clearTimeout(timeoutSettings);
-            timeoutSettings = setTimeout(() => window.syncService.syncSettings(), 2000);
-        }
-    };
-})();
+// Export globally
+window.SyncService = new SyncService();
+console.log('[Sync] Service ready');

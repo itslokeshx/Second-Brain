@@ -12,9 +12,10 @@
     <div id="modal-root"></div>
 
     <div id="modal-root"></div>
-    
+
     <!-- Fallback Sync Button (Visible if main UI fails) -->
-    <div id="fallback-sync-btn" class="sync-button" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #333; color: white; padding: 10px; border-radius: 5px; cursor: pointer; display: none;">
+    <div id="fallback-sync-btn" class="sync-button"
+        style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #333; color: white; padding: 10px; border-radius: 5px; cursor: pointer; display: none;">
         🔄 Sync
     </div>
 
@@ -491,17 +492,19 @@
         };
     </script>
     <script type="text/javascript" src="js/fix_i18n.js"></script>
-    <script type="text/javascript" src="js/network-interceptor.js"></script>
+
     <script type="text/javascript" src="js/i18n.js"></script>
     <script type="text/javascript" src="js/chrome-polyfill.js"></script>
-    <script type="text/javascript" src="js/session-manager.js"></script>
+    <script src="js/suppress-errors.js?v=1000"></script>
+    <script src="js/fix-json-only.js?v=1000"></script>
+    <script src="js/session-manager.js?v=999"></script>
     <script type="text/javascript" src="js/main.js"></script>
 
 
 
-    <script type="text/javascript" src="js/sync-service.js"></script>
+    <script type="text/javascript" src="js/sync-service.js?v=1001"></script>
     <script type="text/javascript" src="js/sync-button-handler.js"></script>
-    <script type="text/javascript" src="js/auth-ui.js"></script>
+
 </body>
 
 </html>

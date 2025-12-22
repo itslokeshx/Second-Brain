@@ -85,47 +85,104 @@
 
         console.log('[Sync Button] 🔄 Clicked! Starting manual sync...');
 
-        if (!window.syncService) {
-            console.error('[Sync Button] ❌ Sync service not loaded');
-            alert('Sync service not available. Please refresh the page.');
-            return;
-        }
-
-        if (!window.syncService.isAuthenticated()) {
+        // Check if user is authenticated
+        const isAuth = (window.SessionManager && window.SessionManager.currentUser) ||
+            document.cookie.includes('ACCT=') ||
+            localStorage.getItem('authToken');
+        if (!isAuth) {
             console.warn('[Sync Button] ⚠️ Not authenticated');
             alert('Please login first to sync data.');
             return;
         }
 
-        try {
-            // Show loading indicator if possible
-            const btn = e.currentTarget || e.target;
-            const originalText = btn.innerText;
-            if (btn.innerText) {
-                btn.innerText = 'Syncing...';
-                btn.disabled = true;
-            }
+        // Try new sync service
+        if (window.SyncService) {
+            try {
+                console.log('[Sync Button] Using new SyncService...');
 
-            await window.syncService.syncAll();
+                // Get data from IndexedDB (legacy app uses IndexedDB, not localStorage)
+                const dbName = 'PomodoroDB6';  // ← FIXED: Correct database name
+                const dbRequest = indexedDB.open(dbName);
 
-            console.log('[Sync Button] ✅ Sync completed successfully');
-            alert('✅ Sync completed successfully!');
+                const data = await new Promise((resolve, reject) => {
+                    dbRequest.onerror = () => reject(dbRequest.error);
+                    dbRequest.onsuccess = () => {
+                        const db = dbRequest.result;
+                        const projects = [];
+                        const tasks = [];
+                        const pomodoroLogs = [];
 
-            // Restore button
-            if (btn.innerText) {
-                btn.innerText = originalText;
-                btn.disabled = false;
-            }
-        } catch (error) {
-            console.error('[Sync Button] ❌ Sync failed:', error);
-            alert('❌ Sync failed: ' + error.message);
+                        // Check if object stores exist
+                        const storeNames = Array.from(db.objectStoreNames);
+                        console.log('[Sync Button] IndexedDB stores:', storeNames);
 
-            // Restore button
-            const btn = e.currentTarget || e.target;
-            if (btn.innerText) {
-                btn.disabled = false;
+                        if (storeNames.length === 0) {
+                            console.warn('[Sync Button] No data stores found in IndexedDB');
+                            resolve({ projects, tasks, pomodoroLogs });
+                            return;
+                        }
+
+                        const transaction = db.transaction(storeNames, 'readonly');
+                        let completed = 0;
+                        const total = storeNames.length;
+
+                        storeNames.forEach(storeName => {
+                            const store = transaction.objectStore(storeName);
+                            const getAllRequest = store.getAll();
+
+                            getAllRequest.onsuccess = () => {
+                                const items = getAllRequest.result || [];
+                                console.log(`[Sync Button] ${storeName}:`, items.length, 'items');
+
+                                // Categorize data
+                                if (storeName.toLowerCase().includes('project')) {
+                                    projects.push(...items);
+                                } else if (storeName.toLowerCase().includes('task') || storeName.toLowerCase().includes('todo')) {
+                                    tasks.push(...items);
+                                } else if (storeName.toLowerCase().includes('pomodoro') || storeName.toLowerCase().includes('log')) {
+                                    pomodoroLogs.push(...items);
+                                }
+
+                                completed++;
+                                if (completed === total) {
+                                    resolve({ projects, tasks, pomodoroLogs });
+                                }
+                            };
+
+                            getAllRequest.onerror = () => {
+                                completed++;
+                                if (completed === total) {
+                                    resolve({ projects, tasks, pomodoroLogs });
+                                }
+                            };
+                        });
+                    };
+                });
+
+                console.log('[Sync Button] Data to sync:', {
+                    projects: data.projects.length,
+                    tasks: data.tasks.length,
+                    logs: data.pomodoroLogs.length
+                });
+
+                const result = await window.SyncService.syncAll({
+                    projects: data.projects,
+                    tasks: data.tasks,
+                    pomodoroLogs: data.pomodoroLogs
+                });
+
+                console.log('[Sync Button] ✅ Sync completed successfully:', result);
+                alert(`✅ Synced: ${result.projectsSynced || 0} projects, ${result.tasksSynced || 0} tasks, ${result.logsSynced || 0} logs`);
+                return;
+            } catch (error) {
+                console.error('[Sync Button] ❌ Sync failed:', error);
+                alert('Sync failed: ' + error.message);
+                return;
             }
         }
+
+        // Fallback to legacy sync (main.js handles it)
+        console.log('[Sync Button] Using legacy sync system...');
     }
 
     // Keyboard shortcut: Ctrl+Shift+S (or Cmd+Shift+S on Mac)

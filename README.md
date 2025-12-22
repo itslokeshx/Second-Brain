@@ -18,45 +18,73 @@
 
 Deployed on Netlify: **[Insert Your Netlify Link Here]**
 
-## 🛠️ Installation & Local Development
-
-Due to modern browser security policies (CORS), this application **cannot** be run by simply opening `index.html` file. It requires a local web server to load audio assets correctly.
-
-### Prerequisites
-
-- **Python 3** (Pre-installed on macOS/Linux)
-- OR **Node.js** (optional, if you prefer `http-server`)
-
-### Quick Start (Python)
-
-1.  Clone the repository:
-    ```bash
-    git clone https://github.com/yourusername/second-brain.git
-    cd second-brain
-    ```
-
-2.  Start the local server:
-    ```bash
-    python3 -m http.server 8008
-    ```
-
-3.  Open code in your browser:
-    [http://localhost:8008](http://localhost:8008)
-
 ## 📂 Project Structure
 
 ```
 second-brain/
 ├── assets/
-│   ├── audio/      # Background sounds & alarms
-│   └── ...
-├── i18n/           # Translation files
+│   ├── audio/          # Background sounds & alarms
+│   ├── font/           # Custom fonts
+│   └── img/            # Images and icons
+├── backend/
+│   ├── middleware/     # Express middleware (auth, etc.)
+│   ├── models/         # MongoDB schemas (User, Project, Task, etc.)
+│   ├── routes/         # API routes (auth, sync, legacy)
+│   ├── scripts/        # Database utility scripts
+│   ├── utils/          # Helper functions
+│   ├── db.js           # Database connection
+│   ├── server.js       # Express server entry point
+│   └── package.json    # Backend dependencies
 ├── js/
-│   ├── main.js     # Application logic
-│   └── ...
-├── main.css        # Styling
-└── index.html      # Entry point
+│   ├── main.js         # Core application logic
+│   ├── i18n.js         # Internationalization
+│   ├── session-manager.js  # User session management
+│   ├── sync-service.js     # MongoDB sync service
+│   └── chrome-polyfill.js  # Browser API polyfills
+├── main.css            # Application styles
+├── index.html          # Entry point
+└── README.md
 ```
+
+## 🔧 Development Setup
+
+### Frontend
+The frontend is a single-page application that runs in the browser.
+
+1. Start a local web server:
+   ```bash
+   python3 -m http.server 8008
+   ```
+
+2. Open in your browser:
+   [http://localhost:8008](http://localhost:8008)
+
+### Backend (MongoDB)
+The backend provides authentication and cloud sync functionality.
+
+1. Install dependencies:
+   ```bash
+   cd backend
+   npm install
+   ```
+
+2. Configure environment variables:
+   Create a `.env` file in the `backend/` directory:
+   ```
+   MONGODB_URI=mongodb://localhost:27017/second-brain
+   JWT_SECRET=your-secret-key-here
+   PORT=3000
+   ```
+
+3. Start the backend server:
+   ```bash
+   npm start
+   ```
+
+The backend will run on `http://localhost:3000`.
+
+### Database Utilities
+See [`backend/scripts/README.md`](backend/scripts/README.md) for database management scripts.
 
 ## 🤝 Contributing
 

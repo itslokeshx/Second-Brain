@@ -1,187 +1,146 @@
-/**
- * Session Manager - Simplified to use existing UI
- * Wires up existing sync and logout buttons instead of creating new ones
- */
+// ✅ DUAL-MODE SESSION MANAGER (Cookie + Token Fallback)
+(function () {
+    'use strict';
 
-window.SessionManager = {
-    init: function () {
-        console.log('[Session] Initializing Session Manager...');
-        this.setupGlobalLogoutDelegation();
-        this.checkLoginStatus();
-        // Note: Sync button is handled by sync-button-handler.js
-    },
+    const SessionManager = {
+        currentUser: null,
+        token: null,
 
-    checkLoginStatus: function () {
-        const token = localStorage.getItem('authToken');
-        const userEmail = localStorage.getItem('userEmail');
-        const userName = localStorage.getItem('userName');
+        init: function () {
+            console.log('[Session] Initializing dual-mode auth...');
 
-        if (token && userEmail) {
-            console.log('[Session] User session active:', userEmail, '(' + userName + ')');
-            // Just log, don't create UI - the app has its own username display
-        } else {
-            console.log('[Session] No active session');
-        }
-    },
+            // Try to restore from localStorage token first
+            this.token = localStorage.getItem('authToken');
 
-    getCurrentUser: function () {
-        return {
-            email: localStorage.getItem('userEmail'),
-            name: localStorage.getItem('userName'),
-            token: localStorage.getItem('authToken')
-        };
-    },
+            // Check login status
+            this.checkLoginStatus();
 
-    wireExistingSyncButton: function () {
-        console.log('[Session] Looking for existing sync button to wire up...');
+            // Setup UI handlers
+            this.setupHandlers();
+        },
 
-        // Wait a bit for the UI to render
-        setTimeout(() => {
-            // Try to find the existing sync button in the app's UI
-            const syncSelectors = [
-                'button[title*="sync" i]',
-                'button[title*="Sync" i]',
-                '.sync-button',
-                '#sync-btn',
-                '[data-sync]',
-                '.header-sync'
-            ];
+        checkLoginStatus: async function () {
+            try {
+                // ✅ DUAL-MODE REQUEST
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
 
-            let syncBtn = null;
-            for (const selector of syncSelectors) {
-                syncBtn = document.querySelector(selector);
-                if (syncBtn) {
-                    console.log('[Session] Found existing sync button:', selector);
-                    break;
+                // Add token if we have it
+                if (this.token) {
+                    headers['X-Session-Token'] = this.token;
                 }
-            }
 
-            if (syncBtn) {
-                // Clone to remove existing handlers
-                const newBtn = syncBtn.cloneNode(true);
-                syncBtn.parentNode.replaceChild(newBtn, syncBtn);
-
-                // Add our sync handler
-                newBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.manualSync();
+                const response = await fetch('http://localhost:3000/v64/user/config', {
+                    method: 'GET',
+                    credentials: 'include', // ✅ Still try cookies
+                    headers: headers
                 });
 
-                console.log('[Session] ✅ Wired existing sync button');
-            } else {
-                console.warn('[Session] Could not find existing sync button');
-            }
-        }, 2000);
-    },
+                const data = await response.json();
 
-    manualSync: function () {
-        console.log('[Session] === MANUAL SYNC STARTED ===');
+                if (data.status === 0 && data.user) {
+                    // ✅ SAVE TOKEN (from response or existing)
+                    this.token = data.token || data.jsessionId || this.token;
+                    if (this.token) {
+                        localStorage.setItem('authToken', this.token);
+                    }
 
-        const user = this.getCurrentUser();
-        if (!user || !user.token) {
-            alert('❌ Not logged in');
-            return;
-        }
-
-        // Get data from localStorage
-        const projects = JSON.parse(localStorage.getItem('customProjects') || '[]');
-        const tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
-        const pomodoroLogs = JSON.parse(localStorage.getItem('pomodoroLogs') || '[]');
-        const settings = {
-            BgMusic: localStorage.getItem('BgMusic'),
-            Volume: localStorage.getItem('Volume'),
-            TimerSettings: JSON.parse(localStorage.getItem('TimerSettings') || '{}')
-        };
-
-        console.log('[Session] Data to sync:', {
-            projects: projects.length,
-            tasks: tasks.length,
-            logs: pomodoroLogs.length
-        });
-
-        // Send to server
-        fetch('http://localhost:3000/api/sync/all', {
-            method: 'POST',
-            credentials: 'include', // ✅ Force cookies
-            headers: {
-                'Authorization': 'Bearer ' + user.token,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                projects,
-                tasks,
-                pomodoroLogs,
-                settings
-            })
-        })
-            .then(response => {
-                console.log('[Session] Response status:', response.status);
-                if (!response.ok) throw new Error('Server error: ' + response.status);
-                return response.json();
-            })
-            .then(data => {
-                console.log('[Session] ✅ Sync response:', data);
-
-                if (data.success) {
-                    // Save sync time
-                    localStorage.setItem('lastSyncTime', new Date().toISOString());
-
-                    // Show success
-                    alert(`✅ Sync Successful!\n\nProjects: ${data.projectsSynced}\nTasks: ${data.tasksSynced}\nLogs: ${data.logsSynced}`);
+                    this.currentUser = data.user;
+                    this.updateUI(true, data.user.email || data.acct);
+                    console.log('[Session] ✅ Authenticated:', data.user.email);
                 } else {
-                    throw new Error(data.message || 'Sync failed');
+                    this.handleLoggedOut();
                 }
-            })
-            .catch(error => {
-                console.error('[Session] ❌ Sync error:', error);
-                alert('❌ Sync failed: ' + error.message);
-            });
-    },
-
-    setupGlobalLogoutDelegation: function () {
-        document.body.addEventListener('click', (e) => {
-            const target = e.target.closest('a, button, div, span') || e.target;
-            const text = (target.innerText || "").trim().toUpperCase();
-            const className = (target.className || "").toString();
-            const title = (target.getAttribute('title') || "").toUpperCase();
-
-            const isLogout =
-                text.includes("LOGOUT") ||
-                text.includes("SIGN OUT") ||
-                title.includes("LOGOUT") ||
-                className.includes('setting-logout') ||
-                className.includes('logout-btn');
-
-            if (isLogout) {
-                console.log('[Session] Logout Triggered via Delegation');
-                e.preventDefault();
-                e.stopPropagation();
-
-                if (confirm('Are you sure you want to log out?')) {
-                    this.logout();
-                }
+            } catch (error) {
+                console.error('[Session] Check failed:', error);
+                this.handleLoggedOut();
             }
-        }, true);
-    },
+        },
 
-    logout: function () {
-        console.log('[Session] Performing Logout...');
+        handleLoggedOut: function () {
+            this.currentUser = null;
+            this.token = null;
+            localStorage.removeItem('authToken');
+            this.updateUI(false);
+            console.log('[Session] Not authenticated');
+        },
 
-        // Clear Storage
-        localStorage.clear();
-        sessionStorage.clear();
+        updateUI: function (isLoggedIn, username = '') {
+            // Try multiple selectors for username display
+            const userDisplay = document.querySelector('#username-display') ||
+                document.querySelector('.user-name') ||
+                document.querySelector('#user-display') ||
+                document.querySelector('[data-user-name]') ||
+                document.querySelector('.username');
 
-        // Clear Cookies
-        document.cookie.split(";").forEach(function (c) {
-            document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-        });
+            const loginBtn = document.querySelector('.login-btn, #login-button');
+            const logoutBtn = document.querySelector('.logout-btn, #logout-button');
 
-        // Reload
-        window.location.reload();
+            if (isLoggedIn) {
+                // Update UI elements
+                if (userDisplay) {
+                    userDisplay.textContent = username;
+                    userDisplay.setAttribute('data-user-name', username);
+                }
+                if (loginBtn) loginBtn.style.display = 'none';
+                if (logoutBtn) logoutBtn.style.display = 'block';
+
+                // Sync with legacy cookies (for main.js compatibility)
+                document.cookie = `NAME=${encodeURIComponent(username)}; path=/; max-age=86400`;
+
+                console.log('[Session] UI updated for:', username);
+            } else {
+                if (userDisplay) {
+                    userDisplay.textContent = 'Not logged in';
+                    userDisplay.removeAttribute('data-user-name');
+                }
+                if (loginBtn) loginBtn.style.display = 'block';
+                if (logoutBtn) logoutBtn.style.display = 'none';
+            }
+        },
+
+        setupHandlers: function () {
+            // Logout handler
+            const logoutBtn = document.querySelector('.logout-btn, #logout-button');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', () => this.logout());
+            }
+        },
+
+        logout: async function () {
+            try {
+                await fetch('http://localhost:3000/v63/user/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+            } catch (e) {
+                console.error('[Session] Logout error:', e);
+            }
+
+            this.handleLoggedOut();
+            window.location.reload();
+        },
+
+        // ✅ HELPER: Get auth headers for other modules
+        getAuthHeaders: function () {
+            const headers = {};
+            if (this.token) {
+                headers['X-Session-Token'] = this.token;
+            }
+            return headers;
+        }
+    };
+
+    // Initialize on load
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => SessionManager.init());
+    } else {
+        SessionManager.init();
     }
-};
 
-document.addEventListener('DOMContentLoaded', () => {
-    window.SessionManager.init();
-});
+    // Export globally
+    window.SessionManager = SessionManager;
+
+    console.log('[Session] Manager loaded - Dual-mode auth ready');
+})();

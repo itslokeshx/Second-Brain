@@ -28,3 +28,9 @@ pids
 *.swp
 *.swo
 *~
+
+# Test and debug files
+test-*.js
+verify-*.js
+check-*.js
+backend/test-*.js
