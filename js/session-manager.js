@@ -21,6 +21,9 @@
 
         checkLoginStatus: async function () {
             try {
+                // ✅ FIRST: Check cookies for existing session
+                const cookieUser = this.getUserFromCookies();
+
                 // ✅ DUAL-MODE REQUEST
                 const headers = {
                     'Content-Type': 'application/json'
@@ -49,13 +52,51 @@
                     this.currentUser = data.user;
                     this.updateUI(true, data.user.email || data.acct);
                     console.log('[Session] ✅ Authenticated:', data.user.email);
+                } else if (cookieUser) {
+                    // ✅ FALLBACK: Use cookie data if API doesn't return user
+                    console.log('[Session] Using cookie-based auth:', cookieUser.email);
+                    this.currentUser = cookieUser;
+                    this.token = cookieUser.sessionId;
+                    if (this.token) {
+                        localStorage.setItem('authToken', this.token);
+                    }
+                    this.updateUI(true, cookieUser.email);
                 } else {
                     this.handleLoggedOut();
                 }
             } catch (error) {
                 console.error('[Session] Check failed:', error);
-                this.handleLoggedOut();
+                // ✅ FALLBACK: Try cookies even if fetch fails
+                const cookieUser = this.getUserFromCookies();
+                if (cookieUser) {
+                    console.log('[Session] Fallback to cookies:', cookieUser.email);
+                    this.currentUser = cookieUser;
+                    this.token = cookieUser.sessionId;
+                    this.updateUI(true, cookieUser.email);
+                } else {
+                    this.handleLoggedOut();
+                }
             }
+        },
+
+        // ✅ NEW: Extract user from cookies
+        getUserFromCookies: function () {
+            const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+                const [key, value] = cookie.trim().split('=');
+                acc[key] = decodeURIComponent(value);
+                return acc;
+            }, {});
+
+            // Check if we have user cookies
+            if (cookies.ACCT && cookies.UID) {
+                return {
+                    email: cookies.ACCT,
+                    id: cookies.UID,
+                    username: cookies.NAME || cookies.ACCT.split('@')[0],
+                    sessionId: cookies.JSESSIONID || cookies['secondbrain.token']
+                };
+            }
+            return null;
         },
 
         handleLoggedOut: function () {
@@ -138,6 +179,21 @@
     } else {
         SessionManager.init();
     }
+
+    // ✅ PERIODIC CHECK: Re-check session every 5 seconds
+    setInterval(() => {
+        SessionManager.checkLoginStatus();
+    }, 5000);
+
+    // ✅ COOKIE MONITOR: Detect when cookies change (login/register)
+    let lastCookies = document.cookie;
+    setInterval(() => {
+        if (document.cookie !== lastCookies) {
+            lastCookies = document.cookie;
+            console.log('[Session] Cookies changed, re-checking auth...');
+            SessionManager.checkLoginStatus();
+        }
+    }, 1000);
 
     // Export globally
     window.SessionManager = SessionManager;
