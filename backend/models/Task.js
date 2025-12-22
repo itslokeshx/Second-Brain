@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
 const taskSchema = new mongoose.Schema({
-    // User reference
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -9,13 +8,12 @@ const taskSchema = new mongoose.Schema({
         index: true
     },
 
-    // Original client-side ID (UUID from localStorage)
     id: {
         type: String,
         required: true
     },
 
-    // Task data (matches localStorage schema)
+    // ✅ Matches localStorage schema exactly
     parentId: {
         type: String,
         required: true
@@ -32,7 +30,7 @@ const taskSchema = new mongoose.Schema({
         type: Number,
         min: 0,
         max: 3,
-        default: 0  // 0=None, 1=Low, 2=Medium, 3=High
+        default: 0
     },
     status: {
         type: String,
@@ -48,26 +46,20 @@ const taskSchema = new mongoose.Schema({
         default: 0
     },
     dueDate: {
-        type: String,  // ISO8601 string or null
+        type: String,
         default: null
     },
     createdTime: {
-        type: Number,  // Timestamp
+        type: Number,
         required: true
     },
 
-    // Metadata
     updatedAt: {
         type: Date,
         default: Date.now
-    },
-    isDeleted: {
-        type: Boolean,
-        default: false
     }
 });
 
-// Compound index for user + client ID
 taskSchema.index({ userId: 1, id: 1 }, { unique: true });
 
 module.exports = mongoose.model('Task', taskSchema);

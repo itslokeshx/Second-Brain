@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const projectSchema = new mongoose.Schema({
-    // User reference
+    // ✅ User reference - separate collection
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -9,13 +9,13 @@ const projectSchema = new mongoose.Schema({
         index: true
     },
 
-    // Original client-side ID (UUID from localStorage)
+    // ✅ Original ID from localStorage
     id: {
         type: String,
         required: true
     },
 
-    // Project data (matches localStorage schema)
+    // ✅ Project data matching localStorage schema exactly
     name: {
         type: String,
         required: true
@@ -46,7 +46,6 @@ const projectSchema = new mongoose.Schema({
         default: 0
     },
 
-    // Metadata
     createdAt: {
         type: Date,
         default: Date.now
@@ -54,14 +53,10 @@ const projectSchema = new mongoose.Schema({
     updatedAt: {
         type: Date,
         default: Date.now
-    },
-    isDeleted: {
-        type: Boolean,
-        default: false
     }
 });
 
-// Compound index for user + client ID
+// ✅ Compound index for fast queries
 projectSchema.index({ userId: 1, id: 1 }, { unique: true });
 
 module.exports = mongoose.model('Project', projectSchema);

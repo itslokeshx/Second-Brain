@@ -77,23 +77,30 @@ router.post('/v63/user/logout', (req, res) => {
 });
 
 // --- CRITICAL SYNC FIX ---
-// This route stops the infinite spinner by providing the exact arrays main.js iterates over.
 router.all('/v64/sync', (req, res) => {
-    // Legacy app uses Unix Timestamp in SECONDS, not milliseconds
+    console.log(`[Legacy Sync] Request received from ${req.ip}`);
+
+    // Legacy app uses Unix Timestamp in SECONDS
     const now = Math.floor(Date.now() / 1000);
-    res.json({
-        status: 0,           // REQUIRED: Legacy success code
+
+    const response = {
+        status: 0,
         success: true,
         timestamp: now,
         server_now: now,
-        update_time: now,
-        projects: [],        // REQUIRED: Even if empty
-        tasks: [],           // REQUIRED
-        subtasks: [],        // REQUIRED
-        pomodoros: [],       // REQUIRED
+        update_time: now, // Some versions look for this
+
+        // REQUIRED: Empty arrays to prevent iteration crashes
+        projects: [],
+        tasks: [],
+        subtasks: [],
+        pomodoros: [],
         project_member: [],
         list: []
-    });
+    };
+
+    console.log('[Legacy Sync] Sending response:', JSON.stringify(response));
+    res.json(response);
 });
 
 // --- STUBS (Prevent 404 Crashes) ---

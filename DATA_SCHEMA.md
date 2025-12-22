@@ -1,7 +1,6 @@
 # 💾 Data Storage & Database Schema
 
-## Storage Mechanism
-This application is a **Client-Side SPA (Single Page Application)**. It does not use a traditional relational database (SQL) or NoSQL database (MongoDB) on the backend for its primary operations. Instead, it relies on the browser's persistent storage.
+
 
 ### Primary Storage: `localStorage`
 The application uses the browser's `window.localStorage` to persist data. This means:
@@ -11,7 +10,7 @@ The application uses the browser's `window.localStorage` to persist data. This m
 -   **Privacy**: Data stays on your device unless the "Sync" feature is explicitly used.
 
 ### Sync Mechanism (Optional/Partial)
-The code contains logic for Cloud Sync (WebSocket/API calls to `focustodo.net`), but in this local build, it acts primarily as a local-first app. Local changes are optimistically saved to `localStorage`.
+The code contains logic for Cloud Sync (WebSocket/API calls to )mongodb, but in this local build, it acts primarily as a local-first app. Local changes are optimistically saved to `localStorage`.
 
 ---
 
@@ -71,7 +70,4 @@ Records specific focus sessions.
 
 ---
 
-## ⚠️ Important Considerations
-1.  **Data Loss Risk**: Clearing your browser's "Cache & Site Data" **WILL DELETE ALL YOUR DATA**.
-2.  **Backups**: Since there is no automatic cloud backup (unless you configure the sync server), you should rely on exporting data if the feature is available.
-3.  **Cross-Browser**: Data in Chrome is not visible in Firefox. It is siloed per browser.
+

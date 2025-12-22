@@ -49,43 +49,27 @@
                     if (data.status === 0 || data.success) {
                         const u = data.user;
 
-                        console.log('[Network] Login Success. Injecting Legacy Cookies...');
+                        console.log('[Network] Login Success. User data:', u);
 
-                        // 1. Set LocalStorage (Modern)
+                        // ✅ Store clean user data in localStorage
                         localStorage.setItem('authToken', data.token);
                         localStorage.setItem('userId', u.id);
+                        localStorage.setItem('userEmail', u.email);
 
-                        // 2. Set LocalStorage (Legacy Keys)
-                        localStorage.setItem('cookie.ACCT', u.email);
-                        localStorage.setItem('cookie.NAME', u.name);
-                        localStorage.setItem('cookie.UID', u.id);
+                        // ✅ CRITICAL: Store name as clean string (no encoding)
+                        const cleanName = String(u.name || u.email.split('@')[0]).trim();
+                        localStorage.setItem('userName', cleanName);
 
-                        // 3. Set DOCUMENT COOKIE (Shim for file://)
-                        // Note: On file://, document.cookie is often disabled or doesn't persist.
-                        // We try standard setting, AND we shim the getter if possible.
-
-                        const cookieString = `ACCT=${u.email}; NAME=${encodeURIComponent(u.name)}; UID=${u.id}`;
-
-                        try {
-                            document.cookie = cookieString;
-                        } catch (e) { }
-
-                        // Force shim if document.cookie is empty after setting (common in file://)
-                        if (!document.cookie && Object.getOwnPropertyDescriptor(Document.prototype, 'cookie')) {
-                            console.warn('[Network] Shimming document.cookie for file:// protocol');
-                            try {
-                                Object.defineProperty(document, 'cookie', {
-                                    get: function () { return cookieString; },
-                                    set: function () { /* no-op */ },
-                                    configurable: true
-                                });
-                            } catch (e) {
-                                console.error('[Network] Failed to shim cookie', e);
-                            }
-                        }
+                        console.log('[Network] Stored user data:', {
+                            email: u.email,
+                            name: cleanName,
+                            id: u.id
+                        });
 
                         // Force Reload to render correct name
                         setTimeout(() => window.location.reload(), 500);
+                    } else {
+                        console.warn('[Network] Login response status not 0/success:', data);
                     }
                 } catch (e) { console.error("Auth Interceptor Error", e); }
             }

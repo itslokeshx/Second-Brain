@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
 const pomodoroLogSchema = new mongoose.Schema({
-    // User reference
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -9,27 +8,25 @@ const pomodoroLogSchema = new mongoose.Schema({
         index: true
     },
 
-    // Original client-side ID (UUID from localStorage)
     id: {
         type: String,
         required: true
     },
 
-    // Pomodoro data (matches localStorage schema)
     taskId: {
         type: String,
         required: true
     },
     startTime: {
-        type: Number,  // Timestamp
+        type: Number,
         required: true
     },
     endTime: {
-        type: Number,  // Timestamp
+        type: Number,
         required: true
     },
     duration: {
-        type: Number,  // Minutes
+        type: Number,
         required: true
     },
     status: {
@@ -38,14 +35,12 @@ const pomodoroLogSchema = new mongoose.Schema({
         default: 'completed'
     },
 
-    // Metadata
     createdAt: {
         type: Date,
         default: Date.now
     }
 });
 
-// Compound index for user + client ID
 pomodoroLogSchema.index({ userId: 1, id: 1 }, { unique: true });
 
 module.exports = mongoose.model('PomodoroLog', pomodoroLogSchema);
