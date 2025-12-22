@@ -12,6 +12,11 @@
     <div id="modal-root"></div>
 
     <div id="modal-root"></div>
+    
+    <!-- Fallback Sync Button (Visible if main UI fails) -->
+    <div id="fallback-sync-btn" class="sync-button" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #333; color: white; padding: 10px; border-radius: 5px; cursor: pointer; display: none;">
+        🔄 Sync
+    </div>
 
     <!-- Hidden Elements to prevent auth-ui.js crash -->
     <div style="display: none;">
@@ -485,8 +490,8 @@
             "db_downloading": "Downloading...",
         };
     </script>
-    <script type="text/javascript" src="js/network-interceptor.js"></script>
     <script type="text/javascript" src="js/fix_i18n.js"></script>
+    <script type="text/javascript" src="js/network-interceptor.js"></script>
     <script type="text/javascript" src="js/i18n.js"></script>
     <script type="text/javascript" src="js/chrome-polyfill.js"></script>
     <script type="text/javascript" src="js/session-manager.js"></script>

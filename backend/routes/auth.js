@@ -28,7 +28,7 @@ router.post('/register', async (req, res) => {
         user = new User({
             email: userEmail,
             password, // Mongoose pre-save hook will hash this
-            username: name || userEmail.split('@')[0]
+            name: name || userEmail.split('@')[0]
         });
 
         await user.save();
@@ -49,7 +49,7 @@ router.post('/register', async (req, res) => {
             user: {
                 id: user._id,
                 email: user.email,
-                name: user.username
+                name: user.name
             }
         });
 

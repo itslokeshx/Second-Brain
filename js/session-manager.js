@@ -103,6 +103,7 @@ window.SessionManager = {
         // Send to server
         fetch('http://localhost:3000/api/sync/all', {
             method: 'POST',
+            credentials: 'include', // ✅ Force cookies
             headers: {
                 'Authorization': 'Bearer ' + user.token,
                 'Content-Type': 'application/json'

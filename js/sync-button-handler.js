@@ -10,53 +10,73 @@
     function initSyncButton() {
         console.log('[Sync Button Handler] Initializing...');
 
-        // Try multiple selectors to find the sync button
+        // Extended selectors for legacy Focus To-Do sync button
         const selectors = [
             '[data-sync]',
             '.sync-button',
             '#sync-btn',
             'button[title*="sync" i]',
             'button[title*="Sync" i]',
-            '[onclick*="sync"]',
             '.header-sync',
-            '.icon-sync'
+            '.icon-sync',
+            '.sync', // Common legacy class
+            '.top-bar-right-sync',
+            '[class*="sync-icon"]'
         ];
 
-        let syncBtn = null;
-        for (const selector of selectors) {
-            syncBtn = document.querySelector(selector);
-            if (syncBtn) {
-                console.log(`[Sync Button Handler] Found sync button using selector: ${selector}`);
-                break;
-            }
-        }
-
-        if (syncBtn) {
-            // Remove existing onclick handlers
-            const clonedBtn = syncBtn.cloneNode(true);
-            syncBtn.parentNode.replaceChild(clonedBtn, syncBtn);
-            syncBtn = clonedBtn;
-
-            // Attach new handler
-            syncBtn.addEventListener('click', handleSyncClick);
-            console.log('[Sync Button Handler] ✅ Handler attached successfully');
-        } else {
-            console.warn('[Sync Button Handler] ⚠️ Could not find sync button with known selectors');
-            console.warn('[Sync Button Handler] Falling back to global click listener');
-
-            // Global fallback - listen for any click on elements containing "sync"
-            document.addEventListener('click', (e) => {
-                const target = e.target;
-                const text = (target.innerText || '').toLowerCase();
-                const title = (target.getAttribute('title') || '').toLowerCase();
-                const className = (target.className || '').toString().toLowerCase();
-
-                if (text.includes('sync') || title.includes('sync') || className.includes('sync')) {
-                    console.log('[Sync Button Handler] Potential sync button clicked:', target);
-                    handleSyncClick(e);
+        const findAndAttach = () => {
+            let syncBtn = null;
+            for (const selector of selectors) {
+                syncBtn = document.querySelector(selector);
+                if (syncBtn) {
+                    console.log(`[Sync Button Handler] Found sync button using selector: ${selector}`);
+                    break;
                 }
-            }, true);
-        }
+            }
+
+            if (syncBtn && !syncBtn.dataset.wired) {
+                // Remove existing onclick handlers
+                const clonedBtn = syncBtn.cloneNode(true);
+                syncBtn.parentNode.replaceChild(clonedBtn, syncBtn);
+                syncBtn = clonedBtn;
+
+                // Attach new handler
+                syncBtn.addEventListener('click', handleSyncClick);
+                syncBtn.dataset.wired = "true"; // Mark as processed
+                console.log('[Sync Button Handler] ✅ Handler attached successfully');
+                return true;
+            }
+            return false;
+        };
+
+        // Attempt immediately
+        if (findAndAttach()) return;
+
+        // Use MutationObserver for dynamic rendering
+        const observer = new MutationObserver((mutations) => {
+            if (findAndAttach()) {
+                observer.disconnect();
+            }
+        });
+
+        const root = document.getElementById('root') || document.body;
+        observer.observe(root, { childList: true, subtree: true });
+
+        // Fallback global listener (keep as failsafe)
+        document.addEventListener('click', (e) => {
+            const target = e.target.closest('button, div, span, a') || e.target;
+            const text = (target.innerText || '').toLowerCase();
+            const title = (target.getAttribute('title') || '').toLowerCase();
+            const className = (target.className || '').toString().toLowerCase();
+
+            // Check if we already handled this in the attached handler
+            if (target.dataset && target.dataset.wired) return;
+
+            if (text.includes('sync') || title.includes('sync') || className.includes('sync')) {
+                console.log('[Sync Button Handler] Global fallback caught sync click:', target);
+                handleSyncClick(e);
+            }
+        }, true);
     }
 
     async function handleSyncClick(e) {

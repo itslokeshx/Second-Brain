@@ -56,6 +56,11 @@
         } else {
             // ✅ CRITICAL: Let authentication and API requests pass through unchanged
             // console.log('[Fix] Passing through non-i18n request:', url);
+
+            // ✅ FIX: Ensure conflict with network-interceptor doesn't drop credentials
+            if (url && typeof url === 'string' && url.includes('localhost:3000')) {
+                this.withCredentials = true;
+            }
         }
 
         return oldSend.apply(this, arguments);

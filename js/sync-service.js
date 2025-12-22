@@ -89,6 +89,7 @@ class MongoDBSyncService {
 
         const response = await fetch(`${this.apiUrl}/api/sync/projects`, {
             method: 'POST',
+            credentials: 'include', // ✅ Force cookies
             headers: this.getHeaders(),
             body: JSON.stringify({
                 projects: localData,
@@ -131,6 +132,7 @@ class MongoDBSyncService {
 
         const response = await fetch(`${this.apiUrl}/api/sync/tasks`, {
             method: 'POST',
+            credentials: 'include', // ✅ Force cookies
             headers: this.getHeaders(),
             body: JSON.stringify({
                 tasks: localData,
@@ -166,6 +168,7 @@ class MongoDBSyncService {
 
         const response = await fetch(`${this.apiUrl}/api/sync/logs`, {
             method: 'POST',
+            credentials: 'include', // ✅ Force cookies
             headers: this.getHeaders(),
             body: JSON.stringify({
                 logs: localData,
@@ -204,6 +207,7 @@ class MongoDBSyncService {
 
         const response = await fetch(`${this.apiUrl}/api/sync/settings`, {
             method: 'POST',
+            credentials: 'include', // ✅ Force cookies
             headers: this.getHeaders(),
             body: JSON.stringify({ settings: payload })
         });

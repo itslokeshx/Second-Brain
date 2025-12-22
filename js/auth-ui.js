@@ -223,10 +223,32 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function handleAuthSuccess(data) {
-        localStorage.setItem('authToken', data.token);
+        const authToken = data.token || data.jsessionId || data.sessionId || '';
+        const jsessionId = data.jsessionId || data.sessionId || authToken;
+
+        // Persist primary auth state
+        localStorage.setItem('authToken', authToken);
         localStorage.setItem('userId', data.user.id);
+
+        // Use a single canonical key for the name (legacy code looks for userName)
+        localStorage.setItem('userName', data.user.name);
         localStorage.setItem('username', data.user.name);
         localStorage.setItem('userEmail', data.user.email);
+
+        // Legacy bundle reads cookies from localStorage via "cookie.<key>"
+        localStorage.setItem('cookie.NAME', data.user.name);
+        localStorage.setItem('cookie.ACCT', data.user.email);
+        localStorage.setItem('cookie.UID', data.user.id);
+        localStorage.setItem('cookie.PID', data.user.id);
+        if (jsessionId) localStorage.setItem('cookie.JSESSIONID', jsessionId);
+
+        // Mirror to real cookies for any direct reads
+        document.cookie = `NAME=${data.user.name}; path=/; max-age=31536000`;
+        document.cookie = `ACCT=${data.user.email}; path=/; max-age=31536000`;
+        document.cookie = `UID=${data.user.id}; path=/; max-age=31536000`;
+        if (jsessionId) {
+            document.cookie = `JSESSIONID=${jsessionId}; path=/; max-age=31536000; SameSite=Lax`;
+        }
 
         // Re-init sync service if it exists
         if (window.syncService) {
@@ -252,7 +274,18 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.removeItem('authToken');
             localStorage.removeItem('userId');
             localStorage.removeItem('username');
+            localStorage.removeItem('userName');
             localStorage.removeItem('userEmail');
+            localStorage.removeItem('cookie.NAME');
+            localStorage.removeItem('cookie.ACCT');
+            localStorage.removeItem('cookie.UID');
+            localStorage.removeItem('cookie.PID');
+            localStorage.removeItem('cookie.JSESSIONID');
+
+            document.cookie = 'NAME=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+            document.cookie = 'ACCT=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+            document.cookie = 'UID=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+            document.cookie = 'JSESSIONID=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
 
             if (typeof MongoDBSyncService !== 'undefined') {
                 window.syncService = new MongoDBSyncService(window.syncService.apiUrl);
