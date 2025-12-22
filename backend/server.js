@@ -40,7 +40,11 @@ app.use((req, res, next) => {
 });
 
 // Import User model
+// Import User model and Sync models
 const User = require('./models/User');
+const Project = require('./models/Project');
+const Task = require('./models/Task');
+const PomodoroLog = require('./models/PomodoroLog');
 
 // Session ID Generator
 function generateJSessionId() {
@@ -211,7 +215,8 @@ app.get('/v64/user/config', async (req, res) => {
         // ✅ Added missing fields to prevent frontend errors
         portrait: "",
         avatar: "",
-        avatarTimestamp: 0,
+        avatarTimestamp: Date.now(),
+        email: user.email, // ✅ Explicit email field
         verifyUser: 1, // Legacy verification flag
         proEndTime: Date.now() + (365 * 24 * 60 * 60 * 1000), // Fake PRO status
         jsessionId,
@@ -280,16 +285,62 @@ app.post('/api/sync/all', async (req, res) => {
     if (!jsessionId || !global.sessions.has(jsessionId)) {
         return res.json({ success: false, message: 'Invalid session' });
     }
+
+    const session = global.sessions.get(jsessionId);
+
+    // Extract payload
     const { projects = [], tasks = [], pomodoroLogs = [] } = req.body || {};
-    console.log('[Sync All] Received sync payload for session', jsessionId);
-    // TODO: Persist to MongoDB
-    res.json({
-        success: true,
-        message: 'Sync successful',
-        projectsSynced: projects.length,
-        tasksSynced: tasks.length,
-        logsSynced: pomodoroLogs.length
-    });
+    console.log(`[Sync All] Processing sync for ${session.email}: ${projects.length} P, ${tasks.length} T, ${pomodoroLogs.length} L`);
+
+    try {
+        // Persist Projects
+        if (projects.length > 0) {
+            const ops = projects.map(p => ({
+                updateOne: {
+                    filter: { id: p.id, userId: session.uid },
+                    update: { $set: { ...p, userId: session.uid } },
+                    upsert: true
+                }
+            }));
+            await Project.bulkWrite(ops);
+        }
+
+        // Persist Tasks
+        if (tasks.length > 0) {
+            const ops = tasks.map(t => ({
+                updateOne: {
+                    filter: { id: t.id, userId: session.uid },
+                    update: { $set: { ...t, userId: session.uid } },
+                    upsert: true
+                }
+            }));
+            await Task.bulkWrite(ops);
+        }
+
+        // Persist Logs
+        if (pomodoroLogs.length > 0) {
+            const ops = pomodoroLogs.map(l => ({
+                updateOne: {
+                    filter: { id: l.id, userId: session.uid },
+                    update: { $set: { ...l, userId: session.uid } },
+                    upsert: true
+                }
+            }));
+            await PomodoroLog.bulkWrite(ops);
+        }
+
+        res.json({
+            success: true,
+            message: 'Sync successful',
+            projectsSynced: projects.length,
+            tasksSynced: tasks.length,
+            logsSynced: pomodoroLogs.length
+        });
+
+    } catch (err) {
+        console.error('[Sync All] Persistence Error:', err);
+        res.json({ success: false, message: 'Sync persistence failed' });
+    }
 });
 
 app.post('/api/sync/projects', syncHandler);

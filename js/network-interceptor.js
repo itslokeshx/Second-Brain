@@ -63,8 +63,15 @@
         if (newUrl.includes('localhost:3000') || newUrl.includes('127.0.0.1:3000')) {
             try {
                 this.withCredentials = true;
+
+                // ✅ REVERSE ENGINEERING FIX: Inject Session Token Header
+                // Legacy main.js doesn't send this, so we MUST inject it here.
+                const token = localStorage.getItem('authToken');
+                if (token) {
+                    this.setRequestHeader('Authorization', 'Bearer ' + token);
+                }
             } catch (e) {
-                console.warn('[Network] Failed to set withCredentials:', e);
+                console.warn('[Network] Failed to set credentials or headers:', e);
             }
         }
         return result;
