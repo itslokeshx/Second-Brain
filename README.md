@@ -12,11 +12,7 @@
 - **✅ Task Management**: Create tasks, set priorities, and organize them into projects.
 - **🎧 Ambient Soundscapes**: Built-in white noise and background sounds (Rain, Forest, Cafe) to block distractions.
 - **📊 Productivity Reports**: Visualize your focus hours and task completion trends.
-- **🌍 Internationalization**: Multi-language support.
 
-## 🚀 Live Demo
-
-Deployed on Netlify: **[Insert Your Netlify Link Here]**
 
 ## 📂 Project Structure
 
