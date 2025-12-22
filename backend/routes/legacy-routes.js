@@ -180,29 +180,45 @@ router.all('/v64/sync', async (req, res) => {
 
     const session = getSession(jsessionId);
     if (!session) {
+        console.log('[Legacy Sync] ❌ No valid session');
         return res.json({ status: 1, success: false });
     }
 
     const user = await User.findById(session.uid);
+    if (!user) {
+        console.log('[Legacy Sync] ❌ User not found');
+        return res.json({ status: 1, success: false });
+    }
+
+    // ✅ LOAD ACTUAL DATA FROM MONGODB
+    const Project = require('../models/Project');
+    const Task = require('../models/Task');
+    const PomodoroLog = require('../models/PomodoroLog');
+
+    const [projects, tasks, pomodoros] = await Promise.all([
+        Project.find({ userId: user._id }).select('-_id -__v -userId').lean(),
+        Task.find({ userId: user._id }).select('-_id -__v -userId').lean(),
+        PomodoroLog.find({ userId: user._id }).select('-_id -__v -userId').lean()
+    ]);
+
+    console.log(`[Legacy Sync] ✅ Loaded: ${projects.length} projects, ${tasks.length} tasks, ${pomodoros.length} pomodoros`);
 
     attachSessionCookie(res, jsessionId);
 
     const response = buildLegacyPayload(user, jsessionId, {
-        acct: session.email,
-        name: session.name || (user && user.name),
         timestamp: now,
         server_now: now,
         update_time: now,
         project_member: [],
         list: [],
-        projects: [],
-        tasks: [],
+        projects: projects || [],
+        tasks: tasks || [],
         subtasks: [],
-        pomodoros: [],
+        pomodoros: pomodoros || [],
         schedules: []
     });
 
-    console.log('[Legacy Sync] Sending response:', JSON.stringify(response));
+    console.log('[Legacy Sync] Sending response with data');
     res.json(response);
 });
 
