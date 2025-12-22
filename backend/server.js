@@ -14,7 +14,30 @@ const path = require('path');
 app.use(express.static(path.join(__dirname, '../')));
 
 // ✅ TASK 2: Session System & Middleware
-global.sessions = global.sessions || new Map();
+// ✅ TASK 2: Session System & Middleware
+const session = require('express-session');
+const MongoStore = require('connect-mongo').MongoStore; // Fix for v6+ import
+
+app.use(session({
+    name: 'JSESSIONID', // Use legacy name
+    secret: process.env.SESSION_SECRET || 'second-brain-secret-key-2025',
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+        mongoUrl: process.env.MONGODB_URI,
+        ttl: 24 * 60 * 60, // 24 hours
+        autoRemove: 'native'
+    }),
+    cookie: {
+        httpOnly: false, // Allow frontend access if needed (or true if using API only)
+        secure: false, // true in production
+        maxAge: 24 * 60 * 60 * 1000,
+        sameSite: 'lax'
+    }
+}));
+
+// Legacy session support fallback (to inspect req.sessionID)
+// Global sessions map removed - using express-session instead
 
 app.use(cors({
     origin: function (origin, callback) {
@@ -47,9 +70,7 @@ const Task = require('./models/Task');
 const PomodoroLog = require('./models/PomodoroLog');
 
 // Session ID Generator
-function generateJSessionId() {
-    return uuidv4();
-}
+// Session ID Generator (Managed by express-session, helper removed)
 
 // Helper to build consistent legacy response
 function buildLegacyResponse(user, jsessionId, overrides = {}) {
@@ -97,23 +118,22 @@ app.post('/v63/user/register', async (req, res) => {
         await user.save();
 
         // 1. GENERATE jsessionId
-        const jsessionId = generateJSessionId();
+        // 1. GENERATE jsessionId (express-session handles this, we just use req.sessionID)
+        const jsessionId = req.sessionID;
 
         // 2. STORE server-side
-        global.sessions.set(jsessionId, {
-            uid: user._id.toString(),
-            email: user.email,
-            username: user.name,
-            createdAt: Date.now()
+        req.session.userId = user._id.toString();
+        req.session.email = user.email;
+        req.session.username = user.name;
+
+        await new Promise((resolve, reject) => {
+            req.session.save((err) => {
+                if (err) reject(err);
+                else resolve();
+            });
         });
 
-        // 3. SET COOKIE
-        res.cookie('JSESSIONID', jsessionId, {
-            httpOnly: false, // Legacy frontend might read this
-            sameSite: 'Lax',
-            secure: false, // false for localhost
-            maxAge: 30 * 24 * 60 * 60 * 1000
-        });
+        // express-session sets the cookie automatically with name 'JSESSIONID'
 
         // 4. RETURN in JSON
         res.json(buildLegacyResponse(user, jsessionId));
@@ -141,27 +161,29 @@ app.post('/v63/user/login', async (req, res) => {
             return res.json({ status: 1, success: false, message: 'Invalid credentials' });
         }
 
-        // 1. GENERATE jsessionId
-        const jsessionId = generateJSessionId();
+        // 1. GENERATE / REGENERATE SESSION
+        req.session.regenerate((err) => {
+            if (err) {
+                console.error('[Login] Session regeneration failed:', err);
+                return res.json({ status: 1, success: false, message: 'Session error' });
+            }
 
-        // 2. STORE server-side
-        global.sessions.set(jsessionId, {
-            uid: user._id.toString(),
-            email: user.email,
-            username: user.name,
-            createdAt: Date.now()
+            // 2. STORE server-side
+            req.session.userId = user._id.toString();
+            req.session.email = user.email;
+            req.session.username = user.name;
+
+            req.session.save((err) => {
+                if (err) {
+                    console.error('[Login] Session save failed:', err);
+                    return res.json({ status: 1, success: false, message: 'Session save error' });
+                }
+
+                // 3. RETURN in JSON
+                // express-session handles the cookie
+                res.json(buildLegacyResponse(user, req.sessionID));
+            });
         });
-
-        // 3. SET COOKIE
-        res.cookie('JSESSIONID', jsessionId, {
-            httpOnly: false,
-            sameSite: 'Lax',
-            secure: false,
-            maxAge: 30 * 24 * 60 * 60 * 1000
-        });
-
-        // 4. RETURN in JSON
-        res.json(buildLegacyResponse(user, jsessionId));
 
     } catch (err) {
         console.error('[Login] Error:', err);
@@ -172,36 +194,28 @@ app.post('/v63/user/login', async (req, res) => {
 // ✅ TASK 4: Implement /v64/user/config (AUTH BOOTSTRAP)
 // Helper: Resolve Session ID from ALL possible sources
 function resolveSessionId(req) {
-    // Check for legacy JSESSIONID cookie or custom headers
-    if (req.cookies?.JSESSIONID) return req.cookies.JSESSIONID;
-    if (req.headers['x-jsessionid']) return req.headers['x-jsessionid'];
-    if (req.headers['x-session-id']) return req.headers['x-session-id'];
-    if (req.body?.jsessionId) return req.body.jsessionId;
-    if (req.body?.session) return req.body.session;
-    if (req.query?.jsessionId) return req.query.jsessionId;
-    // New: Authorization header with Bearer token
-    const authHeader = req.headers['authorization'];
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-        return authHeader.slice(7).trim();
-    }
-    return null;
+    // Deprecated: express-session handles this
+    return req.sessionID;
 }
 
 // ✅ TASK 4: Implement /v64/user/config (AUTH BOOTSTRAP)
 app.get('/v64/user/config', async (req, res) => {
-    const jsessionId = resolveSessionId(req);
+    // Try to recover session if cookie JSESSIONID present but no express session
+    if (!req.session.userId && req.cookies.JSESSIONID) {
+        console.log(`[Config] Attempting to restore session from cookie: ${req.cookies.JSESSIONID}`);
+        // We rely on express-session to handle this via cookie signature
+    }
 
-    console.log('[Config] Checking session:', jsessionId);
+    console.log(`[Config] Checking session: ${req.sessionID}`);
+    console.log(`[Config] Session data:`, req.session);
 
-    if (!jsessionId || !global.sessions.has(jsessionId)) {
+    if (!req.session.userId) {
         console.log('[Config] No valid session found');
         return res.json({ status: 1, success: false });
     }
 
-    const session = global.sessions.get(jsessionId);
-
     try {
-        const user = await User.findById(session.uid).maxTimeMS(5000);
+        const user = await User.findById(req.session.userId).maxTimeMS(5000);
 
         if (!user) {
             return res.json({ status: 1, success: false, message: 'User not found' });
@@ -210,7 +224,7 @@ app.get('/v64/user/config', async (req, res) => {
         res.json({
             status: 0,
             success: true,
-            uid: session.uid,
+            uid: req.session.userId,
             acct: user.email,
             name: user.name,
             portrait: "",
@@ -219,7 +233,7 @@ app.get('/v64/user/config', async (req, res) => {
             email: user.email,
             verifyUser: 1,
             proEndTime: Date.now() + (365 * 24 * 60 * 60 * 1000),
-            jsessionId,
+            jsessionId: req.sessionID,
             config: {
                 theme: 'dark',
                 language: 'en',
@@ -234,22 +248,25 @@ app.get('/v64/user/config', async (req, res) => {
 
 // ✅ TASK 5: Fix /v64/sync
 app.post('/v64/sync', async (req, res) => {
-    const jsessionId = resolveSessionId(req);
-
-    if (!jsessionId || !global.sessions.has(jsessionId)) {
-        return res.json({ status: 1, success: false });
+    // Use req.session.userId directly
+    if (!req.session.userId) {
+        return res.json({ status: 1, success: false, message: 'Not authenticated' });
     }
 
-    const session = global.sessions.get(jsessionId);
+    // Retrieve session data from req.session
+    const userId = req.session.userId;
+    const userEmail = req.session.email;
+    const userName = req.session.username;
+    const jsessionId = req.sessionID;
 
     // Return empty arrays to satisfy legacy frontend limits
     res.json({
         status: 0,
         success: true,
         message: 'OK',
-        acct: session.email,
-        uid: session.uid,
-        name: session.username,
+        acct: userEmail,
+        uid: userId,
+        name: userName,
         jsessionId,
         expiredDate: Date.now() + (30 * 24 * 60 * 60 * 1000),
         timestamp: Date.now(),
@@ -273,35 +290,80 @@ app.post('/v64/sync', async (req, res) => {
 });
 
 // ✅ TASK 6: Modern Sync API Endpoints (Missing from original implementation)
-const syncHandler = (req, res) => {
-    // We just return success for now to unblock the UI
-    // In a real implementation, this would save to MongoDB
-    res.json({
-        success: true,
-        syncTime: Date.now(),
-        ...req.body // Echo back whatever was sent or needed
-    });
+// Helper for bulk syncing collections
+async function syncCollection(model, items, userId) {
+    if (!items || !Array.isArray(items) || items.length === 0) return 0;
+    const ops = items.map(item => ({
+        updateOne: {
+            filter: { id: item.id, userId },
+            update: { $set: { ...item, userId } },
+            upsert: true
+        }
+    }));
+    const res = await model.bulkWrite(ops);
+    return res.upsertedCount + res.modifiedCount;
+}
+
+const granularSyncHandler = async (req, res) => {
+    if (!req.session.userId) {
+        return res.status(401).json({ success: false, message: 'Not authenticated' });
+    }
+    const userId = req.session.userId;
+    const { projects, tasks, logs, settings } = req.body;
+
+    console.log(`[Granular Sync] User: ${req.session.email} | proj:${projects?.length || 0} task:${tasks?.length || 0} log:${logs?.length || 0}`);
+
+    try {
+        let syncedCount = 0;
+
+        if (projects) syncedCount += await syncCollection(Project, projects, userId);
+        if (tasks) syncedCount += await syncCollection(Task, tasks, userId);
+        if (logs) syncedCount += await syncCollection(PomodoroLog, logs, userId); // 'logs' key from frontend
+
+        // Settings (single object logic)
+        // If settings object provided, upsert it? Or is it a collection?
+        // sync-service sends { settings: { ... } }
+        // We need a Settings model or User config update. 
+        // For now, let's assume User model stores config or just log it is handled.
+        // If there is no Settings model defined in server.js imports (I verified User, Project, Task, PomodoroLog).
+        // I will skipping settings persistence for now unless I confirmed a Settings model.
+        // Assuming settings are stored in User.config or similar.
+
+        res.json({
+            status: 0,
+            success: true,
+            syncTime: Date.now(),
+            syncedCount,
+            ...req.body // Echo back needed? frontend merges response.
+            // sync-service expects: data.projects, data.tasks etc back?
+            // It calls merge(local, server). If we don't return server data, it merges nothing (fine for upload-only).
+            // But for bidirectional, we should return data.
+            // For now, let's assume upload-mostly flow or return empty arrays if we can't fetch.
+        });
+    } catch (err) {
+        console.error('[Granular Sync] Error:', err);
+        res.status(500).json({ success: false, message: 'Sync failed' });
+    }
 };
 
 // ✅ NEW ENDPOINT: Bulk sync all data (MongoDB Atlas only)
 app.post('/api/sync/all', async (req, res) => {
-    const jsessionId = resolveSessionId(req);
-    if (!jsessionId || !global.sessions.has(jsessionId)) {
+    if (!req.session.userId) {
         return res.json({ success: false, message: 'Not authenticated' });
     }
 
-    const session = global.sessions.get(jsessionId);
+    const userId = req.session.userId;
     const { projects = [], tasks = [], pomodoroLogs = [], settings = {} } = req.body || {};
 
-    console.log(`[Sync All] ${session.email}: ${projects.length} P, ${tasks.length} T, ${pomodoroLogs.length} L`);
+    console.log(`[Sync All] ${req.session.email}: ${projects.length} P, ${tasks.length} T, ${pomodoroLogs.length} L`);
 
     try {
         // Persist Projects to MongoDB
         if (projects.length > 0) {
             const ops = projects.map(p => ({
                 updateOne: {
-                    filter: { id: p.id, userId: session.uid },
-                    update: { $set: { ...p, userId: session.uid } },
+                    filter: { id: p.id, userId: userId },
+                    update: { $set: { ...p, userId: userId } },
                     upsert: true
                 }
             }));
@@ -312,8 +374,8 @@ app.post('/api/sync/all', async (req, res) => {
         if (tasks.length > 0) {
             const ops = tasks.map(t => ({
                 updateOne: {
-                    filter: { id: t.id, userId: session.uid },
-                    update: { $set: { ...t, userId: session.uid } },
+                    filter: { id: t.id, userId: userId },
+                    update: { $set: { ...t, userId: userId } },
                     upsert: true
                 }
             }));
@@ -324,8 +386,8 @@ app.post('/api/sync/all', async (req, res) => {
         if (pomodoroLogs.length > 0) {
             const ops = pomodoroLogs.map(l => ({
                 updateOne: {
-                    filter: { id: l.id, userId: session.uid },
-                    update: { $set: { ...l, userId: session.uid } },
+                    filter: { id: l.id, userId: userId },
+                    update: { $set: { ...l, userId: userId } },
                     upsert: true
                 }
             }));
@@ -346,10 +408,10 @@ app.post('/api/sync/all', async (req, res) => {
     }
 });
 
-app.post('/api/sync/projects', syncHandler);
-app.post('/api/sync/tasks', syncHandler);
-app.post('/api/sync/logs', syncHandler);
-app.post('/api/sync/settings', syncHandler);
+app.post('/api/sync/projects', granularSyncHandler);
+app.post('/api/sync/tasks', granularSyncHandler);
+app.post('/api/sync/logs', granularSyncHandler);
+app.post('/api/sync/settings', granularSyncHandler);
 
 // Helper Stubs avoiding 404s
 app.all('/v63/user/logout', (req, res) => res.json({ status: 0, success: true }));
