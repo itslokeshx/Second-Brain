@@ -14,21 +14,26 @@
     const TARGET_HOST = 'http://localhost:3000';
     const BLOCKED = ['focustodo.net', 'www.focustodo.net', 'api.focustodo.net'];
 
-    // 2. WebSocket Interceptor (Mock to prevent errors)
+    // 2. WebSocket Interceptor (Allow localhost, block external)
     const OriginalWebSocket = window.WebSocket;
     if (OriginalWebSocket) {
         window.WebSocket = function (url, ...args) {
-            console.warn('[Network] Blocked WebSocket connection:', url);
-            // Return dummy object
+            // Allow localhost WebSocket connections
+            if (url.includes('localhost') || url.includes('127.0.0.1')) {
+                console.log('[Network] ✅ Allowing WebSocket connection:', url);
+                return new OriginalWebSocket(url, ...args);
+            }
+
+            // Block external WebSocket connections
+            console.warn('[Network] ❌ Blocked external WebSocket:', url);
             return {
                 send: () => { },
                 close: () => { },
                 addEventListener: () => { },
                 removeEventListener: () => { },
-                readyState: 0 // CONNECTING
+                readyState: 0
             };
         };
-        // Copy constants if needed by app
         ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'].forEach(prop => {
             window.WebSocket[prop] = OriginalWebSocket[prop];
         });
@@ -56,22 +61,14 @@
         }
 
         // ✅ CRITICAL: Force credentials for all requests to backend
-        // This ensures cookies (JSESSIONID) are sent even if cross-origin (dev)
         const result = originalOpen.call(this, method, newUrl, ...args);
 
-        // Forcefully set it immediately after open
+        // Set credentials flag immediately after open
         if (newUrl.includes('localhost:3000') || newUrl.includes('127.0.0.1:3000')) {
             try {
                 this.withCredentials = true;
-
-                // ✅ REVERSE ENGINEERING FIX: Inject Session Token Header
-                // Legacy main.js doesn't send this, so we MUST inject it here.
-                const token = localStorage.getItem('authToken');
-                if (token) {
-                    this.setRequestHeader('Authorization', 'Bearer ' + token);
-                }
             } catch (e) {
-                console.warn('[Network] Failed to set credentials or headers:', e);
+                console.warn('[Network] Failed to set withCredentials:', e);
             }
         }
         return result;
@@ -79,6 +76,19 @@
 
     XMLHttpRequest.prototype.send = function (...args) {
         const xhr = this;
+
+        // ✅ Inject Authorization header BEFORE sending
+        const url = xhr._interceptedUrl || '';
+        if ((url.includes('localhost:3000') || url.includes('127.0.0.1:3000')) && !url.includes('/login') && !url.includes('/register')) {
+            const token = localStorage.getItem('authToken');
+            if (token) {
+                try {
+                    xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+                } catch (e) {
+                    console.warn('[Network] Failed to set Authorization header:', e);
+                }
+            }
+        }
 
         // Add load listener BEFORE calling send
         const loadHandler = function () {
