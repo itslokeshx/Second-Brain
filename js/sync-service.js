@@ -4,6 +4,7 @@ class MongoDBSyncService {
         this.userId = localStorage.getItem('userId');
         this.token = localStorage.getItem('authToken');
         this.syncInProgress = false;
+        this.isIgnoringUpdates = false; // Flag to prevent infinite loops
 
         // Clean up any known corrupted data on init
         this.cleanCorruptedData();
@@ -102,8 +103,10 @@ class MongoDBSyncService {
         const data = await response.json();
         if (data.success && data.projects) {
             const merged = this.mergeProjects(localData, data.projects);
+            this.isIgnoringUpdates = true;
             localStorage.setItem(key, JSON.stringify(merged));
             localStorage.setItem(syncTimeKey, data.syncTime);
+            this.isIgnoringUpdates = false;
         }
     }
 
@@ -145,8 +148,10 @@ class MongoDBSyncService {
         const data = await response.json();
         if (data.success && data.tasks) {
             const merged = this.mergeTasks(localData, data.tasks);
+            this.isIgnoringUpdates = true;
             localStorage.setItem(key, JSON.stringify(merged));
             localStorage.setItem(syncTimeKey, data.syncTime);
+            this.isIgnoringUpdates = false;
         }
     }
 
@@ -182,8 +187,10 @@ class MongoDBSyncService {
         if (data.success && data.logs) {
             // Logs are append only usually, just add missing ones
             const merged = this.mergeLogs(localData, data.logs);
+            this.isIgnoringUpdates = true;
             localStorage.setItem(key, JSON.stringify(merged));
             localStorage.setItem(syncTimeKey, data.syncTime);
+            this.isIgnoringUpdates = false;
         }
     }
 
@@ -217,11 +224,13 @@ class MongoDBSyncService {
         const data = await response.json();
         if (data.success && data.settings) {
             const s = data.settings;
+            this.isIgnoringUpdates = true;
             if (s.bgMusic) localStorage.setItem('BgMusic', s.bgMusic);
             if (s.volume !== undefined) localStorage.setItem('Volume', s.volume);
             if (s.timerSettings && Object.keys(s.timerSettings).length > 0) {
                 localStorage.setItem('TimerSettings', JSON.stringify(s.timerSettings));
             }
+            this.isIgnoringUpdates = false;
         }
     }
 }
@@ -258,6 +267,7 @@ window.addEventListener('online', () => {
 
         // Trigger Sync based on key
         if (!window.syncService || !window.syncService.isAuthenticated()) return;
+        if (window.syncService.isIgnoringUpdates) return; // Prevent loop
 
         if (key === 'customProjects') {
             clearTimeout(timeoutProjects);
