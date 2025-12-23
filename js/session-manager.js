@@ -5,6 +5,8 @@
     const SessionManager = {
         currentUser: null,
         token: null,
+        checkInterval: null,
+        cookieMonitorInterval: null,
 
         init: function () {
             console.log('[Session] Initializing dual-mode auth...');
@@ -51,7 +53,11 @@
 
                     this.currentUser = data.user;
                     this.updateUI(true, data.user.email || data.acct);
+                    this.startPeriodicCheck();
                     console.log('[Session] ✅ Authenticated:', data.user.email);
+
+                    // Load synced data
+                    await this.loadDataAfterLogin();
                 } else if (cookieUser) {
                     // ✅ FALLBACK: Use cookie data if API doesn't return user
                     console.log('[Session] Using cookie-based auth:', cookieUser.email);
@@ -104,6 +110,7 @@
             this.currentUser = null;
             this.token = null;
             localStorage.removeItem('authToken');
+            this.stopPeriodicCheck();
             this.updateUI(false);
             console.log('[Session] Not authenticated');
         },
@@ -128,10 +135,10 @@
                 if (loginBtn) loginBtn.style.display = 'none';
                 if (logoutBtn) logoutBtn.style.display = 'block';
 
-                // Sync with legacy cookies (for main.js compatibility)
-                document.cookie = `NAME=${encodeURIComponent(username)}; path=/; max-age=86400`;
-
                 console.log('[Session] UI updated for:', username);
+
+                // ✅ FIX: Override main.js username display
+                this.forceUsernameDisplay(username);
             } else {
                 if (userDisplay) {
                     userDisplay.textContent = 'Not logged in';
@@ -140,6 +147,62 @@
                 if (loginBtn) loginBtn.style.display = 'block';
                 if (logoutBtn) logoutBtn.style.display = 'none';
             }
+        },
+
+        // ✅ NEW: Force correct username display by overriding main.js
+        forceUsernameDisplay: function (userEmail) {
+            // Extract username from email
+            const username = userEmail.split('@')[0];
+
+            // Find the actual username element used by main.js
+            const findAndUpdate = () => {
+                // Look for HomeHeader-username class (CSS modules use hashed names)
+                const usernameEl = document.querySelector('[class*="HomeHeader-username"]');
+
+                if (usernameEl && usernameEl.textContent !== username) {
+                    console.log('[Session] Setting header username to:', username);
+                    usernameEl.textContent = username;
+
+                    // Watch for changes and override them
+                    const observer = new MutationObserver(() => {
+                        if (usernameEl.textContent !== username) {
+                            console.log('[Session] main.js tried to change username, reverting...');
+                            usernameEl.textContent = username;
+                        }
+                    });
+
+                    observer.observe(usernameEl, {
+                        childList: true,
+                        characterData: true,
+                        subtree: true
+                    });
+                }
+
+                // Also fix AccountSettings-account elements (shows in settings)
+                const accountEls = document.querySelectorAll('[class*="AccountSettings-account"]');
+                accountEls.forEach(el => {
+                    // Only fix span/div elements, NOT buttons
+                    if (el && el.tagName !== 'BUTTON' && el.textContent && el.textContent.includes('')) {
+                        console.log('[Session] Fixing AccountSettings element');
+                        // Account field should show EMAIL, not username
+                        const cookies = document.cookie.split(';').reduce((acc, c) => {
+                            const [k, v] = c.trim().split('=');
+                            acc[k] = decodeURIComponent(v || '');
+                            return acc;
+                        }, {});
+                        el.textContent = cookies.ACCT || userEmail;
+                    }
+                });
+            };
+
+            // Try immediately
+            findAndUpdate();
+
+            // Try after delays (main.js might set it later)
+            setTimeout(findAndUpdate, 100);
+            setTimeout(findAndUpdate, 500);
+            setTimeout(findAndUpdate, 1000);
+            setTimeout(findAndUpdate, 2000);
         },
 
         setupHandlers: function () {
@@ -152,6 +215,9 @@
 
         logout: async function () {
             try {
+                // Stop intervals FIRST
+                this.stopPeriodicCheck();
+
                 await fetch('http://localhost:3000/v63/user/logout', {
                     method: 'POST',
                     credentials: 'include'
@@ -161,7 +227,14 @@
             }
 
             this.handleLoggedOut();
-            window.location.reload();
+
+            // Clear all cookies
+            document.cookie.split(';').forEach(c => {
+                document.cookie = c.trim().split('=')[0] + '=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/';
+            });
+
+            // Reload after a short delay to ensure cleanup
+            setTimeout(() => window.location.reload(), 100);
         },
 
         // ✅ HELPER: Get auth headers for other modules
@@ -171,6 +244,130 @@
                 headers['X-Session-Token'] = this.token;
             }
             return headers;
+        },
+
+        startPeriodicCheck: function () {
+            // Clear existing intervals
+            if (this.checkInterval) clearInterval(this.checkInterval);
+            if (this.cookieMonitorInterval) clearInterval(this.cookieMonitorInterval);
+
+            // Session check every 30 seconds (not 5 - too aggressive)
+            this.checkInterval = setInterval(() => {
+                if (this.currentUser) {  // Only check if logged in
+                    this.checkLoginStatus();
+                }
+            }, 30000);
+
+            // Cookie monitor every 2 seconds
+            let lastCookies = document.cookie;
+            this.cookieMonitorInterval = setInterval(() => {
+                if (document.cookie !== lastCookies) {
+                    lastCookies = document.cookie;
+                    console.log('[Session] Cookies changed, re-checking auth...');
+                    this.checkLoginStatus();
+                }
+            }, 2000);
+        },
+
+        stopPeriodicCheck: function () {
+            if (this.checkInterval) {
+                clearInterval(this.checkInterval);
+                this.checkInterval = null;
+            }
+            if (this.cookieMonitorInterval) {
+                clearInterval(this.cookieMonitorInterval);
+                this.cookieMonitorInterval = null;
+            }
+        },
+
+        loadDataAfterLogin: async function () {
+            if (!window.SyncService) {
+                console.log('[Session] SyncService not available, skipping data load');
+                return;
+            }
+
+            try {
+                console.log('[Session] Loading synced data...');
+                const data = await window.SyncService.loadAll();
+
+                if (!data || !data.projects) {
+                    console.log('[Session] No data to restore');
+                    return;
+                }
+
+                // Write to IndexedDB
+                const dbName = 'PomodoroDB6';
+                const dbRequest = indexedDB.open(dbName, 1);
+
+                dbRequest.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('projects')) {
+                        db.createObjectStore('projects', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('tasks')) {
+                        db.createObjectStore('tasks', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('pomodoros')) {
+                        db.createObjectStore('pomodoros', { keyPath: 'id' });
+                    }
+                };
+
+                dbRequest.onsuccess = () => {
+                    const db = dbRequest.result;
+                    const tx = db.transaction(['projects', 'tasks', 'pomodoros'], 'readwrite');
+
+                    // Clear and restore projects
+                    const projectStore = tx.objectStore('projects');
+                    projectStore.clear();
+                    (data.projects || []).forEach(p => {
+                        try {
+                            projectStore.add(p);
+                        } catch (e) {
+                            console.warn('[Session] Failed to add project:', e);
+                        }
+                    });
+
+                    // Clear and restore tasks
+                    const taskStore = tx.objectStore('tasks');
+                    taskStore.clear();
+                    (data.tasks || []).forEach(t => {
+                        try {
+                            taskStore.add(t);
+                        } catch (e) {
+                            console.warn('[Session] Failed to add task:', e);
+                        }
+                    });
+
+                    // Clear and restore pomodoros
+                    const pomodoroStore = tx.objectStore('pomodoros');
+                    pomodoroStore.clear();
+                    (data.pomodoros || []).forEach(p => {
+                        try {
+                            pomodoroStore.add(p);
+                        } catch (e) {
+                            console.warn('[Session] Failed to add pomodoro:', e);
+                        }
+                    });
+
+                    tx.oncomplete = () => {
+                        console.log('[Session] ✅ Data restored to IndexedDB');
+                        console.log(`  Projects: ${data.projects?.length || 0}`);
+                        console.log(`  Tasks: ${data.tasks?.length || 0}`);
+                        console.log(`  Pomodoros: ${data.pomodoros?.length || 0}`);
+
+                        // Force UI refresh after a short delay
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 500);
+                    };
+                };
+
+                dbRequest.onerror = (error) => {
+                    console.error('[Session] IndexedDB error:', error);
+                };
+            } catch (error) {
+                console.error('[Session] Data load failed:', error);
+            }
         }
     };
 
@@ -181,20 +378,7 @@
         SessionManager.init();
     }
 
-    // ✅ PERIODIC CHECK: Re-check session every 5 seconds
-    setInterval(() => {
-        SessionManager.checkLoginStatus();
-    }, 5000);
-
-    // ✅ COOKIE MONITOR: Detect when cookies change (login/register)
-    let lastCookies = document.cookie;
-    setInterval(() => {
-        if (document.cookie !== lastCookies) {
-            lastCookies = document.cookie;
-            console.log('[Session] Cookies changed, re-checking auth...');
-            SessionManager.checkLoginStatus();
-        }
-    }, 1000);
+    // Intervals are now managed by startPeriodicCheck/stopPeriodicCheck methods
 
     // Export globally
     window.SessionManager = SessionManager;

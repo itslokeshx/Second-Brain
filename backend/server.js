@@ -136,23 +136,13 @@ const handleAuth = async (req, res, isLogin = false) => {
         console.log(`  Session ID: ${req.sessionID}`);
         console.log(`  Session Data:`, req.session.user);
 
-        // ✅ TRIPLE COOKIE SET (NUCLEAR OPTION)
-        // 1. Express-session automatic cookie
-        // 2. Manual Set-Cookie header
+        // ✅ SET COOKIES - Remove domain to allow JavaScript access
         res.setHeader('Set-Cookie', [
-            `secondbrain.sid=${req.sessionID}; Path=/; HttpOnly=false; SameSite=Lax; Max-Age=86400`,
-            `secondbrain.token=${req.sessionID}; Path=/; HttpOnly=false; SameSite=Lax; Max-Age=86400` // Backup token
+            `ACCT=${encodeURIComponent(user.email)}; Path=/; HttpOnly=false; SameSite=Lax; Max-Age=86400`,
+            `NAME=${encodeURIComponent(user.name)}; Path=/; HttpOnly=false; SameSite=Lax; Max-Age=86400`,
+            `UID=${user._id.toString()}; Path=/; HttpOnly=false; SameSite=Lax; Max-Age=86400`,
+            `secondbrain.sid=${req.sessionID}; Path=/; HttpOnly=false; SameSite=Lax; Max-Age=86400`
         ]);
-
-        // 3. Manual cookie call
-        res.cookie('secondbrain.sid', req.sessionID, {
-            httpOnly: false,
-            secure: false,
-            sameSite: 'lax',
-            maxAge: 24 * 60 * 60 * 1000,
-            path: '/',
-            domain: 'localhost'
-        });
 
         // ✅ RESPONSE WITH TOKEN (DUAL MODE)
         res.json({

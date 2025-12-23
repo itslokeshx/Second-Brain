@@ -74,6 +74,21 @@ class SyncService {
         });
     }
 
+    // Load all data from MongoDB
+    async loadAll() {
+        try {
+            const result = await this.authenticatedFetch(`${this.baseURL}/v64/sync`, {
+                method: 'POST',
+                body: JSON.stringify({}) // Empty body = load request
+            });
+            console.log('[Sync] ✅ Data loaded:', result);
+            return result;
+        } catch (error) {
+            console.error('[Sync] ❌ Load failed:', error);
+            throw error;
+        }
+    }
+
     // Check if authenticated
     isAuthenticated() {
         return window.SessionManager && window.SessionManager.currentUser !== null;
