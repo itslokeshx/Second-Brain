@@ -175,8 +175,24 @@ router.all('/v64/sync', async (req, res) => {
     // Legacy app uses Unix Timestamp in SECONDS
     const now = Date.now(); // milliseconds expected by legacy UI for last-sync math
     const cookieHeader = req.headers.cookie || '';
-    const cookieMatch = cookieHeader.match(/JSESSIONID=([^;]+)/);
-    const jsessionId = req.body?.jsessionId || req.headers['x-jsessionid'] || (req.cookies && req.cookies.JSESSIONID) || (cookieMatch ? cookieMatch[1] : null);
+
+    // ✅ FIX: Check multiple cookie sources for session ID
+    const jsessionIdMatch = cookieHeader.match(/JSESSIONID=([^;]+)/);
+    const tokenMatch = cookieHeader.match(/secondbrain\.token=([^;]+)/);
+
+    let jsessionId = req.body?.jsessionId || req.headers['x-jsessionid'] || (req.cookies && req.cookies.JSESSIONID);
+
+    // If JSESSIONID is literally "undefined", try secondbrain.token
+    if (!jsessionId || jsessionId === 'undefined') {
+        jsessionId = (req.cookies && req.cookies['secondbrain.token']) || (tokenMatch ? tokenMatch[1] : null);
+    }
+
+    // Last resort: try regex matches
+    if (!jsessionId || jsessionId === 'undefined') {
+        jsessionId = (jsessionIdMatch ? jsessionIdMatch[1] : null) || (tokenMatch ? tokenMatch[1] : null);
+    }
+
+    console.log('[Legacy Sync] Session ID:', jsessionId);
 
     const session = getSession(jsessionId);
     if (!session) {
@@ -225,14 +241,31 @@ router.all('/v64/sync', async (req, res) => {
 // --- STUBS (Prevent 404 Crashes) ---
 router.get('/v64/user/config', async (req, res) => {
     const cookieHeader = req.headers.cookie || '';
-    const cookieMatch = cookieHeader.match(/JSESSIONID=([^;]+)/);
-    const jsessionId = (req.cookies && req.cookies.JSESSIONID) || (cookieMatch ? cookieMatch[1] : null);
 
-    if (!jsessionId || !getSession(jsessionId)) {
-        return res.json({ status: 1, success: false });
+    // ✅ FIX: Check multiple cookie sources
+    const jsessionIdMatch = cookieHeader.match(/JSESSIONID=([^;]+)/);
+    const tokenMatch = cookieHeader.match(/secondbrain\.token=([^;]+)/);
+
+    let jsessionId = (req.cookies && req.cookies.JSESSIONID);
+
+    // If JSESSIONID is "undefined", try secondbrain.token
+    if (!jsessionId || jsessionId === 'undefined') {
+        jsessionId = (req.cookies && req.cookies['secondbrain.token']) || (tokenMatch ? tokenMatch[1] : null);
+    }
+
+    // Last resort: regex
+    if (!jsessionId || jsessionId === 'undefined') {
+        jsessionId = (jsessionIdMatch ? jsessionIdMatch[1] : null) || (tokenMatch ? tokenMatch[1] : null);
     }
 
     const session = getSession(jsessionId);
+    if (!session) {
+        return res.json({ status: 1, success: false });
+    }
+
+    // ✅ LOAD ACTUAL USER FROM MONGODB
+    const user = await User.findById(session.uid);
+
     attachSessionCookie(res, jsessionId);
 
     return res.json({
@@ -240,9 +273,14 @@ router.get('/v64/user/config', async (req, res) => {
         success: true,
         uid: session.uid,
         pid: session.uid,
-        acct: session.email,
-        name: session.name || session.email,
+        acct: user ? user.email : session.email,
+        name: user ? user.name : (session.name || session.email),
         jsessionId,
+        user: user ? {
+            id: user._id,
+            email: user.email,
+            name: user.name
+        } : null,
         config: {
             theme: 'dark',
             language: 'en',

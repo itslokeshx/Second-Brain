@@ -87,13 +87,14 @@
                 return acc;
             }, {});
 
-            // Check if we have user cookies
-            if (cookies.ACCT && cookies.UID) {
+            // Check if we have user cookies AND they're not literally "undefined"
+            if (cookies.ACCT && cookies.UID &&
+                cookies.ACCT !== 'undefined' && cookies.UID !== 'undefined') {
                 return {
                     email: cookies.ACCT,
                     id: cookies.UID,
-                    username: cookies.NAME || cookies.ACCT.split('@')[0],
-                    sessionId: cookies.JSESSIONID || cookies['secondbrain.token']
+                    username: cookies.NAME && cookies.NAME !== 'undefined' ? cookies.NAME : cookies.ACCT.split('@')[0],
+                    sessionId: cookies.JSESSIONID && cookies.JSESSIONID !== 'undefined' ? cookies.JSESSIONID : (cookies['secondbrain.token'] || null)
                 };
             }
             return null;

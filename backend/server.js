@@ -95,8 +95,13 @@ const handleAuth = async (req, res, isLogin = false) => {
         let user;
         if (isLogin) {
             user = await User.findOne({ email: account });
-            if (!user || user.password !== password) {
-                return res.json({ status: 1, success: false, message: 'Invalid credentials' });
+            if (!user) {
+                return res.json({ status: 1, success: false, message: 'User not found' });
+            }
+            // ✅ FIX: Use matchPassword for bcrypt comparison
+            const isMatch = await user.matchPassword(password);
+            if (!isMatch) {
+                return res.json({ status: 1, success: false, message: 'Invalid password' });
             }
         } else {
             const existing = await User.findOne({ email: account });
@@ -244,15 +249,71 @@ app.get('/v64/user/config', async (req, res) => {
     res.json({ status: 1, success: false });
 });
 
-// Sync Routes
+// Sync Routes - LOAD DATA FROM MONGODB
 app.post('/v64/sync', verifySession, async (req, res) => {
-    res.json({
-        status: 0,
-        success: true,
-        projects: [],
-        tasks: [],
-        pomodoros: []
-    });
+    try {
+        const userId = req.userId;
+
+        console.log(`[v64/sync] Loading data for user: ${req.userEmail}`);
+
+        // Load data from MongoDB
+        const [projects, tasks, pomodoros] = await Promise.all([
+            Project.find({ userId }).select('-_id -__v -userId').lean(),
+            Task.find({ userId }).select('-_id -__v -userId').lean(),
+            PomodoroLog.find({ userId }).select('-_id -__v -userId').lean()
+        ]);
+
+        console.log(`[v64/sync] ✅ Loaded: ${projects.length} projects, ${tasks.length} tasks, ${pomodoros.length} pomodoros`);
+
+        // ✅ NORMALIZE DATA: Add default values for missing fields
+        const normalizedProjects = projects.map(p => ({
+            ...p,
+            type: p.type !== undefined ? p.type : 0,
+            color: p.color || '#FF6B6B',
+            sortOrder: p.sortOrder !== undefined ? p.sortOrder : 0,
+            closed: p.closed || false,
+            deleted: p.deleted || false
+        }));
+
+        const normalizedTasks = tasks.map(t => ({
+            ...t,
+            projectId: t.projectId || '',
+            priority: t.priority !== undefined ? t.priority : 0,
+            completed: t.completed || false,
+            deleted: t.deleted || false,
+            sortOrder: t.sortOrder !== undefined ? t.sortOrder : 0
+        }));
+
+        // Get user info for response
+        const user = await User.findById(userId);
+
+        res.json({
+            status: 0,
+            success: true,
+            acct: user.email,
+            name: user.name,
+            uid: userId,
+            pid: userId,
+            jsessionId: req.sessionID,
+            timestamp: Date.now(),
+            server_now: Date.now(),
+            update_time: Date.now(),
+            projects: normalizedProjects,
+            tasks: normalizedTasks,
+            pomodoros: pomodoros || [],
+            subtasks: [],
+            schedules: [],
+            project_member: [],
+            list: []
+        });
+    } catch (error) {
+        console.error('[v64/sync] ❌ Error:', error);
+        res.json({
+            status: 1,
+            success: false,
+            message: error.message
+        });
+    }
 });
 
 app.post('/api/sync/all', verifySession, async (req, res) => {
