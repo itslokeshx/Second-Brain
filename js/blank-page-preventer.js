@@ -37,7 +37,7 @@
         event.preventDefault();
     });
 
-    // Monitor for blank body
+    // Monitor for blank body (check every 3 seconds to give main.js time to render)
     const checkInterval = setInterval(() => {
         // Filter out scripts and other non-visual elements
         const visibleChildren = Array.from(document.body.children).filter(el => {
@@ -80,10 +80,10 @@
                 </div>
             `;
         }
-    }, 1000);
+    }, 3000); // Check every 3 seconds instead of 1
 
-    // Stop checking after 10 seconds
-    setTimeout(() => clearInterval(checkInterval), 10000);
+    // Stop checking after 15 seconds (increased from 10)
+    setTimeout(() => clearInterval(checkInterval), 15000);
 
     console.log('[Blank Page Preventer] ✅ Active - Monitoring for errors');
 })();

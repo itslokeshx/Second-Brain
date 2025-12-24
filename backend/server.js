@@ -416,9 +416,7 @@ app.post('/v64/sync', verifySession, async (req, res) => {
             normalizedProjects.unshift({
                 id: '0',
                 name: 'Tasks',
-                type: 'project', // Legacy expects lowercase string often? Or 0/1? Keeping as 'project' for now matching schema
-                // Actually legacy usually uses 0 for project, 1 for folder. Let's send 0 if it's 'project'.
-                // Wait, map above handles p.type.
+                type: 0, // ✅ FIX: Use number 0 for project type (main.js expects this)
                 color: '#FF6B6B',
                 sortOrder: 0,
                 closed: false,

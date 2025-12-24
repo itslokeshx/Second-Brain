@@ -79,10 +79,10 @@
                     console.log('[Cookie Protector] Response:', data);
                 }
 
-                // Reset after a short delay
+                // Reset after 10 seconds to give main.js time to initialize
                 setTimeout(() => {
                     loginInProgress = false;
-                }, 1000);
+                }, 10000);
             }
         } catch (e) {
             console.error('[Cookie Protector] Error parsing response:', e);

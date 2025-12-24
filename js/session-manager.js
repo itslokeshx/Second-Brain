@@ -59,7 +59,12 @@
                     this.updateUI(true, data.user.email || data.acct);
                     this.startPeriodicCheck();
                     console.log('[Session] ✅ Authenticated:', data.user.email);
-                    console.log('[Session] 💾 Using local data - click sync to load from server');
+
+                    // ✅ AUTO-LOAD DATA: Fetch projects/tasks from backend
+                    console.log('[Session] 📥 Loading data from server...');
+                    this.loadDataAfterLogin().catch(err => {
+                        console.warn('[Session] Data load failed, using local data:', err);
+                    });
                 } else if (cookieUser) {
                     // ✅ FALLBACK: Use cookie data if API doesn't return user
                     console.log('[Session] Using cookie-based auth:', cookieUser.email);
@@ -69,6 +74,12 @@
                         localStorage.setItem('authToken', this.token);
                     }
                     this.updateUI(true, cookieUser.email);
+
+                    // ✅ AUTO-LOAD DATA: Fetch projects/tasks from backend
+                    console.log('[Session] 📥 Loading data from server (cookie auth)...');
+                    this.loadDataAfterLogin().catch(err => {
+                        console.warn('[Session] Data load failed, using local data:', err);
+                    });
                 } else {
                     this.handleLoggedOut();
                 }
@@ -81,6 +92,12 @@
                     this.currentUser = cookieUser;
                     this.token = cookieUser.sessionId;
                     this.updateUI(true, cookieUser.email);
+
+                    // ✅ AUTO-LOAD DATA: Fetch projects/tasks from backend
+                    console.log('[Session] 📥 Loading data from server (fallback)...');
+                    this.loadDataAfterLogin().catch(err => {
+                        console.warn('[Session] Data load failed, using local data:', err);
+                    });
                 } else {
                     this.handleLoggedOut();
                 }
@@ -329,78 +346,56 @@
                     return;
                 }
 
-                // Write to IndexedDB
-                const dbName = 'PomodoroDB6';
-                const dbRequest = indexedDB.open(dbName, 1);
+                // ✅ SKIP IndexedDB - Use localStorage directly (more reliable)
+                console.log('[Session] Saving directly to localStorage (skipping IndexedDB)...');
+                this.saveToLocalStorage(data);
 
-                dbRequest.onupgradeneeded = (event) => {
-                    const db = event.target.result;
-                    if (!db.objectStoreNames.contains('projects')) {
-                        db.createObjectStore('projects', { keyPath: 'id' });
-                    }
-                    if (!db.objectStoreNames.contains('tasks')) {
-                        db.createObjectStore('tasks', { keyPath: 'id' });
-                    }
-                    if (!db.objectStoreNames.contains('pomodoros')) {
-                        db.createObjectStore('pomodoros', { keyPath: 'id' });
-                    }
-                };
-
-                dbRequest.onsuccess = () => {
-                    const db = dbRequest.result;
-                    const tx = db.transaction(['projects', 'tasks', 'pomodoros'], 'readwrite');
-
-                    // Clear and restore projects
-                    const projectStore = tx.objectStore('projects');
-                    projectStore.clear();
-                    (data.projects || []).forEach(p => {
-                        try {
-                            projectStore.add(p);
-                        } catch (e) {
-                            console.warn('[Session] Failed to add project:', e);
-                        }
-                    });
-
-                    // Clear and restore tasks
-                    const taskStore = tx.objectStore('tasks');
-                    taskStore.clear();
-                    (data.tasks || []).forEach(t => {
-                        try {
-                            taskStore.add(t);
-                        } catch (e) {
-                            console.warn('[Session] Failed to add task:', e);
-                        }
-                    });
-
-                    // Clear and restore pomodoros
-                    const pomodoroStore = tx.objectStore('pomodoros');
-                    pomodoroStore.clear();
-                    (data.pomodoros || []).forEach(p => {
-                        try {
-                            pomodoroStore.add(p);
-                        } catch (e) {
-                            console.warn('[Session] Failed to add pomodoro:', e);
-                        }
-                    });
-
-                    tx.oncomplete = () => {
-                        console.log('[Session] ✅ Data restored to IndexedDB');
-                        console.log(`  Projects: ${data.projects?.length || 0}`);
-                        console.log(`  Tasks: ${data.tasks?.length || 0}`);
-                        console.log(`  Pomodoros: ${data.pomodoros?.length || 0}`);
-
-                        // Force UI refresh after a short delay
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 500);
-                    };
-                };
-
-                dbRequest.onerror = (error) => {
-                    console.error('[Session] IndexedDB error:', error);
-                };
             } catch (error) {
                 console.error('[Session] Data load failed:', error);
+                console.log('[Session] Attempting localStorage fallback...');
+                // Last resort: try to save to localStorage anyway
+                try {
+                    if (data && data.projects) {
+                        this.saveToLocalStorage(data);
+                    }
+                } catch (e) {
+                    console.error('[Session] localStorage fallback also failed:', e);
+                }
+            }
+        },
+
+        // Helper to save data to localStorage
+        saveToLocalStorage: function (data) {
+            try {
+                console.log('[Session] Saving to localStorage...');
+
+                if (data.projects && data.projects.length > 0) {
+                    localStorage.setItem('pomodoro-projects', JSON.stringify(data.projects));
+                    console.log(`[Session] ✅ Saved ${data.projects.length} projects to localStorage`);
+                }
+
+                if (data.tasks && data.tasks.length > 0) {
+                    localStorage.setItem('pomodoro-tasks', JSON.stringify(data.tasks));
+                    console.log(`[Session] ✅ Saved ${data.tasks.length} tasks to localStorage`);
+                }
+
+                if (data.pomodoros && data.pomodoros.length > 0) {
+                    localStorage.setItem('pomodoro-pomodoros', JSON.stringify(data.pomodoros));
+                    console.log(`[Session] ✅ Saved ${data.pomodoros.length} pomodoros to localStorage`);
+                }
+
+                // Trigger UI update
+                console.log('[Session] Dispatching data-loaded event (localStorage)...');
+                window.dispatchEvent(new CustomEvent('session-data-loaded', {
+                    detail: { projects: data.projects, tasks: data.tasks, pomodoros: data.pomodoros }
+                }));
+
+                // Force main.js to re-render by triggering a storage event
+                window.dispatchEvent(new Event('storage'));
+
+
+            } catch (e) {
+                console.error('[Session] localStorage save failed:', e);
             }
         }
     };

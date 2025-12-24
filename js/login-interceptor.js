@@ -60,27 +60,19 @@
                             );
                         }
 
-                        // DON'T block the handler - let main.js handle it
-                        // This allows retry attempts to work
-                        console.warn('[Login Interceptor] Login failed. Reloading to prevent offline mode bypass.');
-
-                        // FORCE RELOAD to stop main.js from entering "offline mode"
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1500);
+                        // ✅ NO RELOAD - Let user retry login
+                        console.warn('[Login Interceptor] Login failed. User can retry.');
 
                         // DO NOT CALL originalOnLoad - this prevents main.js from proceeding
                         return;
                     } else {
                         console.log('[Login Interceptor] ✅ Login successful');
                         if (window.showNotification) {
-                            window.showNotification('Login successful! Reloading...', 'success', 2000);
+                            window.showNotification('Login successful!', 'success', 2000);
                         }
 
-                        // Force reload after success to ensure clean state
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1000);
+                        // ✅ NO RELOAD - Let main.js render the UI naturally
+                        console.log('[Login Interceptor] Allowing main.js to render UI...');
                     }
                 } catch (e) {
                     console.error('[Login Interceptor] Error parsing response:', e);
