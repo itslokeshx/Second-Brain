@@ -1,4 +1,4 @@
-// Data Sanitizer - Cleans localStorage to prevent main.js crashes
+// Data Sanitizer - Cleans AND Seeds localStorage to prevent main.js crashes
 (function () {
     'use strict';
 
@@ -15,6 +15,7 @@
 
     let fixedCount = 0;
 
+    // 1. Basic Cleaning (Type Checks)
     KEYS_TO_SANITIZE.forEach(key => {
         try {
             const raw = localStorage.getItem(key);
@@ -25,11 +26,9 @@
 
             const originalLength = data.length;
 
-            // Filter out null, undefined, or items missing 'id' (basic check)
-            // The specific error was reading 'type' of undefined, so removing undefined items is key
             data = data.filter(item => {
                 if (!item) return false;
-                if (typeof item !== 'object') return false;
+                if (typeof item !== 'object' && typeof item !== 'string' && typeof item !== 'number') return false;
                 return true;
             });
 
@@ -43,14 +42,7 @@
         }
     });
 
-    if (fixedCount > 0) {
-        console.log(`[Data Sanitizer] ✅ Removed ${fixedCount} corrupt items. Reload recommended if issues persist.`);
-    } else {
-        console.log('[Data Sanitizer] ✅ Data integrity verified.');
-    }
-
-    // ✅ FIX: REFERENTIAL INTEGRITY CHECK
-    // Ensure all tasks belong to a valid project to prevent "reading type of undefined" crash
+    // 2. SEEDING & INTEGRITY (Robust)
     try {
         const projectsRaw = localStorage.getItem('pomodoro-projects') || '[]';
         const tasksRaw = localStorage.getItem('pomodoro-tasks') || '[]';
@@ -59,53 +51,61 @@
         let tasks = JSON.parse(tasksRaw);
 
         if (Array.isArray(projects) && Array.isArray(tasks)) {
-            // 1. Ensure a default project exists
-            let defaultProject = projects.find(p => p.id === '0' || p.id === 0);
+
+            // A. Ensure Default Project ("Tasks") Exists
+            // Main.js likely expects Type 0 (Project) and specific ID '0'.
+            let defaultProject = projects.find(p => String(p.id) === '0');
+
             if (!defaultProject) {
-                console.warn('[Data Sanitizer] ⚠️ No default project found! Creating one...');
+                console.warn('[Data Sanitizer] ⚠️ No default project found! Injecting robust default.');
                 defaultProject = {
-                    id: '0', // Standard ID for "Tasks" / Inbox
+                    id: '0',        // String '0' is standard for legacy
                     name: 'Tasks',
-                    type: 'project', // Critical field
+                    type: 0,        // NUMBER 0 often used for Project in legacy
                     color: '#FF6B6B',
                     order: 0,
                     completed: false,
-                    deleted: false
+                    deleted: false,
+                    sync: 1         // Mark as dirty so it syncs
                 };
                 projects.unshift(defaultProject);
                 localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
-                console.log('[Data Sanitizer] ✅ Created missing default "Tasks" project.');
+                fixedCount++;
             }
 
-            // 2. Reassign orphaned tasks
+            // B. Reassign Orphaned Tasks
             const projectIds = new Set(projects.map(p => String(p.id)));
             let orphanedCount = 0;
 
             tasks = tasks.map(task => {
                 const pid = String(task.projectId || task.parentId || '');
-                // If project doesn't exist, assign to default project (ID '0')
                 if (!projectIds.has(pid)) {
                     orphanedCount++;
-                    task.projectId = defaultProject.id;
-                    task.parentId = defaultProject.id;
+                    task.projectId = '0'; // Assign to Default
+                    task.parentId = '0';
+                    task.sync = 1;
                 }
                 return task;
             });
 
             if (orphanedCount > 0) {
-                console.warn(`[Data Sanitizer] ⚠️ Found ${orphanedCount} orphaned tasks. Reassigned to default project.`);
+                console.warn(`[Data Sanitizer] ⚠️ Reassigned ${orphanedCount} orphaned tasks.`);
                 localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
             }
 
-            // 3. Fix Project Nesting (Orphaned Folders)
-            // If a project has a parentId that doesn't exist, main.js crashes when building the tree
+            // C. Fix Project Nesting (Orphaned Folders)
             let projectsChanged = false;
             projects = projects.map(p => {
                 if (p.parentId && p.parentId !== '' && !projectIds.has(String(p.parentId))) {
-                    console.warn(`[Data Sanitizer] ⚠️ Project "${p.name}" has missing parent ${p.parentId}. Moving to root.`);
-                    p.parentId = ''; // Move to root
+                    console.warn(`[Data Sanitizer] ⚠️ Orphaned folder structure for "${p.name}". Moving to root.`);
+                    p.parentId = '';
+                    p.sync = 1;
                     projectsChanged = true;
                 }
+                // Ensure TYPE matches what we think main.js wants
+                if (p.type === 'project') p.type = 0;
+                if (p.type === 'folder') p.type = 1;
+
                 return p;
             });
 
@@ -113,29 +113,52 @@
                 localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
             }
 
-            // 4. Sanitize custom-project-list (Sort Order)
-            // If this list contains IDs of deleted projects, main.js crashes when rendering sidebar
-            const customListRaw = localStorage.getItem('custom-project-list');
-            if (customListRaw) {
-                try {
-                    let customList = JSON.parse(customListRaw);
-                    if (Array.isArray(customList)) {
-                        const originalListLength = customList.length;
-                        // Only keep IDs that actually exist in 'projects'
-                        customList = customList.filter(id => projectIds.has(String(id)));
+            // D. Ensure custom-project-list contains the Default Project
+            let customListRaw = localStorage.getItem('custom-project-list');
+            let customList = [];
+            try {
+                customList = customListRaw ? JSON.parse(customListRaw) : [];
+            } catch (e) { customList = []; }
 
-                        if (customList.length !== originalListLength) {
-                            console.warn(`[Data Sanitizer] ⚠️ Found ${originalListLength - customList.length} invalid IDs in custom-project-list. Removing...`);
-                            localStorage.setItem('custom-project-list', JSON.stringify(customList));
+            if (!Array.isArray(customList)) customList = [];
+
+            // Filter out garbage
+            customList = customList.filter(id => projectIds.has(String(id)));
+
+            // Ensure '0' is present if not already
+            if (!customList.includes('0')) {
+                customList.unshift('0');
+                console.log('[Data Sanitizer] Added Default Project to Sidebar List.');
+                localStorage.setItem('custom-project-list', JSON.stringify(customList));
+            }
+            // Save cleaned list if it changed (already done by setItem above)
+
+            // E. Clean Pomodoro Focus Task
+            const focusTaskRaw = localStorage.getItem('pomodoro-focus-task');
+            if (focusTaskRaw) {
+                try {
+                    let focusTask = JSON.parse(focusTaskRaw);
+                    if (focusTask && focusTask.projectId) {
+                        if (!projectIds.has(String(focusTask.projectId))) {
+                            console.warn(`[Data Sanitizer] ⚠️ Focus task points to missing project. Clearing.`);
+                            localStorage.removeItem('pomodoro-focus-task');
                         }
+                    } else if (focusTask && !focusTask.id) {
+                        // Empty object or malformed
+                        localStorage.removeItem('pomodoro-focus-task');
                     }
                 } catch (e) {
-                    console.error('[Data Sanitizer] Error cleaning custom-project-list:', e);
+                    localStorage.removeItem('pomodoro-focus-task');
                 }
+            } else {
+                // Should we inject null? localStorage.removeItem does checking implicitly.
             }
         }
+
     } catch (e) {
-        console.error('[Data Sanitizer] Error checking referential integrity:', e);
+        console.error('[Data Sanitizer] Error during seeding/checking:', e);
     }
+
+    console.log('[Data Sanitizer] ✅ Integrity check complete.');
 
 })();

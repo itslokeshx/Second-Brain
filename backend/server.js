@@ -304,6 +304,36 @@ const verifySession = async (req, res, next) => {
     res.status(401).json({ status: 1, success: false, message: 'Not authenticated' });
 };
 
+// ✅ LEGACY ROUTE SUPPORT (Prevent 404s)
+app.get('/v61/user/groups', (req, res) => {
+    res.json({ status: 0, success: true, groups: [] });
+});
+
+app.get('/v61/group/more', (req, res) => {
+    res.json({ status: 0, success: true, list: [] });
+});
+
+app.get('/v63/exception-report', (req, res) => {
+    res.json({ status: 0, success: true });
+});
+
+app.get('/v62/user/point', (req, res) => {
+    res.json({ status: 0, success: true, point: 0 });
+});
+
+app.get('/v65/access', (req, res) => {
+    res.json({ status: 0, success: true });
+});
+
+app.get('/v60/property', (req, res) => {
+    res.json({ status: 0, success: true });
+});
+
+app.get('/undefined', (req, res) => {
+    res.status(200).send(''); // Prevent 404 for undefined
+});
+
+
 // Config Endpoint
 app.get('/v64/user/config', async (req, res) => {
     // Try session first
