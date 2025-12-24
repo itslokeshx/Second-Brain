@@ -36,7 +36,11 @@
                     headers['X-Session-Token'] = this.token;
                 }
 
-                const response = await fetch('http://localhost:3000/v64/user/config', {
+                const apiUrl = window.AppConfig
+                    ? window.AppConfig.getApiUrl('/v64/user/config')
+                    : 'http://localhost:3000/v64/user/config';
+
+                const response = await fetch(apiUrl, {
                     method: 'GET',
                     credentials: 'include', // ✅ Still try cookies
                     headers: headers
@@ -55,9 +59,7 @@
                     this.updateUI(true, data.user.email || data.acct);
                     this.startPeriodicCheck();
                     console.log('[Session] ✅ Authenticated:', data.user.email);
-
-                    // Load synced data
-                    await this.loadDataAfterLogin();
+                    console.log('[Session] 💾 Using local data - click sync to load from server');
                 } else if (cookieUser) {
                     // ✅ FALLBACK: Use cookie data if API doesn't return user
                     console.log('[Session] Using cookie-based auth:', cookieUser.email);
@@ -131,21 +133,25 @@
                 if (userDisplay) {
                     userDisplay.textContent = username;
                     userDisplay.setAttribute('data-user-name', username);
+                    userDisplay.style.color = '#4CAF50'; // Green to indicate logged in
                 }
                 if (loginBtn) loginBtn.style.display = 'none';
                 if (logoutBtn) logoutBtn.style.display = 'block';
 
-                console.log('[Session] UI updated for:', username);
+                console.log('[Session] ✅ UI updated for:', username);
 
                 // ✅ FIX: Override main.js username display
                 this.forceUsernameDisplay(username);
+
             } else {
                 if (userDisplay) {
                     userDisplay.textContent = 'Not logged in';
                     userDisplay.removeAttribute('data-user-name');
+                    userDisplay.style.color = '#999'; // Gray for not logged in
                 }
                 if (loginBtn) loginBtn.style.display = 'block';
                 if (logoutBtn) logoutBtn.style.display = 'none';
+
             }
         },
 
@@ -205,6 +211,7 @@
             setTimeout(findAndUpdate, 2000);
         },
 
+
         setupHandlers: function () {
             // Logout handler
             const logoutBtn = document.querySelector('.logout-btn, #logout-button');
@@ -214,27 +221,55 @@
         },
 
         logout: async function () {
+            console.log('[Session] 🚪 Logout initiated');
+
             try {
                 // Stop intervals FIRST
                 this.stopPeriodicCheck();
 
-                await fetch('http://localhost:3000/v63/user/logout', {
+                const apiUrl = window.AppConfig
+                    ? window.AppConfig.getApiUrl('/v63/user/logout')
+                    : 'http://localhost:3000/v63/user/logout';
+
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     credentials: 'include'
                 });
+
+                const data = await response.json();
+                console.log('[Session] Logout response:', data);
             } catch (e) {
                 console.error('[Session] Logout error:', e);
             }
 
+            // Clear local state
             this.handleLoggedOut();
 
             // Clear all cookies
             document.cookie.split(';').forEach(c => {
-                document.cookie = c.trim().split('=')[0] + '=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/';
+                const name = c.trim().split('=')[0];
+                document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/';
             });
 
+            // Clear IndexedDB
+            try {
+                const dbName = 'PomodoroDB6';
+                const deleteRequest = indexedDB.deleteDatabase(dbName);
+                deleteRequest.onsuccess = () => console.log('[Session] ✅ IndexedDB cleared');
+                deleteRequest.onerror = () => console.log('[Session] ⚠️ IndexedDB clear failed');
+            } catch (e) {
+                console.error('[Session] IndexedDB error:', e);
+            }
+
+            // Clear localStorage auth data
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('userName');
+
+            console.log('[Session] ✅ Logout complete, reloading...');
+
             // Reload after a short delay to ensure cleanup
-            setTimeout(() => window.location.reload(), 100);
+            setTimeout(() => window.location.reload(), 200);
         },
 
         // ✅ HELPER: Get auth headers for other modules
@@ -247,26 +282,25 @@
         },
 
         startPeriodicCheck: function () {
-            // Clear existing intervals
+            // DISABLED: No automatic checks - sync only on manual button click
+            console.log('[Session] ℹ️ Automatic sync disabled - use sync button to sync data');
+
+            // Clear any existing intervals
             if (this.checkInterval) clearInterval(this.checkInterval);
             if (this.cookieMonitorInterval) clearInterval(this.cookieMonitorInterval);
 
-            // Session check every 30 seconds (not 5 - too aggressive)
-            this.checkInterval = setInterval(() => {
-                if (this.currentUser) {  // Only check if logged in
-                    this.checkLoginStatus();
-                }
-            }, 30000);
+            this.checkInterval = null;
+            this.cookieMonitorInterval = null;
 
-            // Cookie monitor every 2 seconds
-            let lastCookies = document.cookie;
-            this.cookieMonitorInterval = setInterval(() => {
-                if (document.cookie !== lastCookies) {
-                    lastCookies = document.cookie;
-                    console.log('[Session] Cookies changed, re-checking auth...');
+            // Optional: Very infrequent session validation (every 5 minutes) just to check if still logged in
+            // Uncomment if you want basic session validation without data sync
+            /*
+            this.checkInterval = setInterval(() => {
+                if (this.currentUser) {
                     this.checkLoginStatus();
                 }
-            }, 2000);
+            }, 300000); // 5 minutes
+            */
         },
 
         stopPeriodicCheck: function () {

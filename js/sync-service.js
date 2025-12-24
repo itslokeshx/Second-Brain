@@ -1,8 +1,12 @@
 // ✅ DUAL-MODE SYNC SERVICE (Cookie + Token)
 class SyncService {
     constructor() {
-        this.baseURL = 'http://localhost:3000';
+        // Use AppConfig if available, fallback to localhost
+        this.baseURL = window.AppConfig
+            ? window.AppConfig.getApiBaseUrl()
+            : 'http://localhost:3000';
         console.log('[Sync] Service initialized - Dual-mode auth');
+        console.log('[Sync] Base URL:', this.baseURL);
     }
 
     // ✅ GUARANTEED AUTHENTICATED FETCH

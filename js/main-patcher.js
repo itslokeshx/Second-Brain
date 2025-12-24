@@ -1,9 +1,9 @@
-// Main.js Patcher - Patches RSA decrypt to handle plain text cookies
+// Main.js Patcher - SECURITY ENHANCED
 // This MUST load BEFORE main.js
 (function () {
     'use strict';
 
-    console.log('[Main Patcher] Initializing...');
+    console.log('[Main Patcher] Initializing SECURITY MODE...');
 
     // Wait for main.js to load and define its RSA/decrypt functions
     const patchInterval = setInterval(() => {
@@ -17,7 +17,6 @@
                 window.JSEncrypt.prototype.decrypt = function (str) {
                     // If string is already plain text (contains @ or is short), return as-is
                     if (!str || str.includes('@') || str.length < 50) {
-                        console.log('[Main Patcher] Skipping decrypt for plain text:', str?.substring(0, 30));
                         return str;
                     }
                     return originalDecrypt.call(this, str);
@@ -30,7 +29,6 @@
                 const originalDecrypt = window.decrypt;
                 window.decrypt = function (str) {
                     if (!str || str.includes('@') || str.length < 50) {
-                        console.log('[Main Patcher] Skipping global decrypt for plain text:', str?.substring(0, 30));
                         return str;
                     }
                     return originalDecrypt(str);
@@ -48,22 +46,6 @@
         console.log('[Main Patcher] Timeout - encryption library may not exist');
     }, 5000);
 
-    // Also patch document.cookie getter to log what's being read
-    const originalCookieDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie');
-    let cookieReadCount = 0;
-
-    Object.defineProperty(Document.prototype, 'cookie', {
-        get: function () {
-            const cookies = originalCookieDescriptor.get.call(this);
-            cookieReadCount++;
-            if (cookieReadCount <= 5) { // Only log first 5 reads
-                console.log('[Main Patcher] Cookie read #' + cookieReadCount + ':', cookies);
-            }
-            return cookies;
-        },
-        set: originalCookieDescriptor.set,
-        configurable: true
-    });
-
-    console.log('[Main Patcher] ✅ Ready');
+    // DON'T override cookie descriptor - let cookie-protector handle it
+    console.log('[Main Patcher] ✅ Ready - Cookie protection delegated to cookie-protector.js');
 })();

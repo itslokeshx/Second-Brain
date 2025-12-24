@@ -17,41 +17,53 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/second
 
 // ✅ SOLUTION A: AGGRESSIVE SESSION CONFIG
 const session = require('express-session');
-const { MongoStore } = require('connect-mongo');
+const MongoStore = require('connect-mongo');
 
 app.use(session({
     name: 'secondbrain.sid',
     secret: process.env.SESSION_SECRET || 'second-brain-secret-key-2025',
     resave: true, // ✅ FORCE session save on every request
     saveUninitialized: true, // ✅ FORCE cookie creation immediately
-    store: MongoStore.create({
+    store: new (MongoStore.default || MongoStore)({
         mongoUrl: MONGODB_URI,
         ttl: 24 * 60 * 60,
         autoRemove: 'native',
         touchAfter: 0 // ✅ Update session on every request
     }),
     cookie: {
-        httpOnly: false, // ✅ CRITICAL: Allow JavaScript access for debugging
-        secure: false,
-        sameSite: 'lax',
+        httpOnly: false, // Allow JavaScript access for session management
+        secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
         maxAge: 24 * 60 * 60 * 1000,
-        path: '/',
-        domain: 'localhost' // ✅ EXPLICIT domain
+        path: '/'
+        // No domain specified - works for any domain
     }
 }));
 
 // CORS - MUST be before body parsers
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000', 'http://localhost:8000'];
+
 app.use(cors({
     origin: function (origin, callback) {
-        const allowed = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000'];
-        if (!origin || origin === 'null' || allowed.includes(origin)) {
+        // Allow requests with no origin (mobile apps, curl, etc.)
+        if (!origin || origin === 'null') {
             return callback(null, true);
         }
-        callback(null, true);
+        // Check if origin is in allowed list
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        // In development, allow all origins
+        if (process.env.NODE_ENV !== 'production') {
+            return callback(null, true);
+        }
+        callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-jsessionid', 'Origin', 'Accept']
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-jsessionid', 'x-session-token', 'Origin', 'Accept']
 }));
 
 // Body parsers - AFTER CORS
@@ -83,37 +95,132 @@ const Project = require('./models/Project');
 const Task = require('./models/Task');
 const PomodoroLog = require('./models/PomodoroLog');
 
+// Rate limiting for auth endpoints
+const authAttempts = new Map();
+const MAX_ATTEMPTS = 10; // Increased for development testing
+const LOCKOUT_TIME = 5 * 60 * 1000; // 5 minutes (reduced for testing)
+
+const checkRateLimit = (ip) => {
+    const now = Date.now();
+    const attempts = authAttempts.get(ip) || { count: 0, firstAttempt: now, lockedUntil: 0 };
+
+    // Check if locked out
+    if (attempts.lockedUntil > now) {
+        const remainingTime = Math.ceil((attempts.lockedUntil - now) / 1000 / 60);
+        return { allowed: false, message: `Too many failed attempts. Try again in ${remainingTime} minutes.` };
+    }
+
+    // Reset if first attempt was more than lockout time ago
+    if (now - attempts.firstAttempt > LOCKOUT_TIME) {
+        authAttempts.set(ip, { count: 1, firstAttempt: now, lockedUntil: 0 });
+        return { allowed: true };
+    }
+
+    // Increment attempts
+    attempts.count++;
+
+    // Lock out if too many attempts
+    if (attempts.count > MAX_ATTEMPTS) {
+        attempts.lockedUntil = now + LOCKOUT_TIME;
+        authAttempts.set(ip, attempts);
+        return { allowed: false, message: `Too many failed attempts. Locked out for ${LOCKOUT_TIME / 1000 / 60} minutes.` };
+    }
+
+    authAttempts.set(ip, attempts);
+    return { allowed: true };
+};
+
+const recordFailedAttempt = (ip) => {
+    const attempts = authAttempts.get(ip) || { count: 0, firstAttempt: Date.now(), lockedUntil: 0 };
+    attempts.count++;
+    authAttempts.set(ip, attempts);
+};
+
+const clearAttempts = (ip) => {
+    authAttempts.delete(ip);
+};
+
 // ✅ GUARANTEED AUTH HANDLER
 const handleAuth = async (req, res, isLogin = false) => {
     try {
+        // Get client IP
+        const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+
+        // RATE LIMITING DISABLED - Unlimited login attempts allowed
+        // const rateCheck = checkRateLimit(clientIp);
+        // if (!rateCheck.allowed) {
+        //     console.log(`[Auth] ❌ Rate limit exceeded for IP: ${clientIp}`);
+        //     return res.json({ status: 1, success: false, message: rateCheck.message });
+        // }
+
         const { account, password } = req.body;
 
+        console.log(`[Auth] ${isLogin ? 'LOGIN' : 'REGISTER'} attempt for:`, account);
+        console.log(`[Auth] Password provided:`, password ? 'YES' : 'NO');
+        console.log(`[Auth] Password length:`, password?.length || 0);
+
         if (!account || !password) {
+            console.log('[Auth] ❌ Missing credentials');
             return res.json({ status: 1, success: false, message: 'Missing credentials' });
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(account)) {
+            console.log('[Auth] ❌ Invalid email format');
+            return res.json({ status: 1, success: false, message: 'Invalid email format' });
+        }
+
+        // Validate password length
+        if (password.length < 6 || password.length > 100) {
+            console.log('[Auth] ❌ Invalid password length');
+            return res.json({ status: 1, success: false, message: 'Password must be 6-100 characters' });
         }
 
         let user;
         if (isLogin) {
+            console.log('[Auth] Looking up user in database...');
             user = await User.findOne({ email: account });
+
             if (!user) {
-                return res.json({ status: 1, success: false, message: 'User not found' });
+                console.log('[Auth] ❌ User not found in database');
+                // User explicitly requested to know if account doesn't exist to prompt registration
+                return res.json({ status: 1, success: false, message: 'Account not found. Please register.' });
             }
+
+            console.log('[Auth] User found, verifying password...');
+            console.log('[Auth] Stored hash:', user.password?.substring(0, 20) + '...');
+
             // ✅ FIX: Use matchPassword for bcrypt comparison
             const isMatch = await user.matchPassword(password);
+
+            console.log('[Auth] Password match result:', isMatch);
+
             if (!isMatch) {
-                return res.json({ status: 1, success: false, message: 'Invalid password' });
+                console.log('[Auth] ❌ Password verification failed');
+                recordFailedAttempt(clientIp);
+                return res.json({ status: 1, success: false, message: 'Invalid email or password' });
             }
+
+            console.log('[Auth] ✅ Password verified successfully');
+            clearAttempts(clientIp); // Clear failed attempts on successful login
         } else {
+            console.log('[Auth] Checking if user already exists...');
             const existing = await User.findOne({ email: account });
+
             if (existing) {
-                return res.json({ status: 1, success: false, message: 'User exists' });
+                console.log('[Auth] ❌ User already exists');
+                return res.json({ status: 1, success: false, message: 'Email already registered' });
             }
+
+            console.log('[Auth] Creating new user...');
             user = await User.create({
                 email: account,
                 password: password,
                 name: account.split('@')[0],
                 createdAt: Date.now()
             });
+            console.log('[Auth] ✅ User created successfully');
         }
 
         // ✅ SET SESSION DATA
@@ -255,24 +362,59 @@ app.post('/v64/sync', verifySession, async (req, res) => {
 
         console.log(`[v64/sync] ✅ Loaded: ${projects.length} projects, ${tasks.length} tasks, ${pomodoros.length} pomodoros`);
 
-        // ✅ NORMALIZE DATA: Add default values for missing fields
-        const normalizedProjects = projects.map(p => ({
-            ...p,
-            type: p.type !== undefined ? p.type : 0,
-            color: p.color || '#FF6B6B',
-            sortOrder: p.sortOrder !== undefined ? p.sortOrder : 0,
-            closed: p.closed || false,
-            deleted: p.deleted || false
-        }));
+        // ✅ DATA INTEGRITY & SANITIZATION (Server-Side)
+        // Ensure data sent to frontend is crash-proof
 
-        const normalizedTasks = tasks.map(t => ({
-            ...t,
-            projectId: t.projectId || '',
-            priority: t.priority !== undefined ? t.priority : 0,
-            completed: t.completed || false,
-            deleted: t.deleted || false,
-            sortOrder: t.sortOrder !== undefined ? t.sortOrder : 0
-        }));
+        // 1. Ensure Default Project ("Tasks") Exists
+        let hasDefault = false;
+        const normalizedProjects = projects.map(p => {
+            if (p.id === '0' || p.id === 0) hasDefault = true;
+            return {
+                ...p,
+                type: p.type !== undefined ? p.type : 0,
+                color: p.color || '#FF6B6B',
+                sortOrder: p.sortOrder !== undefined ? p.sortOrder : 0,
+                closed: p.closed || false,
+                deleted: p.deleted || false,
+                // Fix orphaned nesting (move to root if parent missing)
+                parentId: (p.parentId && projects.some(parent => parent.id == p.parentId)) ? p.parentId : ''
+            };
+        });
+
+        if (!hasDefault) {
+            console.log('[v64/sync] ⚠️ No default project found. Injecting virtual Inbox.');
+            normalizedProjects.unshift({
+                id: '0',
+                name: 'Tasks',
+                type: 'project', // Legacy expects lowercase string often? Or 0/1? Keeping as 'project' for now matching schema
+                // Actually legacy usually uses 0 for project, 1 for folder. Let's send 0 if it's 'project'.
+                // Wait, map above handles p.type.
+                color: '#FF6B6B',
+                sortOrder: 0,
+                closed: false,
+                deleted: false,
+                parentId: ''
+            });
+        }
+
+        const projectIds = new Set(normalizedProjects.map(p => String(p.id)));
+
+        // 2. Fix Orphaned Tasks
+        const normalizedTasks = tasks.map(t => {
+            const pid = String(t.parentId || t.projectId || '');
+            const targetPid = projectIds.has(pid) ? pid : '0'; // Fallback to Inbox
+
+            return {
+                ...t,
+                // Schema match
+                projectId: targetPid,
+                parentId: targetPid,
+                priority: t.priority !== undefined ? t.priority : 0,
+                completed: t.completed || false,
+                deleted: t.deleted || false,
+                sortOrder: t.sortOrder !== undefined ? t.sortOrder : 0
+            };
+        });
 
         // Get user info for response
         const user = await User.findById(userId);
@@ -394,7 +536,34 @@ app.get('/debug/cookies', (req, res) => {
 });
 
 // Helper stubs
-app.all('/v63/user/logout', (req, res) => res.json({ status: 0 }));
+// Logout endpoint - properly destroy session
+app.all('/v63/user/logout', async (req, res) => {
+    try {
+        console.log('[Logout] User logging out:', req.session?.user?.email || 'unknown');
+
+        // Destroy session
+        if (req.session) {
+            await new Promise((resolve, reject) => {
+                req.session.destroy((err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+        }
+
+        // Clear all authentication cookies
+        const cookiesToClear = ['ACCT', 'NAME', 'UID', 'JSESSIONID', 'secondbrain.sid', 'secondbrain.token'];
+        cookiesToClear.forEach(name => {
+            res.clearCookie(name, { path: '/' });
+        });
+
+        console.log('[Logout] ✅ Session destroyed and cookies cleared');
+        res.json({ status: 0, success: true, message: 'Logged out successfully' });
+    } catch (error) {
+        console.error('[Logout] ❌ Error:', error);
+        res.json({ status: 1, success: false, message: 'Logout failed: ' + error.message });
+    }
+});
 app.get('/v65/access', (req, res) => res.json({ success: true }));
 app.get('/v60/property', (req, res) => res.json({ success: true, properties: {} }));
 app.get('/statusv60/property', (req, res) => res.json({ success: true, properties: {} }));
