@@ -159,7 +159,44 @@
                     };
                 });
 
-                console.log('[Sync Button] Data to sync:', {
+                console.log('[Sync Button] IndexedDB data:', {
+                    projects: data.projects.length,
+                    tasks: data.tasks.length,
+                    logs: data.pomodoroLogs.length
+                });
+
+                // ✅ FALLBACK: If IndexedDB is empty, try localStorage
+                if (data.projects.length === 0) {
+                    try {
+                        const lsProjects = JSON.parse(localStorage.getItem('pomodoro-projects') || '[]');
+                        if (lsProjects.length > 0) {
+                            console.log('[Sync Button] Using localStorage projects:', lsProjects.length);
+                            data.projects = lsProjects;
+                        }
+                    } catch (e) { console.warn('[Sync Button] localStorage projects parse error:', e); }
+                }
+
+                if (data.tasks.length === 0) {
+                    try {
+                        const lsTasks = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
+                        if (lsTasks.length > 0) {
+                            console.log('[Sync Button] Using localStorage tasks:', lsTasks.length);
+                            data.tasks = lsTasks;
+                        }
+                    } catch (e) { console.warn('[Sync Button] localStorage tasks parse error:', e); }
+                }
+
+                if (data.pomodoroLogs.length === 0) {
+                    try {
+                        const lsLogs = JSON.parse(localStorage.getItem('pomodoro-pomodoros') || '[]');
+                        if (lsLogs.length > 0) {
+                            console.log('[Sync Button] Using localStorage logs:', lsLogs.length);
+                            data.pomodoroLogs = lsLogs;
+                        }
+                    } catch (e) { console.warn('[Sync Button] localStorage logs parse error:', e); }
+                }
+
+                console.log('[Sync Button] Final data to sync:', {
                     projects: data.projects.length,
                     tasks: data.tasks.length,
                     logs: data.pomodoroLogs.length
