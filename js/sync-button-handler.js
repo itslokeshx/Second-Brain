@@ -115,7 +115,32 @@
         console.log('[Sync Button] 🔄 Clicked! Starting manual sync...');
 
         // ═══════════════════════════════════════════════════════════════════════
-        // PROPER AUTH CHECK: Validate token with server
+        // RULE 1: Block if hydration not complete
+        // ═══════════════════════════════════════════════════════════════════════
+        if (window.HydrationMutex && !window.HydrationMutex.canSync()) {
+            const state = window.HydrationMutex.getState();
+            console.warn('[Sync Button] ⚠️ Hydration not ready:', state.state);
+            if (window.showNotification) {
+                window.showNotification('Please wait for data to load... (' + state.state + ')', 'warning', 3000);
+            } else {
+                alert('Please wait for data to load...');
+            }
+            return;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // RULE 2: Block if sync already in progress
+        // ═══════════════════════════════════════════════════════════════════════
+        if (window._syncInProgress) {
+            console.warn('[Sync Button] ⚠️ Sync already in progress');
+            if (window.showNotification) {
+                window.showNotification('Sync already in progress', 'warning', 3000);
+            }
+            return;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // RULE 3: Validate auth with retry
         // ═══════════════════════════════════════════════════════════════════════
         const isAuthenticated = await checkAuthentication();
         if (!isAuthenticated) {
@@ -127,6 +152,9 @@
             }
             return;
         }
+
+        // Set sync lock
+        window._syncInProgress = true;
 
         // Try new sync service
         if (window.SyncService) {
@@ -260,7 +288,6 @@
                 }
 
                 alert(`✅ Synced: ${result.projectsSynced || 0} projects, ${result.tasksSynced || 0} tasks, ${result.logsSynced || 0} logs`);
-                return;
             } catch (error) {
                 console.error('[Sync Button] ❌ Sync failed:', error);
                 // Even on error, ensure system projects exist
@@ -270,8 +297,12 @@
                     }).catch(() => { });
                 }
                 alert('Sync failed: ' + error.message);
-                return;
+            } finally {
+                // Always release sync lock
+                window._syncInProgress = false;
+                console.log('[Sync Button] 🔓 Sync lock released');
             }
+            return;
         }
 
         // Fallback to legacy sync (main.js handles it)

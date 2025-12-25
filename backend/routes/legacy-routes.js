@@ -40,27 +40,29 @@ function getSystemProjectName(id) {
 }
 
 function getSystemProjectType(id) {
+    // CORRECT type values from main.js:
+    // l.project = 1000, l.today = 4000, l.tomorrow = 4001, etc.
     const types = {
-        'today': 10,
-        'tomorrow': 11,
-        'next7days': 12,
-        'someday': 13,
-        'completed': 14,
-        'history': 14,
-        'all': 15,
-        'calendar': 16,
-        'overdue': 17,
-        'search': 18,
-        'week': 19,
-        'planned': 20,
-        'upcoming': 20,
-        'myday': 10,
-        'inbox': 0,
-        '0': 0,
-        'default': 0,
-        'focus': 0
+        'today': 4000,      // l.today = 4e3
+        'tomorrow': 4001,   // l.tomorrow
+        'next7days': 4004,  // l.next7Days
+        'someday': 4003,    // l.someday
+        'completed': 7003,  // l.history
+        'history': 7003,    // l.history
+        'all': 7000,        // l.all = 7e3
+        'calendar': 7001,   // l.calendar
+        'overdue': 4006,    // l.overdue
+        'search': 7002,     // l.search
+        'week': 4007,       // l.thisWeek
+        'planned': 4002,    // l.scheduled
+        'upcoming': 4002,   // l.scheduled
+        'myday': 4000,      // Same as today
+        'inbox': 1000,      // l.project = 1e3
+        '0': 1000,          // Regular project
+        'default': 1000,    // Regular project
+        'focus': 1000       // Regular project
     };
-    return types[id] || 0;
+    return types[id] || 1000;  // Default to regular project type
 }
 
 // Normalize auth/session payloads to the exact fields the legacy frontend reads

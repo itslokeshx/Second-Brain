@@ -85,15 +85,26 @@
                     }
 
                     this.currentUser = data.user;
+
+                    // ✅ CRITICAL: Store userId in localStorage for hydration gate
+                    if (data.user.id) {
+                        localStorage.setItem('userId', data.user.id);
+                        console.log('[Session] ✅ Stored userId:', data.user.id);
+                    }
+
                     this.updateUI(true, data.user.email || data.acct);
                     this.startPeriodicCheck();
                     console.log('[Session] ✅ Authenticated:', data.user.email);
 
-                    // ✅ AUTO-LOAD DATA: Fetch projects/tasks from backend
-                    console.log('[Session] 📥 Loading data from server...');
-                    this.loadDataAfterLogin().catch(err => {
-                        console.warn('[Session] Data load failed, using local data:', err);
-                    });
+                    // ✅ AUTO-LOAD DATA: Only if mutex hasn't already handled it
+                    if (window.HydrationMutex && window.HydrationMutex.isReady()) {
+                        console.log('[Session] ⏭️ Skipping data load - mutex already handled it');
+                    } else {
+                        console.log('[Session] 📥 Loading data from server...');
+                        this.loadDataAfterLogin().catch(err => {
+                            console.warn('[Session] Data load failed, using local data:', err);
+                        });
+                    }
                 } else if (cookieUser) {
                     // ✅ FALLBACK: Use cookie data if API doesn't return user
                     console.log('[Session] Using cookie-based auth:', cookieUser.email);
@@ -348,6 +359,12 @@
                     document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/';
                 });
                 console.log('[Session] ✅ All cookies cleared');
+
+                // Reset hydration mutex
+                if (window.HydrationMutex) {
+                    window.HydrationMutex.reset();
+                    console.log('[Session] ✅ Hydration mutex reset');
+                }
 
                 console.log('[Session] ✅ Logout complete, reloading...');
 

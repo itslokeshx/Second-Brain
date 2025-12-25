@@ -201,25 +201,43 @@
             try {
                 const db = await openDB();
                 const existing = await getExistingProjects();
-                const existingIds = new Set(existing.map(p => String(p.id)));
+                const existingMap = new Map(existing.map(p => [String(p.id), p]));
 
-                // Find missing system projects
-                const missing = window.SYSTEM_PROJECTS.filter(p => !existingIds.has(String(p.id)));
+                // Check for missing OR wrong-type projects
+                const toUpdate = [];
+                const toInsert = [];
 
-                if (missing.length === 0) {
-                    console.log('[Guardian] ✅ All', window.SYSTEM_PROJECTS.length, 'system projects already exist');
+                for (const sysProj of window.SYSTEM_PROJECTS) {
+                    const existingProj = existingMap.get(String(sysProj.id));
+
+                    if (!existingProj) {
+                        // Project doesn't exist - insert it
+                        toInsert.push(sysProj);
+                    } else if (existingProj.type !== sysProj.type) {
+                        // Project exists but has WRONG type - update it
+                        console.log('[Guardian] ⚠️ Fixing type for', sysProj.id, ':', existingProj.type, '→', sysProj.type);
+                        toUpdate.push({
+                            ...existingProj,
+                            type: sysProj.type,
+                            deadline: sysProj.deadline || sysProj.type,
+                            modifiedDate: Date.now()
+                        });
+                    }
+                }
+
+                if (toInsert.length === 0 && toUpdate.length === 0) {
+                    console.log('[Guardian] ✅ All', window.SYSTEM_PROJECTS.length, 'system projects have correct types');
                     Guardian.isSeeding = false;
                     return true;
                 }
 
-                console.log('[Guardian] 📝 Seeding', missing.length, 'missing system projects:',
-                    missing.map(p => p.id).join(', '));
+                console.log('[Guardian] 📝 Inserting', toInsert.length, 'new, updating', toUpdate.length, 'with wrong types');
 
-                // Insert missing projects
+                // Insert/update projects
                 const tx = db.transaction(PROJECT_STORE, 'readwrite');
                 const store = tx.objectStore(PROJECT_STORE);
 
-                for (const project of missing) {
+                for (const project of toInsert) {
                     const projectWithTimestamp = {
                         ...project,
                         createdDate: Date.now(),
@@ -227,6 +245,11 @@
                     };
                     store.put(projectWithTimestamp);
                 }
+
+                for (const project of toUpdate) {
+                    store.put(project);
+                }
+
 
                 await new Promise((resolve, reject) => {
                     tx.oncomplete = resolve;
