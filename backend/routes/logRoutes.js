@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const PomodoroLog = require('../models/PomodoroLog');
+const Pomodoro = require('../models/Pomodoro');
 const { protect } = require('../middleware/authMiddleware');
 
 // @desc    Get all logs
@@ -8,7 +8,7 @@ const { protect } = require('../middleware/authMiddleware');
 // @access  Private
 router.get('/', protect, async (req, res) => {
     try {
-        const logs = await PomodoroLog.find({ userId: req.user._id });
+        const logs = await Pomodoro.find({ userId: req.user._id });
         res.json(logs);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -37,10 +37,10 @@ router.post('/sync', protect, async (req, res) => {
         });
 
         if (ops.length > 0) {
-            await PomodoroLog.bulkWrite(ops);
+            await Pomodoro.bulkWrite(ops);
         }
 
-        const allLogs = await PomodoroLog.find({ userId: req.user._id });
+        const allLogs = await Pomodoro.find({ userId: req.user._id });
         res.json(allLogs);
 
     } catch (error) {

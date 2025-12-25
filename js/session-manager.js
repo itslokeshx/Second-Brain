@@ -108,18 +108,30 @@
         getUserFromCookies: function () {
             const cookies = document.cookie.split(';').reduce((acc, cookie) => {
                 const [key, value] = cookie.trim().split('=');
-                acc[key] = decodeURIComponent(value);
+                if (key) acc[key] = decodeURIComponent(value || '');
                 return acc;
             }, {});
 
             // Check if we have user cookies AND they're not literally "undefined"
             if (cookies.ACCT && cookies.UID &&
                 cookies.ACCT !== 'undefined' && cookies.UID !== 'undefined') {
+
+                // Get session ID from various cookie sources
+                const sessionId = cookies['secondbrain.sid'] ||
+                    cookies.JSESSIONID ||
+                    cookies['secondbrain.token'] ||
+                    null;
+
+                // ✅ Save to localStorage for fallback
+                if (sessionId && sessionId !== 'undefined') {
+                    localStorage.setItem('authToken', sessionId);
+                }
+
                 return {
                     email: cookies.ACCT,
                     id: cookies.UID,
                     username: cookies.NAME && cookies.NAME !== 'undefined' ? cookies.NAME : cookies.ACCT.split('@')[0],
-                    sessionId: cookies.JSESSIONID && cookies.JSESSIONID !== 'undefined' ? cookies.JSESSIONID : (cookies['secondbrain.token'] || null)
+                    sessionId: sessionId
                 };
             }
             return null;
@@ -393,6 +405,16 @@
                 // Force main.js to re-render by triggering a storage event
                 window.dispatchEvent(new Event('storage'));
 
+                // ✅ ONE-TIME RELOAD: If this is first data load after page refresh, reload to render
+                const hasReloaded = sessionStorage.getItem('data-reload-done');
+                if (!hasReloaded && (data.projects?.length > 0 || data.tasks?.length > 0)) {
+                    console.log('[Session] 🔄 First data load - triggering UI refresh...');
+                    sessionStorage.setItem('data-reload-done', 'true');
+                    // Small delay to ensure localStorage is committed
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 100);
+                }
 
             } catch (e) {
                 console.error('[Session] localStorage save failed:', e);

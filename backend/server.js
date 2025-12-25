@@ -93,7 +93,7 @@ app.use((req, res, next) => {
 const User = require('./models/User');
 const Project = require('./models/Project');
 const Task = require('./models/Task');
-const PomodoroLog = require('./models/PomodoroLog');
+const Pomodoro = require('./models/Pomodoro');
 
 // Rate limiting for auth endpoints
 const authAttempts = new Map();
@@ -387,7 +387,7 @@ app.post('/v64/sync', verifySession, async (req, res) => {
         const [projects, tasks, pomodoros] = await Promise.all([
             Project.find({ userId }).select('-_id -__v -userId').lean(),
             Task.find({ userId }).select('-_id -__v -userId').lean(),
-            PomodoroLog.find({ userId }).select('-_id -__v -userId').lean()
+            Pomodoro.find({ userId }).select('-_id -__v -userId').lean()
         ]);
 
         console.log(`[v64/sync] ✅ Loaded: ${projects.length} projects, ${tasks.length} tasks, ${pomodoros.length} pomodoros`);
@@ -529,7 +529,7 @@ app.post('/api/sync/all', verifySession, async (req, res) => {
                     upsert: true
                 }
             }));
-            const result = await PomodoroLog.bulkWrite(ops);
+            const result = await Pomodoro.bulkWrite(ops);
             logsSynced = result.upsertedCount + result.modifiedCount;
             console.log(`[Sync All] Logs synced: ${logsSynced}`);
         }

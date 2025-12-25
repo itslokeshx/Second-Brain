@@ -11,17 +11,22 @@ class SyncService {
 
     // ✅ GUARANTEED AUTHENTICATED FETCH
     async authenticatedFetch(url, options = {}) {
-        // Check authentication
-        if (!window.SessionManager || !window.SessionManager.currentUser) {
-            throw new Error('Not authenticated');
-        }
-
-        // ✅ MERGE AUTH HEADERS
+        // ✅ MERGE AUTH HEADERS - Try token if available, but don't require it
         const headers = {
             'Content-Type': 'application/json',
-            ...window.SessionManager.getAuthHeaders(), // Token if available
             ...(options.headers || {})
         };
+
+        // Add token header if SessionManager has one
+        if (window.SessionManager && window.SessionManager.token) {
+            headers['X-Session-Token'] = window.SessionManager.token;
+        }
+
+        // Also check localStorage for token fallback
+        const storedToken = localStorage.getItem('authToken');
+        if (storedToken && !headers['X-Session-Token']) {
+            headers['X-Session-Token'] = storedToken;
+        }
 
         const fetchOptions = {
             ...options,
@@ -30,14 +35,12 @@ class SyncService {
         };
 
         console.log('[Sync] Request:', url);
-        console.log('[Sync] Headers:', headers);
 
         const response = await fetch(url, fetchOptions);
 
         if (response.status === 401) {
-            console.error('[Sync] 401 Unauthorized - re-checking session');
-            await window.SessionManager.checkLoginStatus();
-            throw new Error('Authentication expired');
+            console.error('[Sync] 401 Unauthorized');
+            throw new Error('Not authenticated');
         }
 
         if (!response.ok) {

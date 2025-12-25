@@ -209,12 +209,12 @@ router.all('/v64/sync', async (req, res) => {
     // ✅ LOAD ACTUAL DATA FROM MONGODB
     const Project = require('../models/Project');
     const Task = require('../models/Task');
-    const PomodoroLog = require('../models/PomodoroLog');
+    const Pomodoro = require('../models/Pomodoro');
 
     const [projects, tasks, pomodoros] = await Promise.all([
         Project.find({ userId: user._id }).select('-_id -__v -userId').lean(),
         Task.find({ userId: user._id }).select('-_id -__v -userId').lean(),
-        PomodoroLog.find({ userId: user._id }).select('-_id -__v -userId').lean()
+        Pomodoro.find({ userId: user._id }).select('-_id -__v -userId').lean()
     ]);
 
     console.log(`[Legacy Sync] ✅ Loaded: ${projects.length} projects, ${tasks.length} tasks, ${pomodoros.length} pomodoros`);

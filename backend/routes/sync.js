@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Project = require('../models/Project');
 const Task = require('../models/Task');
-const PomodoroLog = require('../models/PomodoroLog');
+const Pomodoro = require('../models/Pomodoro');
 const Settings = require('../models/Settings');
 
 // ✅ Auth Middleware
@@ -96,7 +96,7 @@ router.post('/all', authMiddleware, async (req, res) => {
             console.log(`[Sync All] Syncing ${pomodoroLogs.length} logs...`);
 
             for (const log of pomodoroLogs) {
-                await PomodoroLog.findOneAndUpdate(
+                await Pomodoro.findOneAndUpdate(
                     { userId, id: log.id },
                     {
                         userId,
@@ -219,7 +219,7 @@ router.post('/logs', authMiddleware, async (req, res) => {
 
         if (logs && Array.isArray(logs)) {
             for (const log of logs) {
-                await PomodoroLog.findOneAndUpdate(
+                await Pomodoro.findOneAndUpdate(
                     { userId, id: log.id },
                     { userId, ...log },
                     { upsert: true, new: true }
@@ -228,7 +228,7 @@ router.post('/logs', authMiddleware, async (req, res) => {
             }
         }
 
-        const latestLogs = await PomodoroLog.find({ userId }).select('-_id -__v -userId').lean();
+        const latestLogs = await Pomodoro.find({ userId }).select('-_id -__v -userId').lean();
 
         res.json({
             success: true,
@@ -290,7 +290,7 @@ router.get('/load', authMiddleware, async (req, res) => {
         const [projects, tasks, logs, settings, user] = await Promise.all([
             Project.find({ userId }).select('-_id -__v -userId').lean(),
             Task.find({ userId }).select('-_id -__v -userId').lean(),
-            PomodoroLog.find({ userId }).select('-_id -__v -userId').lean(),
+            Pomodoro.find({ userId }).select('-_id -__v -userId').lean(),
             Settings.findOne({ userId }).select('-_id -__v -userId').lean(),
             User.findById(userId).select('email name lastSyncTime')
         ]);
