@@ -256,7 +256,7 @@
                     tx.onerror = () => reject(tx.error);
                 });
 
-                console.log('[Guardian] ✅ Seeded', missing.length, 'system projects');
+                console.log('[Guardian] ✅ Seeded', toInsert.length, 'new +', toUpdate.length, 'fixed types');
                 Guardian.isSeeding = false;
                 return true;
 

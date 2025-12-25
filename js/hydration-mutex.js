@@ -231,15 +231,36 @@
                 }
 
                 const db = await window.UserDB.openUserDB(userId);
-                const tx = db.transaction('Project', 'readonly');
-                const count = await new Promise((resolve, reject) => {
-                    const req = tx.objectStore('Project').count();
+
+                // Check project count
+                const projTx = db.transaction('Project', 'readonly');
+                const projCount = await new Promise((resolve, reject) => {
+                    const req = projTx.objectStore('Project').count();
                     req.onsuccess = () => resolve(req.result);
                     req.onerror = () => reject(req.error);
                 });
 
-                // Data exists if we have more than just system projects (18)
-                return count > 18;
+                // Check task count
+                const taskTx = db.transaction('Task', 'readonly');
+                const taskCount = await new Promise((resolve, reject) => {
+                    const req = taskTx.objectStore('Task').count();
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => reject(req.error);
+                });
+
+                console.log('[Mutex] Data check: projects=' + projCount + ', tasks=' + taskCount);
+
+                // Data exists if we have projects AND tasks (or sessionStorage flag)
+                const hasData = projCount > 18;
+                const isHydrated = sessionStorage.getItem('hydrated_' + userId);
+
+                // If already hydrated this session, trust the data
+                if (isHydrated && hasData) {
+                    return true;
+                }
+
+                // First load - always fetch to get tasks
+                return false;
             } catch (error) {
                 console.warn('[Mutex] Error checking data existence:', error);
                 return false;
@@ -274,6 +295,20 @@
          */
         isReady() {
             return this.state === 'READY';
+        }
+
+        /**
+         * Check if hydration is in progress (to prevent other loaders)
+         */
+        isInProgress() {
+            return this.state !== 'IDLE' && this.state !== 'READY' && this.state !== 'ERROR';
+        }
+
+        /**
+         * Check if mutex has handled or is handling hydration (use this to block other loaders)
+         */
+        isHandling() {
+            return this.state !== 'IDLE';
         }
 
         /**

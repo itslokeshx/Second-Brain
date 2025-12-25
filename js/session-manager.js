@@ -97,8 +97,8 @@
                     console.log('[Session] ✅ Authenticated:', data.user.email);
 
                     // ✅ AUTO-LOAD DATA: Only if mutex hasn't already handled it
-                    if (window.HydrationMutex && window.HydrationMutex.isReady()) {
-                        console.log('[Session] ⏭️ Skipping data load - mutex already handled it');
+                    if (window.HydrationMutex && window.HydrationMutex.isHandling()) {
+                        console.log('[Session] ⏭️ Skipping data load - mutex is handling it');
                     } else {
                         console.log('[Session] 📥 Loading data from server...');
                         this.loadDataAfterLogin().catch(err => {
@@ -115,11 +115,15 @@
                     }
                     this.updateUI(true, cookieUser.email);
 
-                    // ✅ AUTO-LOAD DATA: Fetch projects/tasks from backend
-                    console.log('[Session] 📥 Loading data from server (cookie auth)...');
-                    this.loadDataAfterLogin().catch(err => {
-                        console.warn('[Session] Data load failed, using local data:', err);
-                    });
+                    // ✅ AUTO-LOAD DATA: Only if mutex hasn't already handled it
+                    if (window.HydrationMutex && window.HydrationMutex.isHandling()) {
+                        console.log('[Session] ⏭️ Skipping data load - mutex is handling it (cookie path)');
+                    } else {
+                        console.log('[Session] 📥 Loading data from server (cookie auth)...');
+                        this.loadDataAfterLogin().catch(err => {
+                            console.warn('[Session] Data load failed, using local data:', err);
+                        });
+                    }
                 } else {
                     this.handleLoggedOut();
                 }
@@ -133,11 +137,15 @@
                     this.token = cookieUser.sessionId;
                     this.updateUI(true, cookieUser.email);
 
-                    // ✅ AUTO-LOAD DATA: Fetch projects/tasks from backend
-                    console.log('[Session] 📥 Loading data from server (fallback)...');
-                    this.loadDataAfterLogin().catch(err => {
-                        console.warn('[Session] Data load failed, using local data:', err);
-                    });
+                    // ✅ AUTO-LOAD DATA: Only if mutex hasn't already handled it
+                    if (window.HydrationMutex && window.HydrationMutex.isHandling()) {
+                        console.log('[Session] ⏭️ Skipping data load - mutex is handling it (fallback path)');
+                    } else {
+                        console.log('[Session] 📥 Loading data from server (fallback)...');
+                        this.loadDataAfterLogin().catch(err => {
+                            console.warn('[Session] Data load failed, using local data:', err);
+                        });
+                    }
                 } else {
                     this.handleLoggedOut();
                 }
@@ -582,12 +590,24 @@
                             resolve();
                         };
 
-                        // 1. Projects
+                        // 1. Projects - protect system project types
                         if (projectStoreName && data.projects && data.projects.length > 0) {
                             const store = tx.objectStore(projectStoreName);
                             let count = 0;
                             data.projects.forEach(item => {
                                 if (!item.id && item._id) item.id = item._id;
+
+                                // ✅ PROTECT SYSTEM PROJECT TYPES
+                                // If this is a system project, use the correct type from SYSTEM_PROJECTS
+                                if (window.isSystemProject && window.isSystemProject(item.id)) {
+                                    const sysProj = window.getSystemProject(item.id);
+                                    if (sysProj) {
+                                        item.type = sysProj.type;
+                                        item.deadline = sysProj.deadline || sysProj.type;
+                                        item.isSystem = true;
+                                    }
+                                }
+
                                 store.put(item);
                                 count++;
                             });
