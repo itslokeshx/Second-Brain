@@ -498,7 +498,10 @@
     <script src="js/blank-page-preventer.js"></script>
     <script src="js/force-reset.js"></script>
     <script src="js/data-sanitizer.js"></script>
+    <!-- ✅ CRITICAL: Mock Encryption to allow Render -->
+    <script src="js/crypto-stub.js"></script>
     <script src="js/suppress-errors.js?v=1000"></script>
+    <script src="js/websocket-mock.js?v=1000"></script> <!-- ✅ Added WebSocket Mock -->
     <script src="js/notifications.js"></script>
     <script src="js/login-interceptor.js"></script>
     <script src="js/fix-json-only.js?v=2000"></script>
@@ -510,7 +513,53 @@
     <script type="text/javascript" src="js/sync-service.js?v=1001"></script>
     <script src="js/session-manager.js?v=999"></script>
     <script src="js/settings-fixer.js?v=1005"></script>
-    <script type="text/javascript" src="js/main.js"></script>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- ✅ CRITICAL: HYDRATION INTEGRITY LAYER - MUST LOAD BEFORE main.js   -->
+    <!-- These scripts ensure IndexedDB has required system projects before  -->
+    <!-- React tries to mount. Without them, main.js:117550 gate fails.      -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <script src="js/db-recovery.js?v=1000"></script> <!-- Recovery tool: run window.resetDB() in console -->
+    <script src="js/user-db.js?v=1000"></script> <!-- User-scoped database helper - MUST load before Guardian -->
+    <script src="js/indexeddb-open-interceptor.js?v=1000"></script>  <!-- Redirect main.js DB opens to user-scoped DB -->
+    <script src="js/system-projects.js?v=1000"></script>
+    <script src="js/indexeddb-guardian.js?v=1000"></script>
+    <script src="js/guardian-loader.js?v=1000"></script>
+    <script src="js/hydration-gate.js?v=1000"></script>
+    <!-- Hydration gate - validates session and ensures data ready -->
+
+    <!-- Hydration Gate: Wait for data before loading main.js -->
+    <script>
+        (async () => {
+            console.log('[Loader] Waiting for hydration...');
+            const result = await window.__HYDRATION_COMPLETE__;
+
+            console.log('[Loader] Hydration result:', result);
+
+            if (result.ready) {
+                console.log('[Loader] ✅ Data ready - loading main.js');
+                const script = document.createElement('script');
+                script.type = 'text/javascript';
+                script.src = 'js/main.js';
+                document.body.appendChild(script);
+            } else {
+                console.log('[Loader] ❌ Not ready:', result.reason);
+                // Load main.js anyway for login screen (unless critical error)
+                if (result.reason === 'no-auth' || result.reason === 'invalid-session') {
+                    console.log('[Loader] Loading main.js for login screen');
+                    const script = document.createElement('script');
+                    script.type = 'text/javascript';
+                    script.src = 'js/main.js';
+                    document.body.appendChild(script);
+                } else {
+                    document.body.innerHTML = '<div style="padding: 40px; text-align: center;"><h2>Error</h2><p>' + result.reason + '</p></div>';
+                }
+            }
+        })();
+    </script>
+
+    <!-- Diagnostic: Check Redux state -->
+    <script src="js/redux-diagnostic.js"></script>
 
     <script type="text/javascript" src="js/sync-button-handler.js"></script>
 

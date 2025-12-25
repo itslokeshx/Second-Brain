@@ -244,10 +244,12 @@ const handleAuth = async (req, res, isLogin = false) => {
         console.log(`  Session Data:`, req.session.user);
 
         // ✅ SET COOKIES - Remove domain to allow JavaScript access
+        // ✅ CRITICAL: Set PID=0 (default project ID) - main.js requires this or it crashes
         res.setHeader('Set-Cookie', [
             `ACCT=${encodeURIComponent(user.email)}; Path=/; HttpOnly=false; SameSite=Lax; Max-Age=86400`,
             `NAME=${encodeURIComponent(user.name)}; Path=/; HttpOnly=false; SameSite=Lax; Max-Age=86400`,
             `UID=${user._id.toString()}; Path=/; HttpOnly=false; SameSite=Lax; Max-Age=86400`,
+            `PID=0; Path=/; HttpOnly=false; SameSite=Lax; Max-Age=86400`,
             `secondbrain.sid=${req.sessionID}; Path=/; HttpOnly=false; SameSite=Lax; Max-Age=86400`
         ]);
 

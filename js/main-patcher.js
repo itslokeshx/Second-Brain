@@ -43,7 +43,9 @@
     // Stop trying after 5 seconds
     setTimeout(() => {
         clearInterval(patchInterval);
-        console.log('[Main Patcher] Timeout - encryption library may not exist');
+        if (!window.JSEncrypt?.prototype?.decrypt) {
+            console.log('[Main Patcher] Timeout - encryption library may not exist');
+        }
     }, 5000);
 
     // DON'T override cookie descriptor - let cookie-protector handle it

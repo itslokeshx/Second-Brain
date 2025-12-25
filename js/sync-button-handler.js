@@ -79,19 +79,52 @@
         }, true);
     }
 
+    /**
+     * Properly check authentication by validating token with server
+     */
+    async function checkAuthentication() {
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) {
+            return false;
+        }
+
+        try {
+            const apiUrl = window.AppConfig
+                ? window.AppConfig.getApiUrl('/v64/user/config')
+                : 'http://localhost:3000/v64/user/config';
+
+            const response = await fetch(apiUrl, {
+                credentials: 'include',
+                headers: {
+                    'X-Session-Token': authToken,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            return response.ok;
+        } catch (error) {
+            console.error('[Sync Button] Auth check failed:', error);
+            return false;
+        }
+    }
+
     async function handleSyncClick(e) {
         e.preventDefault();
         e.stopPropagation();
 
         console.log('[Sync Button] 🔄 Clicked! Starting manual sync...');
 
-        // Check if user is authenticated
-        const isAuth = (window.SessionManager && window.SessionManager.currentUser) ||
-            document.cookie.includes('ACCT=') ||
-            localStorage.getItem('authToken');
-        if (!isAuth) {
+        // ═══════════════════════════════════════════════════════════════════════
+        // PROPER AUTH CHECK: Validate token with server
+        // ═══════════════════════════════════════════════════════════════════════
+        const isAuthenticated = await checkAuthentication();
+        if (!isAuthenticated) {
             console.warn('[Sync Button] ⚠️ Not authenticated');
-            alert('Please login first to sync data.');
+            if (window.showNotification) {
+                window.showNotification('Please login to sync data', 'error', 5000);
+            } else {
+                alert('Please login first to sync data.');
+            }
             return;
         }
 
@@ -100,8 +133,8 @@
             try {
                 console.log('[Sync Button] Using new SyncService...');
 
-                // Get data from IndexedDB (legacy app uses IndexedDB, not localStorage)
-                const dbName = 'PomodoroDB6';  // ← FIXED: Correct database name
+                // Get data from user-scoped IndexedDB
+                const dbName = window.UserDB ? window.UserDB.getDBName() : 'PomodoroDB6';
                 const dbRequest = indexedDB.open(dbName);
 
                 const data = await new Promise((resolve, reject) => {
@@ -202,6 +235,12 @@
                     logs: data.pomodoroLogs.length
                 });
 
+                // ✅ PROTECTION: Ensure system projects are included before sync
+                if (window.IndexedDBGuardian && window.SYSTEM_PROJECTS) {
+                    data.projects = window.IndexedDBGuardian.mergeWithSystemProjects(data.projects);
+                    console.log('[Sync Button] 🛡️ Merged with system projects:', data.projects.length);
+                }
+
                 const result = await window.SyncService.syncAll({
                     projects: data.projects,
                     tasks: data.tasks,
@@ -209,10 +248,27 @@
                 });
 
                 console.log('[Sync Button] ✅ Sync completed successfully:', result);
+
+                // ✅ POST-SYNC INTEGRITY CHECK
+                if (window.IndexedDBGuardian) {
+                    console.log('[Sync Button] 🔍 Validating post-sync integrity...');
+                    const integrity = await window.IndexedDBGuardian.validate();
+                    if (!integrity.valid) {
+                        console.warn('[Sync Button] ⚠️ Missing system projects after sync, reseeding...');
+                        await window.IndexedDBGuardian.forceReseed();
+                    }
+                }
+
                 alert(`✅ Synced: ${result.projectsSynced || 0} projects, ${result.tasksSynced || 0} tasks, ${result.logsSynced || 0} logs`);
                 return;
             } catch (error) {
                 console.error('[Sync Button] ❌ Sync failed:', error);
+                // Even on error, ensure system projects exist
+                if (window.IndexedDBGuardian) {
+                    await window.IndexedDBGuardian.validate().then(r => {
+                        if (!r.valid) window.IndexedDBGuardian.forceReseed();
+                    }).catch(() => { });
+                }
                 alert('Sync failed: ' + error.message);
                 return;
             }

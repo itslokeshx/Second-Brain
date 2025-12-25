@@ -28,6 +28,7 @@
             const [key, val] = cookiePair.split('=');
 
             // STRICT: Block NAME, ACCT, UID cookies unless login was successful
+            // NOTE: PID is allowed to be set anytime (it's not sensitive, just a project ID)
             if (key === 'NAME' || key === 'ACCT' || key === 'UID') {
                 // Block if login is in progress but not successful
                 if (loginInProgress && !loginSuccessful) {
@@ -42,6 +43,17 @@
                 }
 
                 console.log(`[Cookie Protector] ✅ Allowing ${key}=${val}`);
+            }
+
+            // PID cookie is allowed (not sensitive, just project ID)
+            if (key === 'PID') {
+                // Block undefined/null/empty PID values
+                if (!val || val === 'undefined' || val === 'null' || val.trim() === '') {
+                    console.warn(`[Cookie Protector] ❌ BLOCKED PID=${val} - Invalid value`);
+                    return;
+                }
+                // Allow valid PID values like "0"
+                console.log(`[Cookie Protector] ✅ Allowing PID=${val}`);
             }
 
             // Allow the cookie to be set

@@ -11,6 +11,58 @@ const {
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-please-change';
 
+// ═══════════════════════════════════════════════════════════════════════════
+// SYSTEM PROJECT HELPERS - Used to ensure hydration-critical projects exist
+// ═══════════════════════════════════════════════════════════════════════════
+
+function getSystemProjectName(id) {
+    const names = {
+        'today': 'Today',
+        'tomorrow': 'Tomorrow',
+        'inbox': 'Inbox',
+        '0': 'Tasks',
+        'all': 'All',
+        'completed': 'Completed',
+        'calendar': 'Calendar',
+        'search': 'Search',
+        'week': 'This Week',
+        'planned': 'Planned',
+        'someday': 'Someday',
+        'overdue': 'Overdue',
+        'next7days': 'Next 7 Days',
+        'default': 'Default',
+        'myday': "Today's Tasks",
+        'history': 'History',
+        'upcoming': 'Upcoming',
+        'focus': 'Focus'
+    };
+    return names[id] || id;
+}
+
+function getSystemProjectType(id) {
+    const types = {
+        'today': 10,
+        'tomorrow': 11,
+        'next7days': 12,
+        'someday': 13,
+        'completed': 14,
+        'history': 14,
+        'all': 15,
+        'calendar': 16,
+        'overdue': 17,
+        'search': 18,
+        'week': 19,
+        'planned': 20,
+        'upcoming': 20,
+        'myday': 10,
+        'inbox': 0,
+        '0': 0,
+        'default': 0,
+        'focus': 0
+    };
+    return types[id] || 0;
+}
+
 // Normalize auth/session payloads to the exact fields the legacy frontend reads
 const buildLegacyPayload = (user, jsessionId, overrides = {}) => {
     const now = Date.now();
@@ -219,6 +271,37 @@ router.all('/v64/sync', async (req, res) => {
 
     console.log(`[Legacy Sync] ✅ Loaded: ${projects.length} projects, ${tasks.length} tasks, ${pomodoros.length} pomodoros`);
 
+    // ✅ HYDRATION PROTECTION: Ensure system projects are always present
+    // Without these, frontend React gate at main.js:117550 blocks render
+    const SYSTEM_PROJECT_IDS = ['today', 'tomorrow', 'inbox', '0', 'all', 'completed',
+        'calendar', 'search', 'week', 'planned', 'someday', 'overdue', 'next7days',
+        'default', 'myday', 'history', 'upcoming', 'focus'];
+
+    const existingIds = new Set(projects.map(p => String(p.id)));
+
+    const systemProjectsToAdd = SYSTEM_PROJECT_IDS
+        .filter(id => !existingIds.has(id))
+        .map(id => ({
+            id,
+            name: getSystemProjectName(id),
+            type: getSystemProjectType(id),
+            isSystem: true,
+            isPreset: true,
+            hidden: false,
+            state: 0,
+            sync: 1,
+            order: 0,
+            color: '#4A90D9',
+            parentId: '',
+            createdDate: now,
+            modifiedDate: now
+        }));
+
+    const allProjects = [...projects, ...systemProjectsToAdd];
+    if (systemProjectsToAdd.length > 0) {
+        console.log(`[Legacy Sync] 🛡️ Added ${systemProjectsToAdd.length} missing system projects`);
+    }
+
     attachSessionCookie(res, jsessionId);
 
     const response = buildLegacyPayload(user, jsessionId, {
@@ -227,7 +310,7 @@ router.all('/v64/sync', async (req, res) => {
         update_time: now,
         project_member: [],
         list: [],
-        projects: projects || [],
+        projects: allProjects || [],
         tasks: tasks || [],
         subtasks: [],
         pomodoros: pomodoros || [],

@@ -11,6 +11,35 @@
         init: function () {
             console.log('[Session] Initializing dual-mode auth...');
 
+            // 🛠 If a previous patch forced an unrealistically high Version flag (e.g., 888), reset it
+            // to let main.js run its preset-project upgrade (required for sidebar defaults).
+            const storedVersion = Number(localStorage.getItem('Version') || '0');
+            if (storedVersion > 10) {
+                console.log('[Session] Fixing Version flag (was ' + storedVersion + ') -> 0 to allow upgrade');
+                localStorage.setItem('Version', '0');
+            }
+
+            // 🛠 If we somehow marked "reloaded-after-sync" but have no project data, clear the flag so
+            // a fresh load can run and repopulate storage/IndexedDB.
+            if (sessionStorage.getItem('reloaded-after-sync')) {
+                const projectsRaw = localStorage.getItem('pomodoro-projects') || '[]';
+                if (projectsRaw === '[]') {
+                    console.log('[Session] Clearing stale reloaded-after-sync flag (no local projects present)');
+                    sessionStorage.removeItem('reloaded-after-sync');
+                }
+            }
+
+            // ✅ CRITICAL: Set PID=0 EARLY if user is authenticated (before main.js reads cookies)
+            // This prevents main.js from seeing PID=undefined and crashing
+            const cookieUser = this.getUserFromCookies();
+            if (cookieUser) {
+                const rawCookies = document.cookie;
+                if (!rawCookies.includes('PID=0') && !rawCookies.match(/PID=([^;]+)/)?.[1] === '0') {
+                    document.cookie = `PID=0; path=/; max-age=31536000`;
+                    console.log('[Session] ✅ Early PID=0 cookie set (before main.js)');
+                }
+            }
+
             // Try to restore from localStorage token first
             this.token = localStorage.getItem('authToken');
 
@@ -160,12 +189,10 @@
                 document.cookie = `NAME=${encodeURIComponent(userName)}; path=/; max-age=31536000`;
                 document.cookie = `UID=${this.currentUser.id}; path=/; max-age=31536000`;
 
-                // ✅ CRITICAL: Set PID (Project ID) to '0' (Inbox) if missing or undefined
-                // The legacy app crashes/renders blank if PID is invalid or "undefined"
-                if (!document.cookie.includes('PID=') || document.cookie.includes('PID=undefined')) {
-                    console.log('[Session] Enforcing valid PID=0 cookie (Inbox)');
-                    document.cookie = `PID=0; path=/; max-age=31536000`;
-                }
+                // ✅ CRITICAL: ALWAYS set PID=0 (don't check, just set it - cookie-patcher will filter invalid values)
+                // The legacy app crashes/renders blank if PID is missing or "undefined"
+                document.cookie = `PID=0; path=/; max-age=31536000`;
+                console.log('[Session] ✅ Set PID=0 cookie (critical for main.js)');
             }
 
             // Update specific UI elements if they exist
@@ -273,49 +300,64 @@
                 // Stop intervals FIRST
                 this.stopPeriodicCheck();
 
+                // Get user ID before clearing
+                const userId = this.currentUser?.id || window.UserDB?.getCurrentUserId();
+
+                // Call backend logout
                 const apiUrl = window.AppConfig
                     ? window.AppConfig.getApiUrl('/v63/user/logout')
                     : 'http://localhost:3000/v63/user/logout';
 
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    credentials: 'include'
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+                    const data = await response.json();
+                    console.log('[Session] Logout response:', data);
+                } catch (e) {
+                    console.warn('[Session] Backend logout failed (continuing anyway):', e);
+                }
+
+                // Clear local state
+                this.handleLoggedOut();
+
+                // ═══════════════════════════════════════════════════════════════════════
+                // CRITICAL: Delete user-scoped IndexedDB (bypasses Guardian)
+                // ═══════════════════════════════════════════════════════════════════════
+                if (userId && window.UserDB) {
+                    try {
+                        await window.UserDB.deleteUserDB(userId);
+                        console.log('[Session] ✅ User database deleted');
+                    } catch (e) {
+                        console.error('[Session] ❌ Failed to delete user database:', e);
+                    }
+                }
+
+                // Clear ALL localStorage
+                localStorage.clear();
+                console.log('[Session] ✅ localStorage cleared');
+
+                // Clear ALL sessionStorage
+                sessionStorage.clear();
+                console.log('[Session] ✅ sessionStorage cleared');
+
+                // Clear ALL cookies
+                document.cookie.split(';').forEach(c => {
+                    const name = c.trim().split('=')[0];
+                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/';
                 });
+                console.log('[Session] ✅ All cookies cleared');
 
-                const data = await response.json();
-                console.log('[Session] Logout response:', data);
-            } catch (e) {
-                console.error('[Session] Logout error:', e);
+                console.log('[Session] ✅ Logout complete, reloading...');
+
+                // Reload to fresh state
+                setTimeout(() => window.location.reload(), 200);
+            } catch (error) {
+                console.error('[Session] Logout error:', error);
+                // Force reload anyway
+                setTimeout(() => window.location.reload(), 500);
             }
-
-            // Clear local state
-            this.handleLoggedOut();
-
-            // Clear all cookies
-            document.cookie.split(';').forEach(c => {
-                const name = c.trim().split('=')[0];
-                document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/';
-            });
-
-            // Clear IndexedDB
-            try {
-                const dbName = 'PomodoroDB6';
-                const deleteRequest = indexedDB.deleteDatabase(dbName);
-                deleteRequest.onsuccess = () => console.log('[Session] ✅ IndexedDB cleared');
-                deleteRequest.onerror = () => console.log('[Session] ⚠️ IndexedDB clear failed');
-            } catch (e) {
-                console.error('[Session] IndexedDB error:', e);
-            }
-
-            // Clear localStorage auth data
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('userId');
-            localStorage.removeItem('userName');
-
-            console.log('[Session] ✅ Logout complete, reloading...');
-
-            // Reload after a short delay to ensure cleanup
-            setTimeout(() => window.location.reload(), 200);
         },
 
         // ✅ HELPER: Get auth headers for other modules
@@ -361,63 +403,133 @@
         },
 
         loadDataAfterLogin: async function () {
+            // Check reload flag - if set, we already saved data, just ensure it's in both stores
+            const hasReloadedAfterSync = sessionStorage.getItem('reloaded-after-sync');
+
             if (!window.SyncService) {
                 console.log('[Session] SyncService not available, skipping data load');
                 return;
             }
 
             try {
-                console.log('[Session] Loading synced data...');
+                // ALWAYS load from server to ensure we have latest data
+                console.log('[Session] Loading data from server...');
                 const data = await window.SyncService.loadAll();
 
-                if (!data || !data.projects) {
-                    console.log('[Session] No data to restore from server');
+                if (!data || (!data.projects?.length && !data.tasks?.length)) {
+                    console.log('[Session] No data from server');
                     return;
                 }
 
-                // ✅ FIX: Don't overwrite local data with empty server data
-                const localProjects = JSON.parse(localStorage.getItem('pomodoro-projects') || '[]');
-                const localTasks = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
+                console.log('[Session] Loaded from server:', {
+                    projects: data.projects?.length || 0,
+                    tasks: data.tasks?.length || 0
+                });
 
-                const serverHasData = (data.projects?.length > 0 || data.tasks?.length > 0);
-                const localHasData = (localProjects.length > 0 || localTasks.length > 0);
-
-                if (!serverHasData && localHasData) {
-                    console.log('[Session] ⚠️ Server has no data but local has data - preserving local data');
-                    console.log('[Session] Local:', { projects: localProjects.length, tasks: localTasks.length });
-                    return; // Don't overwrite local data with empty server data
-                }
-
-                // ✅ CHECK IndexedDB - The legacy app REQUIRES data in IndexedDB
-                console.log('[Session] Saving to IndexedDB (Critical for UI)...');
+                // ALWAYS save to BOTH IndexedDB and localStorage
+                console.log('[Session] Saving to IndexedDB...');
                 await this.saveToIndexedDB(data);
 
-                // ✅ ALSO Save to localStorage (Hybrid mode)
-                console.log('[Session] Saving to localStorage (Backup)...');
+                console.log('[Session] Saving to localStorage...');
                 this.saveToLocalStorage(data);
 
-                // ✅ CRITICAL FIX: Reload page ONCE after first data load
-                // The legacy main.js only reads data on initial load, not on storage events
-                const hasReloadedAfterSync = sessionStorage.getItem('reloaded-after-sync');
+                // Ensure sidebar data
+                this.ensureLocalSidebarData();
+
+                // Only reload ONCE (first time after login)
                 if (!hasReloadedAfterSync && (data.projects?.length > 0 || data.tasks?.length > 0)) {
-                    console.log('[Session] 🔄 Data saved - reloading page to render UI...');
+                    console.log('[Session] 🔄 First data load - reloading page to render UI...');
                     sessionStorage.setItem('reloaded-after-sync', 'true');
                     setTimeout(() => {
                         window.location.reload();
                     }, 100);
-                    return; // Don't continue execution
+                    return;
                 }
+
+                console.log('[Session] ✅ Data load complete (no reload needed)');
 
             } catch (error) {
                 console.error('[Session] Data load failed:', error);
-                console.log('[Session] Keeping existing local data...');
+            }
+        },
+
+        // ✅ NEW: Ensure data from localStorage is available in IndexedDB (for main.js)
+        ensureIndexedDBDataAvailable: async function () {
+            try {
+                const localProjects = JSON.parse(localStorage.getItem('pomodoro-projects') || '[]');
+                const localTasks = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
+
+                if (localProjects.length === 0 && localTasks.length === 0) {
+                    console.log('[Session] No local data to copy to IndexedDB');
+                    return;
+                }
+
+                console.log('[Session] Ensuring local data is in IndexedDB...', {
+                    projects: localProjects.length,
+                    tasks: localTasks.length
+                });
+
+                const data = {
+                    projects: localProjects,
+                    tasks: localTasks,
+                    pomodoros: JSON.parse(localStorage.getItem('pomodoro-pomodoros') || '[]'),
+                    subtasks: []
+                };
+
+                await this.saveToIndexedDB(data);
+                console.log('[Session] ✅ IndexedDB data ensured');
+            } catch (error) {
+                console.error('[Session] Failed to ensure IndexedDB data:', error);
+            }
+        },
+
+        // ✅ NEW: Ensure sidebar order/list keys exist and dispatch storage events to wake UI
+        ensureLocalSidebarData: function () {
+            try {
+                const projects = JSON.parse(localStorage.getItem('pomodoro-projects') || '[]');
+                if (!Array.isArray(projects) || projects.length === 0) return;
+
+                const projectOrder = projects.map(p => p.id);
+                if (!localStorage.getItem('pomodoro-projectOrder')) {
+                    localStorage.setItem('pomodoro-projectOrder', JSON.stringify(projectOrder));
+                    console.log(`[Session] ✅ Rebuilt pomodoro-projectOrder (${projectOrder.length} items)`);
+                }
+
+                let customList = [];
+                try {
+                    customList = JSON.parse(localStorage.getItem('custom-project-list') || '[]');
+                    if (!Array.isArray(customList)) customList = [];
+                } catch (e) {
+                    customList = [];
+                }
+                // Ensure at least default project is present
+                if (!customList.includes('0')) customList.unshift('0');
+                // Ensure all known project ids are represented (keeps order simple)
+                projectOrder.forEach(id => {
+                    if (!customList.includes(id)) customList.push(id);
+                });
+
+                localStorage.setItem('custom-project-list', JSON.stringify(customList));
+                console.log(`[Session] ✅ Ensured custom-project-list (${customList.length} items)`);
+
+                // Dispatch storage events to trigger React/legacy listeners
+                ['pomodoro-projects', 'pomodoro-projectOrder', 'custom-project-list'].forEach(key => {
+                    window.dispatchEvent(new StorageEvent('storage', {
+                        key,
+                        newValue: localStorage.getItem(key),
+                        url: window.location.href,
+                        storageArea: localStorage
+                    }));
+                });
+            } catch (e) {
+                console.error('[Session] ensureLocalSidebarData failed:', e);
             }
         },
 
         // ✅ NEW: Save to IndexedDB (Required for main.js rendering)
         saveToIndexedDB: function (data) {
             return new Promise((resolve, reject) => {
-                const dbName = 'PomodoroDB6';
+                const dbName = window.UserDB ? window.UserDB.getDBName() : 'PomodoroDB6';
                 const request = indexedDB.open(dbName);
 
                 request.onerror = (event) => {
@@ -427,76 +539,102 @@
 
                 request.onsuccess = (event) => {
                     const db = event.target.result;
-
-                    // ✅ Dynamically detect available stores
                     const availableStores = Array.from(db.objectStoreNames);
                     console.log('[Session] IDB Available stores:', availableStores);
 
-                    if (availableStores.length === 0) {
-                        console.warn('[Session] IDB: No object stores found, skipping');
-                        resolve();
-                        return;
-                    }
-
-                    // Find matching stores for projects, tasks, pomodoros
+                    // Map stores
                     const projectStoreName = availableStores.find(s => s.toLowerCase().includes('project'));
-                    // ✅ FIX: Prioritize 'Task' over 'Subtask' - main.js expects tasks in 'Task' store
                     const taskStoreName = availableStores.find(s => s === 'Task') ||
                         availableStores.find(s => s.toLowerCase().includes('task') || s.toLowerCase().includes('todo'));
                     const pomodoroStoreName = availableStores.find(s => s.toLowerCase().includes('pomodoro') || s.toLowerCase().includes('log'));
+                    const subtaskStoreName = availableStores.find(s => s === 'Subtask');
+                    const groupUserStoreName = availableStores.find(s => s === 'GroupUser');
 
-                    console.log('[Session] IDB Mapped stores:', { projectStoreName, taskStoreName, pomodoroStoreName });
-
-                    // Build list of stores we'll actually use
-                    const storesToUse = [projectStoreName, taskStoreName, pomodoroStoreName].filter(Boolean);
-
-                    if (storesToUse.length === 0) {
-                        console.warn('[Session] IDB: No matching stores found for sync data');
-                        resolve();
-                        return;
-                    }
+                    console.log('[Session] IDB Mapped stores:', { projectStoreName, taskStoreName, pomodoroStoreName, subtaskStoreName, groupUserStoreName });
 
                     try {
-                        const transaction = db.transaction(storesToUse, 'readwrite');
+                        const tx = db.transaction(availableStores, 'readwrite');
 
-                        transaction.oncomplete = () => {
+                        tx.oncomplete = () => {
                             console.log('[Session] ✅ IndexedDB transaction complete');
                             resolve();
                         };
 
-                        transaction.onerror = (event) => {
-                            console.error('[Session] IDB Transaction Error:', event.target.error);
+                        tx.onerror = (e) => {
+                            console.error('[Session] IDB Transaction Error:', e.target.error);
                             resolve();
                         };
 
                         // 1. Projects
                         if (projectStoreName && data.projects && data.projects.length > 0) {
-                            const projectStore = transaction.objectStore(projectStoreName);
-                            data.projects.forEach(p => {
-                                projectStore.put(p);
+                            const store = tx.objectStore(projectStoreName);
+                            let count = 0;
+                            data.projects.forEach(item => {
+                                if (!item.id && item._id) item.id = item._id;
+                                store.put(item);
+                                count++;
                             });
-                            console.log(`[Session] IDB: Put ${data.projects.length} projects to '${projectStoreName}'`);
+                            console.log(`[Session] IDB: Put ${count} projects to '${projectStoreName}'`);
                         }
 
                         // 2. Tasks
                         if (taskStoreName && data.tasks && data.tasks.length > 0) {
-                            const taskStore = transaction.objectStore(taskStoreName);
-                            data.tasks.forEach(t => {
-                                taskStore.put(t);
+                            const store = tx.objectStore(taskStoreName);
+                            let count = 0;
+                            data.tasks.forEach(item => {
+                                if (!item.id && item._id) item.id = item._id;
+                                store.put(item);
+                                count++;
                             });
-                            console.log(`[Session] IDB: Put ${data.tasks.length} tasks to '${taskStoreName}'`);
+                            console.log(`[Session] IDB: Put ${count} tasks to '${taskStoreName}'`);
                         }
 
-                        // 3. Pomodoros
-                        if (pomodoroStoreName && data.pomodoros && data.pomodoros.length > 0) {
-                            const pomodoroStore = transaction.objectStore(pomodoroStoreName);
-                            data.pomodoros.forEach(log => {
-                                pomodoroStore.put(log);
+                        // 3. Subtasks
+                        if (subtaskStoreName && data.subtasks && data.subtasks.length > 0) {
+                            const store = tx.objectStore(subtaskStoreName);
+                            let count = 0;
+                            data.subtasks.forEach(item => {
+                                if (!item.id && item._id) item.id = item._id;
+                                store.put(item);
+                                count++;
                             });
-                            console.log(`[Session] IDB: Put ${data.pomodoros.length} logs to '${pomodoroStoreName}'`);
+                            console.log(`[Session] IDB: Put ${count} subtasks to '${subtaskStoreName}'`);
                         }
-                    } catch (e) {
-                        console.error('[Session] IDB Transaction setup error:', e);
+
+                        // 4. GroupUser (Profile)
+                        if (groupUserStoreName && this.currentUser) {
+                            const store = tx.objectStore(groupUserStoreName);
+                            // Ensure UUID matches the UID cookie/ID so lookups succeed
+                            const uId = this.currentUser.id || this.userId || 'user-1';
+                            const userProfile = {
+                                id: uId,
+                                uuid: uId, // ✅ CRITICAL: main.js queries by uuid index
+                                name: this.currentUser.username || 'User',
+                                email: this.currentUser.email,
+                                sync: 1,
+                                // Add other potential fields to be safe
+                                validUntil: Date.now() + 31536000000,
+                                pro: 1,
+                                vip: 1
+                            };
+                            store.put(userProfile);
+                            console.log(`[Session] IDB: Put user profile to '${groupUserStoreName}' (UUID: ${uId})`);
+                        }
+
+                        // 5. Pomodoros
+                        if (pomodoroStoreName && data.pomodoros && data.pomodoros.length > 0) {
+                            const store = tx.objectStore(pomodoroStoreName);
+                            let count = 0;
+                            data.pomodoros.forEach(item => {
+                                if (!item.id && item._id) item.id = item._id;
+                                store.put(item);
+                                count++;
+                            });
+                            console.log(`[Session] IDB: Put ${count} pomodoros to '${pomodoroStoreName}'`);
+                        }
+
+                    } catch (error) {
+                        console.error('[Session] IDB Transaction Start Failed:', error);
                         resolve();
                     }
                 };
@@ -508,9 +646,39 @@
             try {
                 console.log('[Session] Saving to localStorage...');
 
+                // 1. Capture a valid Project ID for the PID cookie
+                // Try to find "Tasks" or "Inbox" project first
+                let validPid = '0';
                 if (data.projects && data.projects.length > 0) {
+                    // Log all project IDs to help debugging
+                    console.log('[Session] Available Projects:', data.projects.map(p => ({ id: p.id, name: p.name })));
+
+                    const defaultProject = data.projects.find(p => p.name === 'Inbox' || p.name === 'Tasks' || p.name === 'My Tasks');
+                    if (defaultProject) {
+                        validPid = defaultProject.id;
+                    } else {
+                        validPid = data.projects[0].id;
+                    }
+
+                    // Store/Set PID Cookie immediately
+                    if (validPid) {
+                        console.log(`[Session] Setting PID cookie to valid project ID: ${validPid}`);
+                        document.cookie = `PID=${validPid}; path=/; max-age=31536000`;
+                    }
+
                     localStorage.setItem('pomodoro-projects', JSON.stringify(data.projects));
                     console.log(`[Session] ✅ Saved ${data.projects.length} projects`);
+
+                    // ✅ CRITICAL: Create and save project order
+                    // Without this, main.js might not know how to list the projects
+                    const projectOrder = data.projects.map(p => p.id);
+                    localStorage.setItem('pomodoro-projectOrder', JSON.stringify(projectOrder));
+                    console.log(`[Session] ✅ Saved projectOrder (${projectOrder.length} items)`);
+
+                    // ✅ CRITICAL: Sidebar Project List
+                    // main.js uses 'custom-project-list' to determine what shows in the sidebar
+                    localStorage.setItem('custom-project-list', JSON.stringify(projectOrder));
+                    console.log(`[Session] ✅ Saved custom-project-list (${projectOrder.length} items)`);
                 }
 
                 if (data.tasks && data.tasks.length > 0) {
@@ -523,17 +691,29 @@
                     console.log(`[Session] ✅ Saved ${data.pomodoros.length} pomodoros`);
                 }
 
+                // ✅ CRITICAL: Set legacy migration flags UNCONDITIONALLY
+                // These prevent "upgrading" logic that might fail or hang the app
+                localStorage.setItem('UpdateV64Data', 'true');
+                localStorage.setItem('UpdateTasksData', 'true');
+                if (!localStorage.getItem('InstallationDate')) {
+                    localStorage.setItem('InstallationDate', Date.now());
+                }
+                localStorage.setItem('RegionCode', 'US');
+
+                console.log('[Session] ✅ Legacy migration flags set');
                 console.log('[Session] ✅ localStorage updated');
 
-                // ✅ CRITICAL: Trigger storage event so main.js re-renders
-                // This tells the React app that data has changed
+                // ✅ CRITICAL: Dispatch events for BOTH projects and order
                 console.log('[Session] Dispatching storage event to trigger UI update...');
-                window.dispatchEvent(new StorageEvent('storage', {
-                    key: 'pomodoro-projects',
-                    newValue: localStorage.getItem('pomodoro-projects'),
-                    url: window.location.href,
-                    storageArea: localStorage
-                }));
+                const storageKeys = ['pomodoro-projects', 'pomodoro-projectOrder', 'custom-project-list'];
+                storageKeys.forEach(key => {
+                    window.dispatchEvent(new StorageEvent('storage', {
+                        key: key,
+                        newValue: localStorage.getItem(key),
+                        url: window.location.href,
+                        storageArea: localStorage
+                    }));
+                });
 
             } catch (e) {
                 console.error('[Session] localStorage save failed:', e);
