@@ -13,7 +13,7 @@
             // Production: Use Render backend URL
             // UPDATE THIS after deploying backend to Render!
             if (!this.isDevelopment) {
-                return 'https://your-backend-name.onrender.com';
+                return 'https://second-brain-backend-saxs.onrender.com';
             }
 
             // Development: backend on port 3000
