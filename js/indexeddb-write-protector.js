@@ -2,13 +2,15 @@
  * IndexedDB Write Protector
  * ═══════════════════════════════════════════════════════════════════════════
  * CRITICAL: Prevents main.js from overwriting dirty tasks (sync: 0)
+ * while still allowing UI updates to happen
  * 
  * Problem: main.js listens to storage events and re-writes tasks from localStorage
  * to IndexedDB. But localStorage might have stale data, causing dirty tasks to be
  * overwritten with sync=1 versions.
  * 
  * Solution: Intercept IDBObjectStore.put() and check if we're about to overwrite
- * a dirty task. If so, preserve the dirty version.
+ * a dirty task. If so, preserve the dirty version BUT still trigger success callback
+ * so the UI updates.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -20,40 +22,83 @@
     const originalPut = IDBObjectStore.prototype.put;
 
     IDBObjectStore.prototype.put = function (value, key) {
+        const store = this;
+
         // Only protect Task store
         if (this.name === 'Task' && value && value.id) {
+            // Create a fake request that we'll control
+            const fakeRequest = {
+                result: value.id,
+                error: null,
+                source: store,
+                transaction: store.transaction,
+                readyState: 'pending',
+                onsuccess: null,
+                onerror: null
+            };
+
             // Check if we're about to overwrite a dirty task
-            const getReq = this.get(value.id);
+            const getReq = store.get(value.id);
 
             getReq.onsuccess = () => {
                 const existingTask = getReq.result;
 
                 if (existingTask && existingTask.sync === 0 && value.sync !== 0) {
-                    // BLOCK: Attempting to overwrite dirty task with clean version
-                    console.warn(`[Write Protector] 🛡️ BLOCKED overwrite of dirty task "${existingTask.name}" (sync:0 → sync:${value.sync})`);
-                    // Don't call originalPut - just return a fake success
-                    return;
-                }
+                    // PRESERVE: Keep the dirty version, but pretend write succeeded
+                    console.log(`[Write Protector] 🛡️ Preserving dirty task "${existingTask.name}" (sync:0), blocking clean overwrite`);
 
-                // Safe to write
-                originalPut.call(this, value, key);
+                    // Trigger success callback so UI updates
+                    fakeRequest.readyState = 'done';
+                    if (fakeRequest.onsuccess) {
+                        setTimeout(() => {
+                            fakeRequest.onsuccess({ target: fakeRequest });
+                        }, 0);
+                    }
+                } else {
+                    // Safe to write - do the actual put
+                    const realReq = originalPut.call(store, value, key);
+
+                    // Forward callbacks to real request
+                    realReq.onsuccess = (e) => {
+                        fakeRequest.result = realReq.result;
+                        fakeRequest.readyState = 'done';
+                        if (fakeRequest.onsuccess) {
+                            fakeRequest.onsuccess(e);
+                        }
+                    };
+
+                    realReq.onerror = (e) => {
+                        fakeRequest.error = realReq.error;
+                        fakeRequest.readyState = 'done';
+                        if (fakeRequest.onerror) {
+                            fakeRequest.onerror(e);
+                        }
+                    };
+                }
             };
 
             getReq.onerror = () => {
                 // If read fails, allow write (task doesn't exist yet)
-                originalPut.call(this, value, key);
+                const realReq = originalPut.call(store, value, key);
+
+                realReq.onsuccess = (e) => {
+                    fakeRequest.result = realReq.result;
+                    fakeRequest.readyState = 'done';
+                    if (fakeRequest.onsuccess) {
+                        fakeRequest.onsuccess(e);
+                    }
+                };
+
+                realReq.onerror = (e) => {
+                    fakeRequest.error = realReq.error;
+                    fakeRequest.readyState = 'done';
+                    if (fakeRequest.onerror) {
+                        fakeRequest.onerror(e);
+                    }
+                };
             };
 
-            // Return a fake request that will be resolved by the getReq callback
-            return {
-                result: undefined,
-                error: null,
-                source: this,
-                transaction: this.transaction,
-                readyState: 'done',
-                onsuccess: null,
-                onerror: null
-            };
+            return fakeRequest;
         }
 
         // Not a Task store or no ID - allow write
