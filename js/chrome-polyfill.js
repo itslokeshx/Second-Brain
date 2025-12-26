@@ -136,8 +136,8 @@ if (!chrome.i18n) {
             // Basic English fallback or just return the key formatted
             // This part is kept for backward compatibility or if window.I18n is not available
             const messages = {
-                "appName": "Focus To-Do",
-                "appDescription": "Focus To-Do Web App",
+                "appName": "Second Brain",
+                "appDescription": "Second Brain - Your Personal Productivity Hub",
                 // Add more common keys if needed or load from _locales/en/messages.json
             };
             return messages[messageName] || messageName.replace(/_/g, ' ');

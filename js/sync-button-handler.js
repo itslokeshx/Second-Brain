@@ -10,7 +10,7 @@
     function initSyncButton() {
         console.log('[Sync Button Handler] Initializing...');
 
-        // Extended selectors for legacy Focus To-Do sync button
+        // Extended selectors for legacy Second Brain sync button
         const selectors = [
             '[data-sync]',
             '.sync-button',

@@ -1,7 +1,7 @@
 /**
  * System Projects Definition
  * ═══════════════════════════════════════════════════════════════════════════
- * CRITICAL: These projects are MANDATORY for Focus To-Do React hydration.
+ * CRITICAL: These projects are MANDATORY for Second Brain React hydration.
  * If any are missing from IndexedDB, the UI will not render (blank screen).
  * 
  * The main.js webpack bundle checks for `props.todayProject` before mounting.

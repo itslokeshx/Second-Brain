@@ -227,7 +227,7 @@ window.I18N_DATA = {
     "pomo_del_msg": "Pomodoro will disappear and can not be recovered.",
     "pur": "Premium",
     "pur_title": "Get Premium",
-    "pur_pls_title": "Please purchase Focus To-Do Premium",
+    "pur_pls_title": "",
     "pur_alert_content": "This is a premium feature.",
     "pur_alert_ok": "Upgrade Now",
     "pur_sync": "Synchronize data within all devices.",
