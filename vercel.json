@@ -1,15 +1,26 @@
 {
-    "buildCommand": "echo 'No build needed - static files'",
-    "outputDirectory": ".",
-    "installCommand": "echo 'No install needed'",
-    "framework": null,
-    "headers": [
+    "rewrites": [
         {
             "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ],
+    "headers": [
+        {
+            "source": "/index.html",
             "headers": [
                 {
                     "key": "Cache-Control",
-                    "value": "public, max-age=0, must-revalidate"
+                    "value": "no-cache, no-store, must-revalidate"
+                }
+            ]
+        },
+        {
+            "source": "/js/(.*)",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "no-cache, no-store, must-revalidate"
                 }
             ]
         }
