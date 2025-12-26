@@ -1,7 +1,7 @@
 /**
  * IndexedDB Write Protector
  * ═══════════════════════════════════════════════════════════════════════════
- * CRITICAL: Prevents main.js from overwriting dirty tasks (sync: 0)
+ * CRITICAL: Prevents main.js from overwriting dirty tasks/projects (sync: 0)
  * while still allowing UI updates to happen
  * 
  * Problem: main.js listens to storage events and re-writes tasks from localStorage
@@ -24,8 +24,8 @@
     IDBObjectStore.prototype.put = function (value, key) {
         const store = this;
 
-        // Only protect Task store
-        if (this.name === 'Task' && value && value.id) {
+        // Protect both Task and Project stores
+        if ((this.name === 'Task' || this.name === 'Project') && value && value.id) {
             // Create a fake request that we'll control
             const fakeRequest = {
                 result: value.id,
@@ -37,15 +37,16 @@
                 onerror: null
             };
 
-            // Check if we're about to overwrite a dirty task
+            // Check if we're about to overwrite a dirty item
             const getReq = store.get(value.id);
 
             getReq.onsuccess = () => {
-                const existingTask = getReq.result;
+                const existingItem = getReq.result;
 
-                if (existingTask && existingTask.sync === 0 && value.sync !== 0) {
+                if (existingItem && existingItem.sync === 0 && value.sync !== 0) {
                     // PRESERVE: Keep the dirty version, but pretend write succeeded
-                    console.log(`[Write Protector] 🛡️ Preserving dirty task "${existingTask.name}" (sync:0), blocking clean overwrite`);
+                    const itemType = this.name === 'Task' ? 'task' : 'project';
+                    console.log(`[Write Protector] 🛡️ Preserving dirty ${itemType} "${existingItem.name}" (sync:0), blocking clean overwrite`);
 
                     // Trigger success callback so UI updates
                     fakeRequest.readyState = 'done';
@@ -78,7 +79,7 @@
             };
 
             getReq.onerror = () => {
-                // If read fails, allow write (task doesn't exist yet)
+                // If read fails, allow write (item doesn't exist yet)
                 const realReq = originalPut.call(store, value, key);
 
                 realReq.onsuccess = (e) => {
@@ -101,7 +102,7 @@
             return fakeRequest;
         }
 
-        // Not a Task store or no ID - allow write
+        // Not a protected store or no ID - allow write
         return originalPut.call(this, value, key);
     };
 

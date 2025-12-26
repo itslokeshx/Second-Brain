@@ -654,15 +654,18 @@
                             resolve();
                         };
 
-                        // 1. Projects - protect system project types
+                        // 1. Projects - CRITICAL: Preserve local dirty changes (sync: 0)
+                        // ✅ Same cursor-based protection as Tasks
+                        // Prevents: deleted projects from being restored, settings from reverting
                         if (projectStoreName && data.projects && data.projects.length > 0) {
-                            const store = tx.objectStore(projectStoreName);
-                            let count = 0;
+                            const projectStore = tx.objectStore(projectStoreName);
+
+                            // Build map of server projects
+                            const serverProjectMap = new Map();
                             data.projects.forEach(item => {
                                 if (!item.id && item._id) item.id = item._id;
 
-                                // ✅ PROTECT SYSTEM PROJECT TYPES
-                                // If this is a system project, use the correct type from SYSTEM_PROJECTS
+                                // Protect system project types
                                 if (window.isSystemProject && window.isSystemProject(item.id)) {
                                     const sysProj = window.getSystemProject(item.id);
                                     if (sysProj) {
@@ -672,23 +675,66 @@
                                     }
                                 }
 
-                                // ✅ CRITICAL: Ensure required fields for IndexedDB state index
-                                // main.js queries projects using IDBKeyRange.bound(0, 1) on state index
-                                // Projects without state field will NOT be found by cursor!
-                                if (item.state === undefined || item.state === null) {
-                                    item.state = 0;
-                                }
-                                if (item.order === undefined || item.order === null) {
-                                    item.order = 0;
-                                }
-                                if (item.sync === undefined || item.sync === null) {
-                                    item.sync = 1;
-                                }
+                                // Ensure required fields
+                                if (item.state === undefined || item.state === null) item.state = 0;
+                                if (item.order === undefined || item.order === null) item.order = 0;
+                                if (item.sync === undefined || item.sync === null) item.sync = 1;
 
-                                store.put(item);
-                                count++;
+                                serverProjectMap.set(item.id, item);
                             });
-                            console.log(`[Session] IDB: Put ${count} projects to '${projectStoreName}'`);
+
+                            let count = 0;
+                            let skipped = 0;
+                            const processedIds = new Set();
+
+                            // Cursor-based atomic merge
+                            const cursorReq = projectStore.openCursor();
+
+                            cursorReq.onsuccess = (event) => {
+                                const cursor = event.target.result;
+
+                                if (cursor) {
+                                    const existingProject = cursor.value;
+                                    const serverProject = serverProjectMap.get(existingProject.id);
+
+                                    if (serverProject) {
+                                        processedIds.add(existingProject.id);
+
+                                        // CRITICAL: Preserve dirty projects (deleted/modified locally)
+                                        if (existingProject.sync === 0) {
+                                            console.log(`[Session] ⏭️ Preserving dirty project "${existingProject.name}" (sync:0)`);
+                                            skipped++;
+                                        } else {
+                                            // Clean project - safe to update from server
+                                            cursor.update(serverProject);
+                                            count++;
+                                        }
+                                    } else {
+                                        // Project exists locally but not on server
+                                        // If clean (sync=1) and not system, it was deleted on server
+                                        if (existingProject.sync === 1 && !window.isSystemProject(existingProject.id)) {
+                                            console.log(`[Session] 🗑️ Deleting project "${existingProject.name}" - removed on server`);
+                                            cursor.delete();
+                                        }
+                                    }
+
+                                    cursor.continue();
+                                } else {
+                                    // Cursor finished - add new projects from server
+                                    serverProjectMap.forEach((serverProject, projectId) => {
+                                        if (!processedIds.has(projectId)) {
+                                            projectStore.add(serverProject);
+                                            count++;
+                                        }
+                                    });
+
+                                    console.log(`[Session] IDB: Updated ${count} projects, preserved ${skipped} dirty projects`);
+                                }
+                            };
+
+                            cursorReq.onerror = () => {
+                                console.error('[Session] Project cursor error:', cursorReq.error);
+                            };
                         }
 
                         // 2. Tasks - CRITICAL: Preserve local dirty changes (sync: 0)
