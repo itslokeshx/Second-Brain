@@ -16,22 +16,36 @@
      */
     function getCurrentUserId() {
         // Try cookies first (set by backend)
-        const cookies = document.cookie.split(';').reduce((acc, c) => {
-            const [k, v] = c.trim().split('=');
-            if (k) acc[k] = decodeURIComponent(v || '');
-            return acc;
-        }, {});
+        try {
+            const cookies = document.cookie.split(';').reduce((acc, c) => {
+                const [k, v] = c.trim().split('=');
+                if (k) {
+                    try {
+                        acc[k] = decodeURIComponent(v || '');
+                    } catch (e) {
+                        // Malformed cookie value, use raw value
+                        acc[k] = v || '';
+                    }
+                }
+                return acc;
+            }, {});
 
-        if (cookies.UID && cookies.UID !== 'undefined') {
-            return cookies.UID;
+            if (cookies.UID && cookies.UID !== 'undefined') {
+                console.log('[UserDB] Got userId from cookie:', cookies.UID);
+                return cookies.UID;
+            }
+        } catch (error) {
+            console.warn('[UserDB] Error parsing cookies:', error);
         }
 
         // Fallback to localStorage
         const userId = localStorage.getItem('userId');
-        if (userId && userId !== 'undefined') {
+        if (userId && userId !== 'undefined' && userId !== 'null') {
+            console.log('[UserDB] Got userId from localStorage:', userId);
             return userId;
         }
 
+        console.warn('[UserDB] No userId found in cookies or localStorage!');
         return null;
     }
 

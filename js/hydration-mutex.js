@@ -305,9 +305,12 @@
         }
 
         /**
-         * STATE 5: Verify data integrity
+         * STATE 5: Verify data integrity - BOTH IndexedDB AND localStorage
          */
         async _verifyData(userId) {
+            console.log('[Mutex] 🔍 Verifying data integrity...');
+
+            // PART 1: Verify IndexedDB has data
             if (!window.UserDB) {
                 throw new Error('UserDB not available');
             }
@@ -324,7 +327,50 @@
                 throw new Error('Data verification failed: no projects in database');
             }
 
-            console.log('[Mutex] ✅ Data verified:', count, 'projects');
+            console.log('[Mutex] ✅ IndexedDB verified:', count, 'projects');
+
+            // PART 2: CRITICAL - Verify localStorage has data
+            // main.js reads from localStorage, so we MUST wait until it's populated
+            const maxRetries = 20; // 2 seconds max
+            const retryDelay = 100; // 100ms between retries
+
+            for (let i = 0; i < maxRetries; i++) {
+                const projectsJson = localStorage.getItem('pomodoro-projects');
+                if (projectsJson && projectsJson !== '[]') {
+                    try {
+                        const projects = JSON.parse(projectsJson);
+                        if (projects && projects.length > 0) {
+                            console.log('[Mutex] ✅ localStorage verified:', projects.length, 'projects');
+                            return; // SUCCESS!
+                        }
+                    } catch (e) {
+                        // Invalid JSON, keep waiting
+                    }
+                }
+
+                // Wait and retry
+                if (i < maxRetries - 1) {
+                    console.log('[Mutex] ⏳ Waiting for localStorage... (attempt', i + 1, ')');
+                    await new Promise(r => setTimeout(r, retryDelay));
+                }
+            }
+
+            // localStorage not populated - try to populate it from IndexedDB
+            console.warn('[Mutex] ⚠️ localStorage empty - populating from IndexedDB...');
+            const allTx = db.transaction('Project', 'readonly');
+            const projects = await new Promise((resolve, reject) => {
+                const req = allTx.objectStore('Project').getAll();
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+
+            if (projects && projects.length > 0) {
+                localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
+                localStorage.setItem('pomodoro-projectOrder', JSON.stringify(projects.map(p => p.id)));
+                console.log('[Mutex] ✅ Populated localStorage from IndexedDB:', projects.length, 'projects');
+            } else {
+                throw new Error('Cannot verify data: both IndexedDB and localStorage are empty');
+            }
         }
 
         /**
