@@ -636,6 +636,16 @@ app.get('/statusv60/property', (req, res) => res.json({ success: true, propertie
 app.get('/v62/user/point', (req, res) => res.json({ success: true, point: 0 }));
 app.all('/v63/exception-report', (req, res) => res.json({ status: 0, success: true }));
 
+// Health check endpoint (for keep-alive pings)
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development'
+    });
+});
+
 // Fix undefined route
 app.get('/undefined', (req, res) => {
     console.warn('[Warning] Request to /undefined - likely a frontend bug');
@@ -658,7 +668,13 @@ mongoose.connect(MONGODB_URI, {
         process.exit(1);
     });
 
+// Import keep-alive service
+const { startKeepAlive } = require('./services/keepAlive');
+
 app.listen(PORT, () => {
     console.log(`✅ Server: http://localhost:${PORT}`);
     console.log(`✅ Dual-Mode Auth: Cookie + Token`);
+
+    // Start keep-alive service (prevents Render free tier from sleeping)
+    startKeepAlive();
 });

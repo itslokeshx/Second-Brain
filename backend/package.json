@@ -19,6 +19,7 @@
         "express-session": "^1.18.2",
         "jsonwebtoken": "^9.0.3",
         "mongoose": "^7.6.3",
+        "node-cron": "^4.2.1",
         "tough-cookie": "^6.0.0",
         "uuid": "^13.0.0",
         "ws": "^8.18.3"
