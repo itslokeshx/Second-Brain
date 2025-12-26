@@ -10,9 +10,10 @@
 
         // Get API base URL
         getApiBaseUrl: function () {
-            // If backend is on same origin (production setup)
-            if (window.location.port === '3000' || !this.isDevelopment) {
-                return window.location.origin;
+            // Production: Use Render backend URL
+            // UPDATE THIS after deploying backend to Render!
+            if (!this.isDevelopment) {
+                return 'https://your-backend-name.onrender.com';
             }
 
             // Development: backend on port 3000
