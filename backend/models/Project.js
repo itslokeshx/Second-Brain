@@ -17,7 +17,7 @@ const projectSchema = new mongoose.Schema({
     name: { type: String, required: true },
     color: { type: String, default: 'F4B357' },
     order: { type: Number, default: 0 },
-    type: { type: String, default: '0' }, // "0" = folder, "1000" = project, "4xxx" = smart filters
+    type: { type: Number, default: 0 }, // "0" = folder, "1000" = project, "4xxx" = smart filters
     parentId: { type: String, default: '' },
 
     // State & Sync

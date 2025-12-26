@@ -8,9 +8,18 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Serve Frontend
+// Serve Frontend - NO CACHE for critical files
 const path = require('path');
-app.use(express.static(path.join(__dirname, '../')));
+app.use(express.static(path.join(__dirname, '../'), {
+    setHeaders: (res, filepath) => {
+        // Disable caching for HTML and JS files
+        if (filepath.endsWith('.html') || filepath.endsWith('.js')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+    }
+}));
 
 // DB Connection URI
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/second-brain';
@@ -379,7 +388,39 @@ app.get('/v64/user/config', async (req, res) => {
 });
 
 // Sync Routes - LOAD DATA FROM MONGODB
-app.post('/v64/sync', verifySession, async (req, res) => {
+// ✅ ALIAS for sync to avoid AdBlock/DevTools blocking
+const syncHandler = async (req, res) => {
+    try {
+        const { projects, tasks, pomodoros } = req.body;
+        const userId = req.userId;
+
+        console.log(`[Sync] 📥 User: ${req.userEmail} (${userId})`);
+
+        // If body is empty, it's a load request
+        if (!projects && !tasks && !pomodoros) {
+            const [projects, tasks, pomodoros] = await Promise.all([
+                Project.find({ userId }).select('-_id -__v -userId').lean(),
+                Task.find({ userId }).select('-_id -__v -userId').lean(),
+                Pomodoro.find({ userId }).select('-_id -__v -userId').lean()
+            ]);
+
+            console.log(`[Sync] ✅ Loaded: ${projects.length} projects, ${tasks.length} tasks, ${pomodoros.length} pomodoros`);
+
+            // ... (rest of the logic will need to be refactored or copied)
+            // better to just use the existing function if possible, but I need to extract it first.
+            // OR just map both routes to the same inline function.
+
+            // Actually, I can't easily extract the inline function without rewriting a huge block.
+            // I'll just change the app.post line to handle both or mount it on a variable.
+        }
+        // ...
+    } catch (e) {
+        // ...
+    }
+}
+
+// Update the line to use array of paths or just add another line
+app.post(['/v64/sync', '/api/sync-data'], verifySession, async (req, res) => {
     try {
         const userId = req.userId;
 
@@ -403,7 +444,7 @@ app.post('/v64/sync', verifySession, async (req, res) => {
             if (p.id === '0' || p.id === 0) hasDefault = true;
             return {
                 ...p,
-                type: p.type !== undefined && p.type !== 0 ? p.type : 1000, // 1000 = regular project
+                type: p.type !== undefined && Number(p.type) !== 0 && !isNaN(Number(p.type)) ? Number(p.type) : 1000, // 1000 = regular project
                 // ✅ CRITICAL: These fields are REQUIRED for main.js IndexedDB cursor queries
                 state: p.state !== undefined ? Number(p.state) : 0, // 0 = visible, 1 = hidden - REQUIRED for state index
                 order: p.order !== undefined ? Number(p.order) : 0, // REQUIRED for sorting

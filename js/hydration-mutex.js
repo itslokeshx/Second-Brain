@@ -355,21 +355,44 @@
                 }
             }
 
-            // localStorage not populated - try to populate it from IndexedDB
-            console.warn('[Mutex] ⚠️ localStorage empty - populating from IndexedDB...');
-            const allTx = db.transaction('Project', 'readonly');
-            const projects = await new Promise((resolve, reject) => {
-                const req = allTx.objectStore('Project').getAll();
-                req.onsuccess = () => resolve(req.result);
-                req.onerror = () => reject(req.error);
-            });
+            // localStorage not populated or missing keys - try to populate from IndexedDB
+            console.log('[Mutex] 🔍 Checking localStorage completeness...');
 
-            if (projects && projects.length > 0) {
-                localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
-                localStorage.setItem('pomodoro-projectOrder', JSON.stringify(projects.map(p => p.id)));
-                console.log('[Mutex] ✅ Populated localStorage from IndexedDB:', projects.length, 'projects');
+            if (!localStorage.getItem('pomodoro-projects') ||
+                !localStorage.getItem('custom-project-list')) { // Check specifically for the list key main.js needs
+
+                console.warn('[Mutex] ⚠️ localStorage incomplete - populating from IndexedDB...');
+                const allTx = db.transaction('Project', 'readonly');
+                const projects = await new Promise((resolve, reject) => {
+                    const req = allTx.objectStore('Project').getAll();
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => reject(req.error);
+                });
+
+                if (projects && projects.length > 0) {
+                    // 1. Projects
+                    localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
+
+                    // 2. Project Order
+                    const projectOrder = projects.map(p => p.id);
+                    localStorage.setItem('pomodoro-projectOrder', JSON.stringify(projectOrder));
+
+                    // 3. Custom Project List - CRITICAL for sidebar rendering in main.js
+                    localStorage.setItem('custom-project-list', JSON.stringify(projectOrder));
+
+                    console.log('[Mutex] ✅ Populated localStorage from IndexedDB:', projects.length, 'projects');
+                } else {
+                    throw new Error('Cannot verify data: both IndexedDB and localStorage are empty');
+                }
             } else {
-                throw new Error('Cannot verify data: both IndexedDB and localStorage are empty');
+                // Even if projects exist, safe-check custom-project-list one last time
+                if (!localStorage.getItem('custom-project-list')) {
+                    const projects = JSON.parse(localStorage.getItem('pomodoro-projects'));
+                    const projectOrder = projects.map(p => p.id);
+                    localStorage.setItem('custom-project-list', JSON.stringify(projectOrder));
+                    console.log('[Mutex] 🔧 Repaired missing custom-project-list');
+                }
+                console.log('[Mutex] ✅ localStorage fully verified');
             }
         }
 

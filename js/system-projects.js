@@ -221,55 +221,6 @@
             deadline: 0,
             order: 100,
             color: '#4A90D9'
-        },
-        {
-            ...baseProject,
-            id: 'inbox',
-            name: 'Inbox',
-            type: 1000,     // Regular project
-            deadline: 0,
-            order: 101,
-            color: '#87CEEB'
-        },
-        {
-            ...baseProject,
-            id: 'default',
-            name: 'Default',
-            type: 1000,     // Regular project
-            deadline: 0,
-            order: 102,
-            color: '#98D8C8'
-        },
-
-        // ═══════════════════════════════════════════════════════════════════
-        // SPECIAL VIEWS
-        // ═══════════════════════════════════════════════════════════════════
-        {
-            ...baseProject,
-            id: 'myday',
-            name: "Today's Tasks",
-            type: 4000,     // Same as today
-            deadline: 4000,
-            order: 0,
-            color: '#FF6B6B'
-        },
-        {
-            ...baseProject,
-            id: 'upcoming',
-            name: 'Upcoming',
-            type: 4002,     // Same as scheduled
-            deadline: 4002,
-            order: 200,
-            color: '#20B2AA'
-        },
-        {
-            ...baseProject,
-            id: 'focus',
-            name: 'Focus',
-            type: 1000,     // Regular project
-            deadline: 0,
-            order: 201,
-            color: '#FF4500'
         }
     ];
 

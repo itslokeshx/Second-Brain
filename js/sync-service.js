@@ -67,7 +67,7 @@ class SyncService {
 
     // Sync projects
     async syncProjects(projects) {
-        return this.authenticatedFetch(`${this.baseURL}/v64/sync`, {
+        return this.authenticatedFetch(`${this.baseURL}/api/sync-data`, {
             method: 'POST',
             body: JSON.stringify({ projects })
         });
@@ -75,7 +75,7 @@ class SyncService {
 
     // Sync tasks
     async syncTasks(tasks) {
-        return this.authenticatedFetch(`${this.baseURL}/v64/sync`, {
+        return this.authenticatedFetch(`${this.baseURL}/api/sync-data`, {
             method: 'POST',
             body: JSON.stringify({ tasks })
         });
@@ -84,7 +84,8 @@ class SyncService {
     // Load all data from MongoDB
     async loadAll() {
         try {
-            const result = await this.authenticatedFetch(`${this.baseURL}/v64/sync`, {
+            // ✅ USE THE NEW UNBLOCKED ENDPOINT
+            const result = await this.authenticatedFetch(`${this.baseURL}/api/sync-data`, {
                 method: 'POST',
                 body: JSON.stringify({}) // Empty body = load request
             });

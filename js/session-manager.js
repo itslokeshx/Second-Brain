@@ -597,9 +597,51 @@
         },
 
         // ✅ NEW: Save to IndexedDB (Required for main.js rendering)
+        // Uses two-phase approach: read dirty tasks FIRST, then write while preserving them
         saveToIndexedDB: function (data) {
-            return new Promise((resolve, reject) => {
+            return new Promise(async (resolve, reject) => {
                 const dbName = window.UserDB ? window.UserDB.getDBName() : 'PomodoroDB6';
+
+                // ═══════════════════════════════════════════════════════════════
+                // PHASE 1: Read existing dirty tasks (sync: 0) BEFORE writing
+                // ═══════════════════════════════════════════════════════════════
+                try {
+                    const readDb = await new Promise((res, rej) => {
+                        const req = indexedDB.open(dbName);
+                        req.onsuccess = () => res(req.result);
+                        req.onerror = () => rej(req.error);
+                    });
+
+                    const taskStoreName = Array.from(readDb.objectStoreNames).find(s => s === 'Task');
+                    if (taskStoreName) {
+                        const readTx = readDb.transaction([taskStoreName], 'readonly');
+                        const existingTasks = await new Promise((res) => {
+                            const req = readTx.objectStore(taskStoreName).getAll();
+                            req.onsuccess = () => res(req.result || []);
+                            req.onerror = () => res([]);
+                        });
+
+                        this._dirtyTaskIds = new Set(
+                            existingTasks
+                                .filter(t => t.sync === 0)
+                                .map(t => t.id)
+                        );
+
+                        if (this._dirtyTaskIds.size > 0) {
+                            console.log(`[Session] ⚠️ PRE-READ: Found ${this._dirtyTaskIds.size} dirty tasks (sync: 0) - will PRESERVE them`);
+                        }
+                    } else {
+                        this._dirtyTaskIds = new Set();
+                    }
+                    readDb.close();
+                } catch (preReadError) {
+                    console.warn('[Session] Pre-read failed, dirty tasks may be lost:', preReadError);
+                    this._dirtyTaskIds = new Set();
+                }
+
+                // ═══════════════════════════════════════════════════════════════
+                // PHASE 2: Write data (but skip dirty tasks)
+                // ═══════════════════════════════════════════════════════════════
                 const request = indexedDB.open(dbName);
 
                 request.onerror = (event) => {
@@ -672,16 +714,27 @@
                             console.log(`[Session] IDB: Put ${count} projects to '${projectStoreName}'`);
                         }
 
-                        // 2. Tasks
+                        // 2. Tasks - CRITICAL: Preserve local dirty changes (sync: 0)
+                        // NOTE: We pre-read dirty tasks BEFORE this transaction started (see dirtyTaskIds below)
                         if (taskStoreName && data.tasks && data.tasks.length > 0) {
-                            const store = tx.objectStore(taskStoreName);
+                            const taskStore = tx.objectStore(taskStoreName);
                             let count = 0;
+                            let skipped = 0;
                             data.tasks.forEach(item => {
                                 if (!item.id && item._id) item.id = item._id;
-                                store.put(item);
+
+                                // CRITICAL: Don't overwrite local dirty changes!
+                                // dirtyTaskIds is populated before the transaction (see below)
+                                if (this._dirtyTaskIds && this._dirtyTaskIds.has(item.id)) {
+                                    console.log(`[Session] ⏭️ Skipping server task "${item.name}" - local version is dirty (sync:0)`);
+                                    skipped++;
+                                    return; // Skip this task, keep local version
+                                }
+
+                                taskStore.put(item);
                                 count++;
                             });
-                            console.log(`[Session] IDB: Put ${count} tasks to '${taskStoreName}'`);
+                            console.log(`[Session] IDB: Put ${count} tasks, skipped ${skipped} dirty local tasks`);
                         }
 
                         // 3. Subtasks
@@ -776,9 +829,51 @@
                     console.log(`[Session] ✅ Saved custom-project-list (${projectOrder.length} items)`);
                 }
 
+                // ═══════════════════════════════════════════════════════════════
+                // CRITICAL: Preserve dirty tasks (sync: 0) in localStorage
+                // ═══════════════════════════════════════════════════════════════
                 if (data.tasks && data.tasks.length > 0) {
-                    localStorage.setItem('pomodoro-tasks', JSON.stringify(data.tasks));
-                    console.log(`[Session] ✅ Saved ${data.tasks.length} tasks`);
+                    // Read existing tasks and find dirty ones
+                    const existingTasksStr = localStorage.getItem('pomodoro-tasks');
+                    let existingTasks = [];
+                    try {
+                        existingTasks = existingTasksStr ? JSON.parse(existingTasksStr) : [];
+                    } catch (e) {
+                        existingTasks = [];
+                    }
+
+                    // Create map of dirty tasks (sync: 0)
+                    const dirtyTasks = {};
+                    existingTasks.forEach(t => {
+                        if (t.sync === 0 && t.id) {
+                            dirtyTasks[t.id] = t;
+                        }
+                    });
+
+                    const dirtyCount = Object.keys(dirtyTasks).length;
+                    if (dirtyCount > 0) {
+                        console.log(`[Session] ⚠️ localStorage: Found ${dirtyCount} dirty tasks - preserving them`);
+                    }
+
+                    // Merge: use dirty local version where it exists, otherwise server version
+                    const mergedTasks = data.tasks.map(serverTask => {
+                        if (dirtyTasks[serverTask.id]) {
+                            console.log(`[Session] ⏭️ localStorage: Keeping local dirty task "${serverTask.name}"`);
+                            return dirtyTasks[serverTask.id];  // Keep local dirty version
+                        }
+                        return serverTask;  // Use server version
+                    });
+
+                    // Also include any dirty tasks that aren't in server data (newly created)
+                    Object.values(dirtyTasks).forEach(dirtyTask => {
+                        if (!data.tasks.find(t => t.id === dirtyTask.id)) {
+                            console.log(`[Session] ➕ localStorage: Adding local-only task "${dirtyTask.name}"`);
+                            mergedTasks.push(dirtyTask);
+                        }
+                    });
+
+                    localStorage.setItem('pomodoro-tasks', JSON.stringify(mergedTasks));
+                    console.log(`[Session] ✅ Saved ${mergedTasks.length} tasks (${dirtyCount} preserved dirty)`);
                 }
 
                 if (data.pomodoros && data.pomodoros.length > 0) {

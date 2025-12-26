@@ -113,23 +113,34 @@
                 localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
             }
 
-            // D. Ensure custom-project-list contains the Default Project
-            let customListRaw = localStorage.getItem('custom-project-list');
-            let customList = [];
-            try {
-                customList = customListRaw ? JSON.parse(customListRaw) : [];
-            } catch (e) { customList = []; }
+            // D. Ensure custom-project-list integrity (Safety Check)
+            // CRITICAL: Do NOT filter the list if projects are missing!
+            if (projects.length >= 5) { // Only filter if we have a healthy project list (system projects = ~20)
+                let customListRaw = localStorage.getItem('custom-project-list');
+                let customList = [];
+                try {
+                    customList = customListRaw ? JSON.parse(customListRaw) : [];
+                } catch (e) { customList = []; }
 
-            if (!Array.isArray(customList)) customList = [];
+                if (!Array.isArray(customList)) customList = [];
 
-            // Filter out garbage
-            customList = customList.filter(id => projectIds.has(String(id)));
+                // Filter out garbage (only if we trust 'projects' list)
+                const originalLength = customList.length;
+                customList = customList.filter(id => projectIds.has(String(id)));
 
-            // Ensure '0' is present if not already
-            if (!customList.includes('0')) {
-                customList.unshift('0');
-                console.log('[Data Sanitizer] Added Default Project to Sidebar List.');
+                if (customList.length !== originalLength) {
+                    console.log(`[Data Sanitizer] Removed ${originalLength - customList.length} invalid items from sidebar list.`);
+                }
+
+                // Ensure '0' is present if not already
+                if (!customList.includes('0')) {
+                    customList.unshift('0');
+                    console.log('[Data Sanitizer] Added Default Project to Sidebar List.');
+                }
+
                 localStorage.setItem('custom-project-list', JSON.stringify(customList));
+            } else {
+                console.warn(`[Data Sanitizer] ⚠️ Project list suspicious (len=${projects.length}). Skipping sidebar filtering to prevent collapse.`);
             }
             // Save cleaned list if it changed (already done by setItem above)
 
