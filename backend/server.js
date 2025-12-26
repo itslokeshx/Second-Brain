@@ -459,23 +459,9 @@ app.post(['/v64/sync', '/api/sync-data'], verifySession, async (req, res) => {
             };
         });
 
-        if (!hasDefault) {
-            console.log('[v64/sync] ⚠️ No default project found. Injecting virtual Inbox.');
-            normalizedProjects.unshift({
-                id: '0',
-                name: 'Tasks',
-                type: 1000, // CORRECT: 1000 = regular project (l.project = 1e3)
-                state: 0, // CRITICAL: Required for state index
-                order: 0,
-                orderingRule: 0,
-                sync: 1,
-                color: '#FF6B6B',
-                sortOrder: 0,
-                closed: false,
-                deleted: false,
-                parentId: ''
-            });
-        }
+        // ✅ REMOVED: Phantom project injection
+        // Frontend handles default project creation via data-sanitizer.js
+        // Server should NOT inject defaults as it creates duplicates
 
         const projectIds = new Set(normalizedProjects.map(p => String(p.id)));
 

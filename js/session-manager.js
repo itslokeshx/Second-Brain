@@ -51,6 +51,12 @@
         },
 
         checkLoginStatus: async function () {
+            // ✅ CRITICAL: If mutex is already READY, data is already loaded - skip this entirely
+            if (window.HydrationMutex && window.HydrationMutex.isReady()) {
+                console.log('[Session] ⏭️ Mutex already READY - data already loaded, skipping checkLoginStatus');
+                return;
+            }
+
             try {
                 // ✅ FIRST: Check cookies for existing session
                 const cookieUser = this.getUserFromCookies();
@@ -467,11 +473,19 @@
         },
 
         loadDataAfterLogin: async function () {
-            // ✅ GATEKEEPER: Prevent concurrent data loading with Hydration Mutex
+            // ✅ GATEKEEPER 1: Prevent concurrent data loading with Hydration Mutex
             if (window.HydrationMutex && window.HydrationMutex.isHandling()) {
                 console.log('[Session] 🛑 Blocking loadDataAfterLogin - mutex is handling hydration');
                 return;
             }
+
+            // ✅ GATEKEEPER 2: Debounce protection - prevent rapid-fire loads
+            const now = Date.now();
+            if (this._lastDataLoad && (now - this._lastDataLoad) < 2000) {
+                console.log('[Session] 🛑 Blocking loadDataAfterLogin - debounce (2s cooldown)');
+                return;
+            }
+            this._lastDataLoad = now;
 
             // Check reload flag - if set, we already saved data, just ensure it's in both stores
             const hasReloadedAfterSync = sessionStorage.getItem('reloaded-after-sync');
@@ -603,44 +617,7 @@
                 const dbName = window.UserDB ? window.UserDB.getDBName() : 'PomodoroDB6';
 
                 // ═══════════════════════════════════════════════════════════════
-                // PHASE 1: Read existing dirty tasks (sync: 0) BEFORE writing
-                // ═══════════════════════════════════════════════════════════════
-                try {
-                    const readDb = await new Promise((res, rej) => {
-                        const req = indexedDB.open(dbName);
-                        req.onsuccess = () => res(req.result);
-                        req.onerror = () => rej(req.error);
-                    });
-
-                    const taskStoreName = Array.from(readDb.objectStoreNames).find(s => s === 'Task');
-                    if (taskStoreName) {
-                        const readTx = readDb.transaction([taskStoreName], 'readonly');
-                        const existingTasks = await new Promise((res) => {
-                            const req = readTx.objectStore(taskStoreName).getAll();
-                            req.onsuccess = () => res(req.result || []);
-                            req.onerror = () => res([]);
-                        });
-
-                        this._dirtyTaskIds = new Set(
-                            existingTasks
-                                .filter(t => t.sync === 0)
-                                .map(t => t.id)
-                        );
-
-                        if (this._dirtyTaskIds.size > 0) {
-                            console.log(`[Session] ⚠️ PRE-READ: Found ${this._dirtyTaskIds.size} dirty tasks (sync: 0) - will PRESERVE them`);
-                        }
-                    } else {
-                        this._dirtyTaskIds = new Set();
-                    }
-                    readDb.close();
-                } catch (preReadError) {
-                    console.warn('[Session] Pre-read failed, dirty tasks may be lost:', preReadError);
-                    this._dirtyTaskIds = new Set();
-                }
-
-                // ═══════════════════════════════════════════════════════════════
-                // PHASE 2: Write data (but skip dirty tasks)
+                // Write data with real-time dirty check (no pre-read needed)
                 // ═══════════════════════════════════════════════════════════════
                 const request = indexedDB.open(dbName);
 
@@ -715,26 +692,63 @@
                         }
 
                         // 2. Tasks - CRITICAL: Preserve local dirty changes (sync: 0)
-                        // NOTE: We pre-read dirty tasks BEFORE this transaction started (see dirtyTaskIds below)
+                        // ✅ BULLETPROOF FIX: Use cursor-based iteration for atomic dirty check
+                        // This ensures NO race condition - all reads/writes happen in same transaction
                         if (taskStoreName && data.tasks && data.tasks.length > 0) {
                             const taskStore = tx.objectStore(taskStoreName);
+
+                            // Build map of server tasks for quick lookup
+                            const serverTaskMap = new Map(data.tasks.map(t => {
+                                if (!t.id && t._id) t.id = t._id;
+                                return [t.id, t];
+                            }));
+
                             let count = 0;
                             let skipped = 0;
-                            data.tasks.forEach(item => {
-                                if (!item.id && item._id) item.id = item._id;
+                            const processedIds = new Set();
 
-                                // CRITICAL: Don't overwrite local dirty changes!
-                                // dirtyTaskIds is populated before the transaction (see below)
-                                if (this._dirtyTaskIds && this._dirtyTaskIds.has(item.id)) {
-                                    console.log(`[Session] ⏭️ Skipping server task "${item.name}" - local version is dirty (sync:0)`);
-                                    skipped++;
-                                    return; // Skip this task, keep local version
+                            // Step 1: Iterate through ALL existing tasks using cursor
+                            const cursorReq = taskStore.openCursor();
+
+                            cursorReq.onsuccess = (event) => {
+                                const cursor = event.target.result;
+
+                                if (cursor) {
+                                    const existingTask = cursor.value;
+                                    const serverTask = serverTaskMap.get(existingTask.id);
+
+                                    if (serverTask) {
+                                        processedIds.add(existingTask.id);
+
+                                        // CRITICAL: Check sync flag ATOMICALLY
+                                        if (existingTask.sync === 0) {
+                                            // Local task is dirty - PRESERVE IT
+                                            console.log(`[Session] ⏭️ Preserving dirty task "${existingTask.name}" (sync:0)`);
+                                            skipped++;
+                                        } else {
+                                            // Local task is clean - safe to overwrite with server version
+                                            cursor.update(serverTask);
+                                            count++;
+                                        }
+                                    }
+
+                                    cursor.continue(); // Move to next task
+                                } else {
+                                    // Cursor finished - now add any NEW tasks from server
+                                    serverTaskMap.forEach((serverTask, taskId) => {
+                                        if (!processedIds.has(taskId)) {
+                                            taskStore.add(serverTask);
+                                            count++;
+                                        }
+                                    });
+
+                                    console.log(`[Session] IDB: Updated ${count} tasks, preserved ${skipped} dirty tasks`);
                                 }
+                            };
 
-                                taskStore.put(item);
-                                count++;
-                            });
-                            console.log(`[Session] IDB: Put ${count} tasks, skipped ${skipped} dirty local tasks`);
+                            cursorReq.onerror = () => {
+                                console.error('[Session] Task cursor error:', cursorReq.error);
+                            };
                         }
 
                         // 3. Subtasks

@@ -421,6 +421,23 @@
     }
 
     /**
+     * SPY: Intercept put operations to trace Task completion
+     * Logs the object being written to debug sync/state issues
+     */
+    function installPutProtection() {
+        const originalPut = IDBObjectStore.prototype.put;
+
+        IDBObjectStore.prototype.put = function (value, key) {
+            if (this.name === 'Task') {
+                console.log(`[Guardian] 🕵️ Task PUT Detected: id=${value.id} state=${value.state} sync=${value.sync}`);
+            }
+            return originalPut.call(this, value, key);
+        };
+
+        console.log('[Guardian] 🕵️ Put Spy installed');
+    }
+
+    /**
      * PROTECTION: Intercept deleteDatabase calls
      * CRITICAL: main.js:70049 deletes PomodoroDB6 when version <= 0
      * This ALWAYS blocks that deletion - even before Guardian init completes
@@ -521,6 +538,7 @@
         // Install other protections (deleteDatabase protection already installed synchronously)
         installDeleteProtection();
         installClearProtection();
+        installPutProtection(); // ✅ Added Spy
 
         // Seed system projects
         await seedSystemProjects();

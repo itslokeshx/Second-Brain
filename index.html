@@ -523,13 +523,16 @@
     <script src="js/indexeddb-guardian.js?v=1002"></script>
     <script src="js/guardian-loader.js?v=1000"></script>
 
-    <!-- ✅ NOW session-manager can safely use IndexedDB (interceptors are active) -->
-    <script src="js/session-manager.js?v=1010"></script>
-    <script src="js/settings-fixer.js?v=1005"></script>
+    <!-- ✅ CRITICAL: Write protector MUST load BEFORE main.js -->
+    <script src="js/indexeddb-write-protector.js?v=1000"></script>
 
-    <!-- Hydration state machine - blocks main.js until data is ready -->
-    <script src="js/hydration-mutex.js?v=1006"></script> <!-- Hydration state machine -->
-    <script src="js/hydration-gate.js?v=1001"></script>
+    <!-- ✅ CRITICAL: Hydration mutex MUST load BEFORE session-manager to prevent race condition -->
+    <script src="js/hydration-mutex.js?v=1007"></script> <!-- Hydration state machine -->
+    <script src="js/hydration-gate.js?v=1002"></script>
+
+    <!-- ✅ NOW session-manager can safely check mutex state -->
+    <script src="js/session-manager.js?v=1011"></script>
+    <script src="js/settings-fixer.js?v=1005"></script>
     <!-- Hydration gate - validates session and ensures data ready -->
 
     <!-- Hydration Gate: Wait for data before loading main.js -->
