@@ -20,10 +20,45 @@
 
     class HydrationMutex {
         constructor() {
-            this.state = 'UNINITIALIZED';
             this.promise = null;
-            this.userId = null;
             this.error = null;
+
+            // ✅ CRITICAL: Restore state from sessionStorage
+            // This prevents Mutex from resetting when main.js causes script re-execution
+            this._restoreState();
+        }
+
+        /**
+         * Initialize state - ALWAYS start fresh on page load
+         * 
+         * NOTE: We do NOT restore from sessionStorage anymore because:
+         * 1. If Mutex starts in READY state, main.js loads immediately
+         * 2. But session-manager hasn't finished populating localStorage yet
+         * 3. This causes main.js to render with empty data = blank screen
+         * 
+         * The hydration-gate will properly call Mutex.acquire() on each page load.
+         */
+        _restoreState() {
+            // Always start fresh - let hydration-gate properly initialize
+            this.state = 'UNINITIALIZED';
+            this.userId = null;
+            console.log('[Mutex] Starting fresh - will wait for hydration-gate');
+        }
+
+        /**
+         * Persist state to sessionStorage
+         */
+        _persistState() {
+            try {
+                if (this.state === 'READY' && this.userId) {
+                    sessionStorage.setItem('hydration_mutex_state', JSON.stringify({
+                        state: this.state,
+                        userId: this.userId
+                    }));
+                }
+            } catch (e) {
+                console.warn('[Mutex] Failed to persist state:', e);
+            }
         }
 
         /**
@@ -98,17 +133,19 @@
                 this.state = 'READY';
                 console.log('[Mutex] State:', this.state);
 
+                // ✅ CRITICAL: Persist READY state to sessionStorage
+                // This allows Mutex to survive main.js script re-execution
+                this._persistState();
+
                 // Check if this is first hydration (no flag exists yet)
                 const wasAlreadyHydrated = sessionStorage.getItem('hydrated_' + userId);
                 sessionStorage.setItem('hydrated_' + userId, 'true');
 
                 console.log('[Mutex] ✅ Hydration complete');
 
-                // If this was first hydration and we fetched data, reload to ensure clean state
+                // If this was first hydration, just return success (don't reload)
                 if (!wasAlreadyHydrated && data) {
-                    console.log('[Mutex] 🔄 First hydration complete - reloading for clean state...');
-                    setTimeout(() => window.location.reload(), 500);
-                    return { success: true, state: 'RELOADING', userId };
+                    console.log('[Mutex] 🔄 First hydration complete');
                 }
 
                 return { success: true, state: 'READY', userId };
@@ -305,10 +342,16 @@
         }
 
         /**
-         * Check if mutex has handled or is handling hydration (use this to block other loaders)
+         * Check if mutex is currently IN THE MIDDLE of hydration
+         * Returns false for terminal states (READY, ERROR, UNINITIALIZED)
+         * This allows session-manager to load data when Mutex is already READY
          */
         isHandling() {
-            return this.state !== 'IDLE';
+            // Only return true when actively hydrating
+            // READY, ERROR, UNINITIALIZED are terminal states - not "handling"
+            return this.state !== 'UNINITIALIZED' &&
+                this.state !== 'READY' &&
+                this.state !== 'ERROR';
         }
 
         /**
@@ -337,6 +380,12 @@
             this.promise = null;
             this.userId = null;
             this.error = null;
+            // ✅ Clear persisted state on logout
+            try {
+                sessionStorage.removeItem('hydration_mutex_state');
+            } catch (e) {
+                console.warn('[Mutex] Failed to clear persisted state:', e);
+            }
             console.log('[Mutex] Reset');
         }
     }

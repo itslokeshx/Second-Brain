@@ -510,8 +510,9 @@
     <script src="js/cookie-patcher.js?v=3002"></script>
     <script src="js/main-patcher.js?v=2003"></script>
     <script src="js/config.js"></script>
+    <script src="js/system-projects.js?v=1003"></script> <!-- Definitions needed by SessionManager -->
     <script type="text/javascript" src="js/sync-service.js?v=1001"></script>
-    <script src="js/session-manager.js?v=999"></script>
+    <script src="js/session-manager.js?v=1005"></script>
     <script src="js/settings-fixer.js?v=1005"></script>
 
     <!-- ═══════════════════════════════════════════════════════════════════ -->
@@ -521,11 +522,11 @@
     <!-- ═══════════════════════════════════════════════════════════════════ -->
     <script src="js/db-recovery.js?v=1000"></script> <!-- Recovery tool: run window.resetDB() in console -->
     <script src="js/user-db.js?v=1000"></script> <!-- User-scoped database helper - MUST load before Guardian -->
-    <script src="js/indexeddb-open-interceptor.js?v=1000"></script>  <!-- Redirect main.js DB opens to user-scoped DB -->
-    <script src="js/system-projects.js?v=1000"></script>
-    <script src="js/indexeddb-guardian.js?v=1000"></script>
+    <script src="js/indexeddb-open-interceptor.js?v=1000"></script> <!-- Redirect main.js DB opens to user-scoped DB -->
+
+    <script src="js/indexeddb-guardian.js?v=1002"></script>
     <script src="js/guardian-loader.js?v=1000"></script>
-    <script src="js/hydration-mutex.js?v=1000"></script>  <!-- Hydration state machine -->
+    <script src="js/hydration-mutex.js?v=1003"></script> <!-- Hydration state machine -->
     <script src="js/hydration-gate.js?v=1000"></script>
     <!-- Hydration gate - validates session and ensures data ready -->
 

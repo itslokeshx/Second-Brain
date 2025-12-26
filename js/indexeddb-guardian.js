@@ -213,7 +213,7 @@
                     if (!existingProj) {
                         // Project doesn't exist - insert it
                         toInsert.push(sysProj);
-                    } else if (existingProj.type !== sysProj.type) {
+                    } else if (Number(existingProj.type) !== Number(sysProj.type)) {
                         // Project exists but has WRONG type - update it
                         console.log('[Guardian] ⚠️ Fixing type for', sysProj.id, ':', existingProj.type, '→', sysProj.type);
                         toUpdate.push({
@@ -240,6 +240,9 @@
                 for (const project of toInsert) {
                     const projectWithTimestamp = {
                         ...project,
+                        state: project.state !== undefined ? project.state : 0, // CRITICAL for state index
+                        order: project.order !== undefined ? project.order : 0,
+                        sync: project.sync !== undefined ? project.sync : 1,
                         createdDate: Date.now(),
                         modifiedDate: Date.now()
                     };
@@ -247,6 +250,8 @@
                 }
 
                 for (const project of toUpdate) {
+                    // Ensure state is set for index compatibility
+                    if (project.state === undefined) project.state = 0;
                     store.put(project);
                 }
 

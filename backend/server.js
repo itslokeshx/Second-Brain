@@ -403,7 +403,12 @@ app.post('/v64/sync', verifySession, async (req, res) => {
             if (p.id === '0' || p.id === 0) hasDefault = true;
             return {
                 ...p,
-                type: p.type !== undefined ? p.type : 0,
+                type: p.type !== undefined && p.type !== 0 ? p.type : 1000, // 1000 = regular project
+                // ✅ CRITICAL: These fields are REQUIRED for main.js IndexedDB cursor queries
+                state: p.state !== undefined ? Number(p.state) : 0, // 0 = visible, 1 = hidden - REQUIRED for state index
+                order: p.order !== undefined ? Number(p.order) : 0, // REQUIRED for sorting
+                orderingRule: p.orderingRule !== undefined ? Number(p.orderingRule) : 0, // REQUIRED for presets
+                sync: p.sync !== undefined ? Number(p.sync) : 1, // 1 = synced
                 color: p.color || '#FF6B6B',
                 sortOrder: p.sortOrder !== undefined ? p.sortOrder : 0,
                 closed: p.closed || false,
@@ -418,7 +423,11 @@ app.post('/v64/sync', verifySession, async (req, res) => {
             normalizedProjects.unshift({
                 id: '0',
                 name: 'Tasks',
-                type: 0, // ✅ FIX: Use number 0 for project type (main.js expects this)
+                type: 1000, // CORRECT: 1000 = regular project (l.project = 1e3)
+                state: 0, // CRITICAL: Required for state index
+                order: 0,
+                orderingRule: 0,
+                sync: 1,
                 color: '#FF6B6B',
                 sortOrder: 0,
                 closed: false,

@@ -18,20 +18,28 @@
             if (window.IndexedDBGuardian) {
                 clearInterval(waitForGuardian);
 
+                let timeoutId = null;
+                let resolved = false;
+
                 // Wait for Guardian initialization
                 const checkInit = setInterval(async () => {
-                    if (window.IndexedDBGuardian.isInitialized) {
+                    if (window.IndexedDBGuardian.isInitialized && !resolved) {
+                        resolved = true;
                         clearInterval(checkInit);
+                        if (timeoutId) clearTimeout(timeoutId); // Cancel timeout
                         console.log('[Guardian Loader] ✅ IndexedDB ready - releasing main.js');
                         resolve(true);
                     }
                 }, 50);
 
                 // Timeout after 10 seconds
-                setTimeout(() => {
-                    clearInterval(checkInit);
-                    console.warn('[Guardian Loader] ⚠️ Timeout - proceeding anyway');
-                    resolve(false);
+                timeoutId = setTimeout(() => {
+                    if (!resolved) {
+                        resolved = true;
+                        clearInterval(checkInit);
+                        console.warn('[Guardian Loader] ⚠️ Timeout - proceeding anyway');
+                        resolve(false);
+                    }
                 }, 10000);
             }
         }, 10);

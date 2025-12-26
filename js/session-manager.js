@@ -92,6 +92,35 @@
                         console.log('[Session] ✅ Stored userId:', data.user.id);
                     }
 
+                    // ✅ CRITICAL: Initialize Guardian after login
+                    // Guardian skips initialization if no user is logged in yet
+                    // So we must trigger it manually after successful login
+                    if (window.IndexedDBGuardian && !window.IndexedDBGuardian.isInitialized) {
+                        console.log('[Session] 🛡️ Initializing Guardian after login...');
+                        window.IndexedDBGuardian.initialize().then(() => {
+                            console.log('[Session] ✅ Guardian initialized');
+
+                            // ✅ CRITICAL P0 FIX: Start HydrationMutex after Guardian
+                            // hydration-gate only runs on page load, not after UI login
+                            // So Mutex stays in 'UNINITIALIZED' state, blocking sync
+                            // We must manually trigger Mutex.acquire() here
+                            if (window.HydrationMutex && window.HydrationMutex.getState().state === 'UNINITIALIZED') {
+                                console.log('[Session] 🔒 Starting HydrationMutex after login...');
+                                window.HydrationMutex.acquire(data.user.id).then(result => {
+                                    if (result.success && result.state === 'READY') {
+                                        console.log('[Session] ✅ Mutex ready - sync enabled');
+                                    } else {
+                                        console.error('[Session] ❌ Mutex failed:', result);
+                                    }
+                                }).catch(err => {
+                                    console.error('[Session] ❌ Mutex error:', err);
+                                });
+                            }
+                        }).catch(err => {
+                            console.error('[Session] ❌ Guardian initialization failed:', err);
+                        });
+                    }
+
                     this.updateUI(true, data.user.email || data.acct);
                     this.startPeriodicCheck();
                     console.log('[Session] ✅ Authenticated:', data.user.email);
@@ -156,7 +185,17 @@
         getUserFromCookies: function () {
             const cookies = document.cookie.split(';').reduce((acc, cookie) => {
                 const [key, value] = cookie.trim().split('=');
-                if (key) acc[key] = decodeURIComponent(value || '');
+                if (key) {
+                    // ✅ CRITICAL: Wrap decodeURIComponent in try-catch
+                    // Malformed cookies (e.g., %XX with invalid hex) throw URIError
+                    // which crashes the entire script and causes blank screen
+                    try {
+                        acc[key] = decodeURIComponent(value || '');
+                    } catch (e) {
+                        console.warn(`[Session] Failed to decode cookie '${key}', using raw value:`, e.message);
+                        acc[key] = value || ''; // Fallback to raw value
+                    }
+                }
                 return acc;
             }, {});
 
@@ -428,6 +467,12 @@
         },
 
         loadDataAfterLogin: async function () {
+            // ✅ GATEKEEPER: Prevent concurrent data loading with Hydration Mutex
+            if (window.HydrationMutex && window.HydrationMutex.isHandling()) {
+                console.log('[Session] 🛑 Blocking loadDataAfterLogin - mutex is handling hydration');
+                return;
+            }
+
             // Check reload flag - if set, we already saved data, just ensure it's in both stores
             const hasReloadedAfterSync = sessionStorage.getItem('reloaded-after-sync');
 
@@ -606,6 +651,19 @@
                                         item.deadline = sysProj.deadline || sysProj.type;
                                         item.isSystem = true;
                                     }
+                                }
+
+                                // ✅ CRITICAL: Ensure required fields for IndexedDB state index
+                                // main.js queries projects using IDBKeyRange.bound(0, 1) on state index
+                                // Projects without state field will NOT be found by cursor!
+                                if (item.state === undefined || item.state === null) {
+                                    item.state = 0;
+                                }
+                                if (item.order === undefined || item.order === null) {
+                                    item.order = 0;
+                                }
+                                if (item.sync === undefined || item.sync === null) {
+                                    item.sync = 1;
                                 }
 
                                 store.put(item);

@@ -71,6 +71,16 @@
                             window.showNotification('Login successful!', 'success', 2000);
                         }
 
+                        // ✅ CRITICAL: Trigger SessionManager to initialize Guardian + Mutex
+                        // Without this, Guardian/Mutex stay uninitialized after UI login
+                        // causing sync to fail with "Hydration not ready" error
+                        setTimeout(() => {
+                            if (window.SessionManager && window.SessionManager.checkLoginStatus) {
+                                console.log('[Login Interceptor] 🔄 Triggering SessionManager.checkLoginStatus()...');
+                                window.SessionManager.checkLoginStatus();
+                            }
+                        }, 500); // Small delay to let cookies settle
+
                         // ✅ NO RELOAD - Let main.js render the UI naturally
                         console.log('[Login Interceptor] Allowing main.js to render UI...');
                     }
