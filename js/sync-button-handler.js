@@ -273,44 +273,38 @@
                 if (data.tasks.length > 0) {
                     const initialCount = data.tasks.length;
 
-                    // Filter out keystroke artifacts
+                    // Filter out keystroke artifacts with STRICT Heuristics
                     data.tasks = data.tasks.filter(t => {
-                        const hasValidName = t.name && t.name.length >= 3;
+                        // 🔍 HEURISTIC 1: Minimum Viable Data
+                        // Real tasks usually have meaningful IDs or creation times, but 
+                        // we focus on content structure.
+                        const validName = t.name && t.name.length >= 3;
                         const hasOtherProps = (t.deadline && t.deadline !== 0) ||
                             (t.projectId && t.projectId !== '0') ||
                             (t.priority && t.priority > 0) ||
                             (t.tags && t.tags.length > 0) ||
                             (t.description && t.description.length > 0);
 
-                        // Keep if valid name + props OR very long name (10+) OR already synced
-                        return (hasValidName && hasOtherProps) ||
-                            (t.name && t.name.length >= 10) ||
-                            t.sync === 1;
+                        // 🔍 HEURISTIC 2: Legacy Compatibility
+                        // Long text without props might be a quick "brain dump" task
+                        const legitimateLongText = t.name && t.name.length >= 10;
+
+                        // 🔍 HEURISTIC 3: Sync Integrity
+                        // If it's already marked as synced (1), we trust it 
+                        // (unless it's blatantly garbage, but we assume server authority)
+                        const alreadySynced = t.sync === 1;
+
+                        // 🛡️ DECISION: Keep only if Valid OR Synced
+                        return (validName && hasOtherProps) || legitimateLongText || alreadySynced;
                     });
 
                     const removed = initialCount - data.tasks.length;
                     if (removed > 0) {
-                        console.log(`[Sync Button] 🧹 Cleaned up ${removed} keystroke artifacts before sync`);
+                        console.log(`[Sync Button] 🧹 Sanitized ${removed} artifacts from memory before sync`);
 
                         // Update storage with cleaned data to prevent recurrence
                         try {
-                            // Update IndexedDB
-                            const dbName = window.UserDB ? window.UserDB.getDBName() : 'PomodoroDB6';
-                            const db = await new Promise((resolve, reject) => {
-                                const req = indexedDB.open(dbName);
-                                req.onsuccess = () => resolve(req.result);
-                                req.onerror = () => reject(req.error);
-                            });
-
-                            const tx = db.transaction(['Task'], 'readwrite');
-                            const store = tx.objectStore('Task');
-
-                            // Clear and rewrite tasks (safest way to remove artifacts)
-                            // Ideally we'd delete by ID but full rewrite is cleaner here
-                            // For safety, we'll just let the sync fix it on next load
-                            // But we update localStorage immediately for UI fix
                             localStorage.setItem('tasks', JSON.stringify(data.tasks));
-
                         } catch (e) {
                             console.warn('[Sync Button] Cleanup storage update failed:', e);
                         }
