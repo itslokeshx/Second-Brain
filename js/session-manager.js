@@ -769,9 +769,26 @@
 
                                         // CRITICAL: Check sync flag ATOMICALLY
                                         if (existingTask.sync === 0) {
-                                            // Local task is dirty - PRESERVE IT
-                                            console.log(`[Session] ⏭️ Preserving dirty task "${existingTask.name}" (sync:0)`);
-                                            skipped++;
+                                            // Check if this is a real task or keystroke artifact
+                                            const isRealTask = (
+                                                (existingTask.name && existingTask.name.length >= 3) ||
+                                                existingTask.deadline ||
+                                                existingTask.projectId ||
+                                                existingTask.priority ||
+                                                existingTask.tags ||
+                                                existingTask.description
+                                            );
+
+                                            if (isRealTask) {
+                                                // Local task is dirty and real - PRESERVE IT
+                                                console.log(`[Session] ⏭️ Preserving dirty task "${existingTask.name}" (sync:0)`);
+                                                skipped++;
+                                            } else {
+                                                // Keystroke artifact - overwrite with server version
+                                                console.log(`[Session] 🗑️ Removing keystroke artifact "${existingTask.name}"`);
+                                                cursor.update(serverTask);
+                                                count++;
+                                            }
                                         } else {
                                             // Local task is clean - safe to overwrite with server version
                                             cursor.update(serverTask);
