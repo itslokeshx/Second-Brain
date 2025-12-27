@@ -347,9 +347,16 @@
 
                     // Also update main.js internal timestamp if possible
                     // This is a global hack to reset the "20449 days" calculation
+                    const now = new Date().getTime();
                     if (window.f && window.f.default && window.f.default.shared) {
-                        window.f.default.shared.syncTimestamp = new Date().getTime();
+                        window.f.default.shared.syncTimestamp = now;
                     }
+
+                    // 🕒 TIME AUTHORITY FIX: Persist to localStorage
+                    // This ensures the fix survives a page reload
+                    localStorage.setItem('SyncTimestamp', now);
+                    localStorage.setItem('lastSyncTime', now); // Redundant backup
+
                 } catch (e) {
                     console.warn('[Sync Button] Failed to update UI timestamp:', e);
                 }

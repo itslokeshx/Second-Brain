@@ -388,6 +388,30 @@
         logout: async function () {
             console.log('[Session] 🚪 Logout initiated');
 
+            // ═══════════════════════════════════════════════════════════════════════
+            // 🔐 STATE AUTHORITY FIX: Safe Logout Guard
+            // ═══════════════════════════════════════════════════════════════════════
+
+            // 1. Check for active sync
+            if (window._syncInProgress) {
+                const proceed = confirm('Sync is currently in progress! Logging out now may cause data loss.\n\nAre you sure you want to force logout?');
+                if (!proceed) return;
+            }
+
+            // 2. Check for dirty (unsynced) tasks
+            // We only check localStorage as it's the fast replication layer
+            try {
+                const tasks = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
+                const dirtyCount = tasks.filter(t => t.sync === 0).length;
+
+                if (dirtyCount > 0) {
+                    const proceed = confirm(`⚠️ You have ${dirtyCount} unsynced items!\n\nLogging out will DESTROY this data.\n\nAre you sure you want to logout?`);
+                    if (!proceed) return;
+                }
+            } catch (e) {
+                console.warn('[Session] Failed to check dirty state:', e);
+            }
+
             try {
                 // Stop intervals FIRST
                 this.stopPeriodicCheck();
@@ -938,6 +962,24 @@
                     // main.js uses 'custom-project-list' to determine what shows in the sidebar
                     localStorage.setItem('custom-project-list', JSON.stringify(projectOrder));
                     console.log(`[Session] ✅ Saved custom-project-list (${projectOrder.length} items)`);
+
+                    // ═══════════════════════════════════════════════════════════════
+                    // 🕒 TIME AUTHORITY FIX: Persist Server Timestamp
+                    // ═══════════════════════════════════════════════════════════════
+                    if (data.timestamp) {
+                        try {
+                            // main.js reads "SyncTimestamp" (capitalized)
+                            localStorage.setItem('SyncTimestamp', data.timestamp);
+                            console.log(`[Session] 🕒 Time Authority Replicant: Saved SyncTimestamp=${data.timestamp}`);
+
+                            // Attempt explicit memory injection if possible
+                            if (window.f && window.f.default && window.f.default.shared) {
+                                window.f.default.shared.syncTimestamp = data.timestamp;
+                            }
+                        } catch (e) {
+                            console.warn('[Session] Failed to persist Time Authority:', e);
+                        }
+                    }
                 }
 
                 // ═══════════════════════════════════════════════════════════════
