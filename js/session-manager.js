@@ -306,8 +306,9 @@
                     console.log('[Session] Setting header username to:', username);
                     usernameEl.textContent = username;
 
+                    // DISABLED: This observer was too aggressive and interfered with input fields
                     // Watch for changes and override them
-                    const observer = new MutationObserver(() => {
+                    /* const observer = new MutationObserver(() => {
                         if (usernameEl.textContent !== username) {
                             console.log('[Session] main.js tried to change username, reverting...');
                             usernameEl.textContent = username;
@@ -318,7 +319,7 @@
                         childList: true,
                         characterData: true,
                         subtree: true
-                    });
+                    }); */
                 }
 
                 // Also fix AccountSettings-account elements (shows in settings)
