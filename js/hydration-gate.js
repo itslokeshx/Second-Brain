@@ -26,8 +26,24 @@
 
             console.log('[Hydration Gate] ✅ Auth token found');
 
-            // Step 2: Get userId from localStorage (set during login)
-            const userId = localStorage.getItem('userId');
+            // Step 2: Get userId from localStorage OR cookies
+            let userId = localStorage.getItem('userId');
+
+            // If not in localStorage, try to get from cookies
+            if (!userId) {
+                const cookies = document.cookie.split(';');
+                for (let cookie of cookies) {
+                    const [name, value] = cookie.trim().split('=');
+                    if (name === 'UID') {
+                        userId = value;
+                        // Save to localStorage for next time
+                        localStorage.setItem('userId', userId);
+                        console.log('[Hydration Gate] ✅ Synced userId from cookie to localStorage:', userId);
+                        break;
+                    }
+                }
+            }
+
             if (!userId) {
                 console.log('[Hydration Gate] ❌ No userId - invalid state');
                 localStorage.clear();
