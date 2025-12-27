@@ -277,6 +277,10 @@
 
                 console.log('[Session] ✅ UI updated for:', username);
 
+                // ✅ SAFE: Update username in header ONLY (not task inputs)
+                // This runs once, not in a loop
+                this.updateHeaderUsername(username);
+
             } else {
                 if (userDisplay) {
                     userDisplay.textContent = 'Not logged in';
@@ -289,6 +293,29 @@
             }
         },
 
+        // ✅ SAFE: Update username in header ONLY - NO INTERVALS, NO TASK INPUTS
+        updateHeaderUsername: function (userEmail) {
+            const username = userEmail.split('@')[0];
+
+            // STRICT WHITELIST: Only look in header/menu containers
+            const safeContainers = document.querySelectorAll('[class*="HomeHeader"], [class*="UserMenu"]');
+
+            for (const container of safeContainers) {
+                // Find username display ONLY within safe containers
+                const usernameEl = container.querySelector('[class*="username"]');
+
+                if (usernameEl &&
+                    usernameEl.tagName !== 'INPUT' &&
+                    usernameEl.tagName !== 'TEXTAREA' &&
+                    !usernameEl.isContentEditable &&
+                    !usernameEl.closest('form')) {
+
+                    usernameEl.textContent = username;
+                    console.log('[Session] ✅ Updated header username:', username);
+                    return; // Found and updated, exit
+                }
+            }
+        },
 
         setupHandlers: function () {
             // Logout handler

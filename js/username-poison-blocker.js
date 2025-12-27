@@ -19,7 +19,7 @@
         if (cookies.NAME) {
             username = cookies.NAME;
             usernamePrefix = username.toLowerCase();
-            console.log('[Poison Blocker] 🔍 Monitoring for username:', username);
+            // console.log('[Poison Blocker] 🔍 Monitoring for username:', username);
         }
     }
 
