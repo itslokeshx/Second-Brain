@@ -367,16 +367,12 @@
 
             // 2. Check for dirty (unsynced) tasks
             // We only check localStorage as it's the fast replication layer
-            try {
-                const tasks = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
-                const dirtyCount = tasks.filter(t => t.sync === 0).length;
+            // We use the new STRICT HELPER to ignore keystroke artifacts
+            const dirtyCount = this.checkDirtyState();
 
-                if (dirtyCount > 0) {
-                    const proceed = confirm(`⚠️ You have ${dirtyCount} unsynced items!\n\nLogging out will DESTROY this data.\n\nAre you sure you want to logout?`);
-                    if (!proceed) return;
-                }
-            } catch (e) {
-                console.warn('[Session] Failed to check dirty state:', e);
+            if (dirtyCount > 0) {
+                const proceed = confirm(`⚠️ You have ${dirtyCount} unsynced items!\n\nLogging out will DESTROY this data.\n\nAre you sure you want to logout?`);
+                if (!proceed) return;
             }
 
             try {
@@ -993,65 +989,51 @@
 
                     // Create map of dirty tasks (sync: 0), filtering out keystroke artifacts
                     const dirtyTasks = {};
+                    let dirtyCount = 0;
+
                     existingTasks.forEach(t => {
                         if (t.sync === 0 && t.id) {
                             // STRICT: Only include real tasks, not keystroke artifacts
-                            const hasValidName = t.name && t.name.length >= 3;
-                            const hasDeadline = t.deadline && t.deadline !== 0;
-                            const hasNonDefaultProject = t.projectId && t.projectId !== '0' && t.projectId !== 0;
-                            const hasPriority = t.priority && t.priority > 0;
-                            const hasTags = t.tags && t.tags.length > 0;
-                            const hasDescription = t.description && t.description.length > 0;
-
-                            // Require BOTH valid name AND at least one other property
-                            // OR just a very long name (10+ chars, likely intentional)
                             const isRealTask = (
-                                (hasValidName && (hasDeadline || hasNonDefaultProject || hasPriority || hasTags || hasDescription)) ||
-                                (t.name && t.name.length >= 10)
+                                (t.name && t.name.length >= 3) ||
+                                (t.projectId && t.projectId !== '0') ||
+                                t.deadline ||
+                                t.priority
                             );
 
-                            if (isRealTask) {
+                            // BLOCK: Artifacts that look like partial usernames "d", "do", "its"
+                            const isArtifact = t.name && (
+                                t.name.length < 3 ||
+                                (t.name.length < 10 && !t.projectId && !t.deadline)
+                            );
+
+                            if (isRealTask && !isArtifact) {
                                 dirtyTasks[t.id] = t;
+                                dirtyCount++;
                             } else {
-                                console.log(`[Session] 🗑️ localStorage: Skipping keystroke artifact "${t.name}"`);
+                                console.log(`[Session] 🛑 Blocking poisonous draft artifact: "${t.name}"`);
                             }
                         }
                     });
 
-                    const dirtyCount = Object.keys(dirtyTasks).length;
                     if (dirtyCount > 0) {
                         console.log(`[Session] ⚠️ localStorage: Found ${dirtyCount} dirty tasks - preserving them`);
                     }
 
-                    // Merge: use dirty local version where it exists, otherwise server version
+                    // Merge server tasks, respecting local dirty state
                     const mergedTasks = data.tasks.map(serverTask => {
                         if (dirtyTasks[serverTask.id]) {
                             console.log(`[Session] ⏭️ localStorage: Keeping local dirty task "${serverTask.name}"`);
-                            return dirtyTasks[serverTask.id];  // Keep local dirty version
+                            return dirtyTasks[serverTask.id]; // Keep local version
                         }
-                        return serverTask;  // Use server version
+                        return serverTask;
                     });
 
-                    // Also include any dirty tasks that aren't in server data (newly created)
-                    // BUT filter out keystroke artifacts (very short names with no other properties)
-                    Object.values(dirtyTasks).forEach(dirtyTask => {
-                        if (!data.tasks.find(t => t.id === dirtyTask.id)) {
-                            // Validate: Is this a real task or just a keystroke artifact?
-                            const isRealTask = (
-                                (dirtyTask.name && dirtyTask.name.length >= 3) ||  // Name is long enough
-                                dirtyTask.deadline ||  // Has deadline
-                                dirtyTask.projectId ||  // Assigned to project
-                                dirtyTask.priority ||  // Has priority
-                                dirtyTask.tags ||  // Has tags
-                                dirtyTask.description  // Has description
-                            );
-
-                            if (isRealTask) {
-                                console.log(`[Session] ➕ localStorage: Adding local-only task "${dirtyTask.name}"`);
-                                mergedTasks.push(dirtyTask);
-                            } else {
-                                console.log(`[Session] 🗑️ localStorage: Skipping keystroke artifact "${dirtyTask.name}"`);
-                            }
+                    // Add any dirty tasks that are NEW (not in server list yet)
+                    Object.values(dirtyTasks).forEach(localTask => {
+                        const exists = mergedTasks.find(t => t.id === localTask.id);
+                        if (!exists) {
+                            mergedTasks.push(localTask);
                         }
                     });
 
