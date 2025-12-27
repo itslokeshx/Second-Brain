@@ -926,10 +926,25 @@
                     });
 
                     // Also include any dirty tasks that aren't in server data (newly created)
+                    // BUT filter out keystroke artifacts (very short names with no other properties)
                     Object.values(dirtyTasks).forEach(dirtyTask => {
                         if (!data.tasks.find(t => t.id === dirtyTask.id)) {
-                            console.log(`[Session] ➕ localStorage: Adding local-only task "${dirtyTask.name}"`);
-                            mergedTasks.push(dirtyTask);
+                            // Validate: Is this a real task or just a keystroke artifact?
+                            const isRealTask = (
+                                (dirtyTask.name && dirtyTask.name.length >= 3) ||  // Name is long enough
+                                dirtyTask.deadline ||  // Has deadline
+                                dirtyTask.projectId ||  // Assigned to project
+                                dirtyTask.priority ||  // Has priority
+                                dirtyTask.tags ||  // Has tags
+                                dirtyTask.description  // Has description
+                            );
+
+                            if (isRealTask) {
+                                console.log(`[Session] ➕ localStorage: Adding local-only task "${dirtyTask.name}"`);
+                                mergedTasks.push(dirtyTask);
+                            } else {
+                                console.log(`[Session] 🗑️ localStorage: Skipping keystroke artifact "${dirtyTask.name}"`);
+                            }
                         }
                     });
 
