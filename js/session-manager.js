@@ -920,11 +920,25 @@
                         existingTasks = [];
                     }
 
-                    // Create map of dirty tasks (sync: 0)
+                    // Create map of dirty tasks (sync: 0), filtering out keystroke artifacts
                     const dirtyTasks = {};
                     existingTasks.forEach(t => {
                         if (t.sync === 0 && t.id) {
-                            dirtyTasks[t.id] = t;
+                            // Only include real tasks, not keystroke artifacts
+                            const isRealTask = (
+                                (t.name && t.name.length >= 3) ||
+                                t.deadline ||
+                                t.projectId ||
+                                t.priority ||
+                                t.tags ||
+                                t.description
+                            );
+
+                            if (isRealTask) {
+                                dirtyTasks[t.id] = t;
+                            } else {
+                                console.log(`[Session] 🗑️ localStorage: Skipping keystroke artifact "${t.name}"`);
+                            }
                         }
                     });
 
