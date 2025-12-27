@@ -494,7 +494,27 @@
                 let dirtyCount = 0;
 
                 // Filter strict artifacts from dirty count
-                dirtyCount += tasks.filter(t => t.sync === 0 && (t.name.length >= 3 || t.projectId !== '0')).length;
+                // Use SAME heuristic as saveToLocalStorage
+                dirtyCount += tasks.filter(t => {
+                    if (t.sync !== 0) return false;
+
+                    // STRICT: Only include real tasks, not keystroke artifacts
+                    const isRealTask = (
+                        (t.name && t.name.length >= 3) ||
+                        (t.projectId && t.projectId !== '0') ||
+                        t.deadline ||
+                        t.priority
+                    );
+
+                    // BLOCK: Artifacts that look like partial usernames "d", "do", "its", "itslokeshx"
+                    const isArtifact = t.name && (
+                        t.name.length < 3 ||
+                        (t.name.length < 20 && !t.projectId && !t.deadline)
+                    );
+
+                    return isRealTask && !isArtifact; // Only count as dirty if Real AND Not Artifact
+                }).length;
+
                 dirtyCount += logs.filter(l => l.sync === 0).length;
                 dirtyCount += projects.filter(p => p.sync === 0).length;
 
@@ -1001,10 +1021,11 @@
                                 t.priority
                             );
 
-                            // BLOCK: Artifacts that look like partial usernames "d", "do", "its"
+                            // BLOCK: Artifacts that look like partial usernames "d", "do", "its", "itslokeshx"
+                            const hasValidProject = t.projectId && t.projectId !== '0';
                             const isArtifact = t.name && (
                                 t.name.length < 3 ||
-                                (t.name.length < 10 && !t.projectId && !t.deadline)
+                                (t.name.length < 20 && !hasValidProject && !t.deadline)
                             );
 
                             if (isRealTask && !isArtifact) {

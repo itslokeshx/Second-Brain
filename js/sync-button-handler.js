@@ -287,14 +287,17 @@
 
                         // 🔍 HEURISTIC 2: Legacy Compatibility
                         // Long text without props might be a quick "brain dump" task
-                        const legitimateLongText = t.name && t.name.length >= 10;
+                        // INCREASED THRESHOLD: Must be 20+ chars to avoid username poisoning ("itslokeshx" is 10)
+                        const hasValidProject = t.projectId && t.projectId !== '0';
+                        const legitimateLongText = t.name && t.name.length >= 20;
 
                         // 🔍 HEURISTIC 3: Sync Integrity
                         // If it's already marked as synced (1), we trust it 
                         // (unless it's blatantly garbage, but we assume server authority)
                         const alreadySynced = t.sync === 1;
 
-                        // 🛡️ DECISION: Keep only if Valid OR Synced
+                        // 🛡️ DECISION: Keep only if Valid OR Synced OR Very Long Text (Brain Dump)
+                        // BUT: If it's short, has no project/deadline, it's an artifact.
                         return (validName && hasOtherProps) || legitimateLongText || alreadySynced;
                     });
 
