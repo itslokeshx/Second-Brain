@@ -322,6 +322,60 @@
 
                 console.log('[Sync Button] ✅ Sync completed successfully:', result);
 
+                // ═══════════════════════════════════════════════════════════════════════
+                // 🔧 CRITICAL FIX: Update sync flags after successful sync
+                // This prevents false "unsynced items" warnings during logout
+                // ═══════════════════════════════════════════════════════════════════════
+                try {
+                    console.log('[Sync Button] 📝 Updating sync flags in localStorage...');
+
+                    // Update tasks
+                    const tasks = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
+                    let tasksUpdated = 0;
+                    tasks.forEach(t => {
+                        if (t.sync === 0) {
+                            t.sync = 1;
+                            tasksUpdated++;
+                        }
+                    });
+                    if (tasksUpdated > 0) {
+                        localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
+                        console.log(`[Sync Button] ✅ Marked ${tasksUpdated} tasks as synced`);
+                    }
+
+                    // Update projects
+                    const projects = JSON.parse(localStorage.getItem('pomodoro-projects') || '[]');
+                    let projectsUpdated = 0;
+                    projects.forEach(p => {
+                        if (p.sync === 0) {
+                            p.sync = 1;
+                            projectsUpdated++;
+                        }
+                    });
+                    if (projectsUpdated > 0) {
+                        localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
+                        console.log(`[Sync Button] ✅ Marked ${projectsUpdated} projects as synced`);
+                    }
+
+                    // Update logs
+                    const logs = JSON.parse(localStorage.getItem('pomodoro-pomodoros') || '[]');
+                    let logsUpdated = 0;
+                    logs.forEach(l => {
+                        if (l.sync === 0) {
+                            l.sync = 1;
+                            logsUpdated++;
+                        }
+                    });
+                    if (logsUpdated > 0) {
+                        localStorage.setItem('pomodoro-pomodoros', JSON.stringify(logs));
+                        console.log(`[Sync Button] ✅ Marked ${logsUpdated} logs as synced`);
+                    }
+
+                    console.log('[Sync Button] ✅ All sync flags updated - logout will now be clean');
+                } catch (e) {
+                    console.warn('[Sync Button] ⚠️ Failed to update sync flags:', e);
+                }
+
                 // ✅ FIX: Update Sync Timestamp in UI
                 try {
                     // Try multiple selectors for the timestamp

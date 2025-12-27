@@ -386,11 +386,11 @@
                 console.log('[Session] ✅ Logout complete, reloading...');
 
                 // Reload to fresh state
-                setTimeout(() => window.location.reload(), 200);
+                window.location.href = window.location.origin + "/";
             } catch (error) {
                 console.error('[Session] Logout error:', error);
                 // Force reload anyway
-                setTimeout(() => window.location.reload(), 500);
+                window.location.href = window.location.origin + "/";
             }
         },
 
