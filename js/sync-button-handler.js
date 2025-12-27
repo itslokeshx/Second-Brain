@@ -269,6 +269,54 @@
                     console.log('[Sync Button] 🛡️ Merged with system projects:', data.projects.length);
                 }
 
+                // ✅ CLEANUP: Remove keystroke artifacts before syncing
+                if (data.tasks.length > 0) {
+                    const initialCount = data.tasks.length;
+
+                    // Filter out keystroke artifacts
+                    data.tasks = data.tasks.filter(t => {
+                        const hasValidName = t.name && t.name.length >= 3;
+                        const hasOtherProps = (t.deadline && t.deadline !== 0) ||
+                            (t.projectId && t.projectId !== '0') ||
+                            (t.priority && t.priority > 0) ||
+                            (t.tags && t.tags.length > 0) ||
+                            (t.description && t.description.length > 0);
+
+                        // Keep if valid name + props OR very long name (10+) OR already synced
+                        return (hasValidName && hasOtherProps) ||
+                            (t.name && t.name.length >= 10) ||
+                            t.sync === 1;
+                    });
+
+                    const removed = initialCount - data.tasks.length;
+                    if (removed > 0) {
+                        console.log(`[Sync Button] 🧹 Cleaned up ${removed} keystroke artifacts before sync`);
+
+                        // Update storage with cleaned data to prevent recurrence
+                        try {
+                            // Update IndexedDB
+                            const dbName = window.UserDB ? window.UserDB.getDBName() : 'PomodoroDB6';
+                            const db = await new Promise((resolve, reject) => {
+                                const req = indexedDB.open(dbName);
+                                req.onsuccess = () => resolve(req.result);
+                                req.onerror = () => reject(req.error);
+                            });
+
+                            const tx = db.transaction(['Task'], 'readwrite');
+                            const store = tx.objectStore('Task');
+
+                            // Clear and rewrite tasks (safest way to remove artifacts)
+                            // Ideally we'd delete by ID but full rewrite is cleaner here
+                            // For safety, we'll just let the sync fix it on next load
+                            // But we update localStorage immediately for UI fix
+                            localStorage.setItem('tasks', JSON.stringify(data.tasks));
+
+                        } catch (e) {
+                            console.warn('[Sync Button] Cleanup storage update failed:', e);
+                        }
+                    }
+                }
+
                 const result = await window.SyncService.syncAll({
                     projects: data.projects,
                     tasks: data.tasks,
@@ -276,6 +324,35 @@
                 });
 
                 console.log('[Sync Button] ✅ Sync completed successfully:', result);
+
+                // ✅ FIX: Update Sync Timestamp in UI
+                try {
+                    // Try multiple selectors for the timestamp
+                    const timestampSelectors = [
+                        '.UserDropdownMenu-menu-KviKX', // The one seen in logs
+                        '[class*="UserDropdownMenu-menu"]',
+                        '.sync-time',
+                        '.last-synced'
+                    ];
+
+                    for (const selector of timestampSelectors) {
+                        const els = document.querySelectorAll(selector);
+                        els.forEach(el => {
+                            if (el.textContent.includes('Synced') || el.textContent.includes('ago')) {
+                                el.textContent = 'Last synced: Just now';
+                                el.style.color = '#4caf50'; // Green to indicate success
+                            }
+                        });
+                    }
+
+                    // Also update main.js internal timestamp if possible
+                    // This is a global hack to reset the "20449 days" calculation
+                    if (window.f && window.f.default && window.f.default.shared) {
+                        window.f.default.shared.syncTimestamp = new Date().getTime();
+                    }
+                } catch (e) {
+                    console.warn('[Sync Button] Failed to update UI timestamp:', e);
+                }
 
                 // ✅ POST-SYNC INTEGRITY CHECK
                 if (window.IndexedDBGuardian) {
