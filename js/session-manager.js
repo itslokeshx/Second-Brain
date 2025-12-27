@@ -300,21 +300,48 @@
             // Find the actual username element used by main.js
             const findAndUpdate = () => {
                 // Look for HomeHeader-username class (CSS modules use hashed names)
-                const usernameEl = document.querySelector('[class*="HomeHeader-username"]');
+                // STRICTER SELECTION: Must NOT be an input field
+                const candidates = document.querySelectorAll('[class*="HomeHeader-username"], .user-name, .username');
+                let usernameEl = null;
+
+                for (const el of candidates) {
+                    // Skip inputs, textareas, and editable elements
+                    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable) {
+                        continue;
+                    }
+
+                    // Skip elements inside a form (likely inputs)
+                    if (el.closest('form')) {
+                        continue;
+                    }
+
+                    // Specific check for task input classes (common patterns)
+                    const className = el.className || '';
+                    if (typeof className === 'string' && (
+                        className.includes('input') ||
+                        className.includes('task') ||
+                        className.includes('editor')
+                    )) {
+                        continue;
+                    }
+
+                    // Found a safe candidate
+                    usernameEl = el;
+                    break;
+                }
 
                 if (usernameEl && usernameEl.textContent !== username) {
                     console.log('[Session] Setting header username to:', username);
                     usernameEl.textContent = username;
 
                     // DISABLED: This observer was too aggressive and interfered with input fields
-                    // Watch for changes and override them
                     /* const observer = new MutationObserver(() => {
                         if (usernameEl.textContent !== username) {
                             console.log('[Session] main.js tried to change username, reverting...');
                             usernameEl.textContent = username;
                         }
-                    });
-
+                    }); 
+                    
                     observer.observe(usernameEl, {
                         childList: true,
                         characterData: true,
