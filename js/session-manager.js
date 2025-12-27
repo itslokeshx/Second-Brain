@@ -512,15 +512,16 @@
                 // ═══════════════════════════════════════════════════════════════════════
                 // 🛡️ USERNAME POISON DETECTION (Logout Gate)
                 // ═══════════════════════════════════════════════════════════════════════
-                const cookies = document.cookie.split(';').reduce((acc, c) => {
-                    const [k, v] = c.trim().split('=');
-                    acc[k] = decodeURIComponent(v || '');
-                    return acc;
-                }, {});
-                const usernamePrefix = cookies.NAME ? cookies.NAME.toLowerCase() : '';
+                // FIX: Get username from stored state instead of cookies
+                // (NAME cookie is blocked by cookie-patcher.js to prevent injection)
+                const storedUsername = this.currentUser?.username || 
+                                      localStorage.getItem('userName') || 
+                                      '';
+                const usernamePrefix = storedUsername.split('@')[0].toLowerCase();
+                console.log(`[Session] 🔍 Poison detection using username: "${usernamePrefix}"`);
 
-                // Filter strict artifacts from dirty count
-                // Use SAME heuristic as saveToLocalStorage
+                // Count unsynced tasks (sync: 0), excluding poisoned ones
+                // Artifact filtering is handled by sync handler, not here
                 dirtyCount += tasks.filter(t => {
                     if (t.sync !== 0) return false;
 
@@ -531,21 +532,9 @@
                         return false;
                     }
 
-                    // STRICT: Only include real tasks, not keystroke artifacts
-                    const isRealTask = (
-                        (t.name && t.name.length >= 3) ||
-                        (t.projectId && t.projectId !== '0') ||
-                        t.deadline ||
-                        t.priority
-                    );
-
-                    // BLOCK: Artifacts that look like partial keystrokes
-                    const isArtifact = t.name && (
-                        t.name.length < 3 ||
-                        (t.name.length < 20 && !t.projectId && !t.deadline)
-                    );
-
-                    return isRealTask && !isArtifact; // Only count as dirty if Real AND Not Artifact
+                    // Count all other unsynced tasks
+                    console.log(`[Session] ⚠️ Unsynced task: "${t.name}"`);
+                    return true;
                 }).length;
 
                 dirtyCount += logs.filter(l => l.sync === 0).length;
