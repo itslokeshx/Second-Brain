@@ -275,7 +275,17 @@
 
                     // Filter out keystroke artifacts with STRICT Heuristics
                     data.tasks = data.tasks.filter(t => {
-                        // 🔍 HEURISTIC 1: Minimum Viable Data
+                        // ═══════════════════════════════════════════════════════════════════════
+                        // 🔧 CRITICAL FIX: NEVER filter unsynced tasks (sync: 0)
+                        // If a task has sync: 0, it MUST be synced regardless of content
+                        // This prevents data loss from overly aggressive filtering
+                        // ═══════════════════════════════════════════════════════════════════════
+                        if (t.sync === 0) {
+                            console.log(`[Sync Button] ✅ Including unsynced task: "${t.name}"`);
+                            return true; // ALWAYS include unsynced tasks
+                        }
+
+                        // For already-synced tasks (sync: 1), apply artifact detection heuristics
                         // Real tasks usually have meaningful IDs or creation times, but 
                         // we focus on content structure.
                         const validName = t.name && t.name.length >= 3;
@@ -288,17 +298,16 @@
                         // 🔍 HEURISTIC 2: Legacy Compatibility
                         // Long text without props might be a quick "brain dump" task
                         // INCREASED THRESHOLD: Must be 20+ chars to avoid username poisoning ("itslokeshx" is 10)
-                        const hasValidProject = t.projectId && t.projectId !== '0';
                         const legitimateLongText = t.name && t.name.length >= 20;
 
-                        // 🔍 HEURISTIC 3: Sync Integrity
-                        // If it's already marked as synced (1), we trust it 
-                        // (unless it's blatantly garbage, but we assume server authority)
-                        const alreadySynced = t.sync === 1;
+                        // Only filter already-synced tasks that look like artifacts
+                        const shouldKeep = (validName && hasOtherProps) || legitimateLongText;
 
-                        // 🛡️ DECISION: Keep only if Valid OR Synced OR Very Long Text (Brain Dump)
-                        // BUT: If it's short, has no project/deadline, it's an artifact.
-                        return (validName && hasOtherProps) || legitimateLongText || alreadySynced;
+                        if (!shouldKeep) {
+                            console.log(`[Sync Button] 🧹 Filtering synced artifact: "${t.name}"`);
+                        }
+
+                        return shouldKeep;
                     });
 
                     const removed = initialCount - data.tasks.length;
