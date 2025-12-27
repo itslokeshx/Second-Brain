@@ -249,12 +249,7 @@
             // 🛡️ POISON PURGE: Remove username-contaminated tasks BEFORE persistence
             // ═══════════════════════════════════════════════════════════════════════
             if (data.tasks && Array.isArray(data.tasks)) {
-                const cookies = document.cookie.split(';').reduce((acc, c) => {
-                    const [k, v] = c.trim().split('=');
-                    acc[k] = decodeURIComponent(v || '');
-                    return acc;
-                }, {});
-                const usernamePrefix = cookies.NAME ? cookies.NAME.toLowerCase() : '';
+                const usernamePrefix = (window.SessionManager && window.SessionManager.getUsernamePrefix) ? window.SessionManager.getUsernamePrefix() : "";
                 
                 if (usernamePrefix) {
                     const originalCount = data.tasks.length;

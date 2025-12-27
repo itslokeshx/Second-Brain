@@ -403,6 +403,22 @@
             return headers;
         },
 
+        // ═══════════════════════════════════════════════════════════════════════
+        // 🔧 UNIFIED USERNAME HELPER (Fix for blocked NAME cookie)
+        // Used by: checkDirtyState, saveToLocalStorage, hydration-mutex, purgeAllPoisonedTasks
+        // ═══════════════════════════════════════════════════════════════════════
+        getStoredUsername: function() {
+            return this.currentUser?.username || 
+                   localStorage.getItem('userName') || 
+                   localStorage.getItem('userEmail') || 
+                   '';
+        },
+
+        getUsernamePrefix: function() {
+            const username = this.getStoredUsername();
+            return username.split('@')[0].toLowerCase();
+        },
+
         startPeriodicCheck: function () {
             // DISABLED: No automatic checks - sync only on manual button click
             console.log('[Session] ℹ️ Automatic sync disabled - use sync button to sync data');
@@ -431,13 +447,8 @@
 
         purgeAllPoisonedTasks: function () {
             try {
-                // Get username from cookies
-                const cookies = document.cookie.split(';').reduce((acc, c) => {
-                    const [k, v] = c.trim().split('=');
-                    acc[k] = decodeURIComponent(v || '');
-                    return acc;
-                }, {});
-                const usernamePrefix = cookies.NAME ? cookies.NAME.toLowerCase() : '';
+                // Get username from helper function (bypasses blocked cookie)
+                const usernamePrefix = this.getUsernamePrefix();
 
                 if (!usernamePrefix) {
                     console.log('[Session] No username found - skipping poison purge');
@@ -1067,12 +1078,7 @@
                             // ═══════════════════════════════════════════════════════════════════════
                             // 🛡️ USERNAME POISONING DETECTION (localStorage)
                             // ═══════════════════════════════════════════════════════════════════════
-                            const cookies = document.cookie.split(';').reduce((acc, c) => {
-                                const [k, v] = c.trim().split('=');
-                                acc[k] = decodeURIComponent(v || '');
-                                return acc;
-                            }, {});
-                            const usernamePrefix = cookies.NAME ? cookies.NAME.toLowerCase() : '';
+                            const usernamePrefix = this.getUsernamePrefix();
                             const taskNameLower = (t.name || '').toLowerCase();
 
                             // POISON CHECK: If task name starts with username, it's contaminated
