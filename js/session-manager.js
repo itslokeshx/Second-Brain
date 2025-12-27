@@ -299,35 +299,57 @@
 
             // Find the actual username element used by main.js
             const findAndUpdate = () => {
-                // Look for HomeHeader-username class (CSS modules use hashed names)
-                // STRICTER SELECTION: Must NOT be an input field
-                const candidates = document.querySelectorAll('[class*="HomeHeader-username"], .user-name, .username');
+                // ═══════════════════════════════════════════════════════════════════════
+                // 🛡️ CRITICAL SECURITY: WHITELIST-ONLY APPROACH
+                // Only update elements in header/menu contexts - NEVER task/input contexts
+                // ═══════════════════════════════════════════════════════════════════════
+                
+                // WHITELIST: Only header/userinfo containers
+                const safeContainers = document.querySelectorAll('[class*="HomeHeader"], [class*="userinfo"], [class*="UserMenu"]');
                 let usernameEl = null;
 
-                for (const el of candidates) {
+                for (const container of safeContainers) {
+                    // Find username display ONLY within safe containers
+                    const candidate = container.querySelector('[class*="username"]');
+                    
+                    if (!candidate) continue;
+
                     // ⛔ FIREWALL 1: Reject Inputs, Textareas, Editable Elements
-                    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable) {
+                    if (candidate.tagName === 'INPUT' || candidate.tagName === 'TEXTAREA' || candidate.isContentEditable) {
                         continue;
                     }
 
                     // ⛔ FIREWALL 2: Reject Form Contexts
-                    if (el.closest('form')) {
+                    if (candidate.closest('form')) {
                         continue;
                     }
 
-                    // ⛔ FIREWALL 3: Reject Editor Classes
-                    const className = el.className || '';
+                    // ⛔ FIREWALL 3: Reject Task/Editor/Draft Contexts  
+                    const className = candidate.className || '';
                     if (typeof className === 'string' && (
                         className.includes('input') ||
                         className.includes('task') ||
+                        className.includes('Task') ||
                         className.includes('editor') ||
-                        className.includes('draft')
+                        className.includes('draft') ||
+                        className.includes('placeholder')
+                    )) {
+                        continue;
+                    }
+
+                    // ⛔ FIREWALL 4: Reject if parent has task-related classes
+                    const parent = candidate.parentElement;
+                    const parentClass = parent ? (parent.className || '') : '';
+                    if (typeof parentClass === 'string' && (
+                        parentClass.includes('task') ||
+                        parentClass.includes('Task') ||
+                        parentClass.includes('input')
                     )) {
                         continue;
                     }
 
                     // Found a safe candidate
-                    usernameEl = el;
+                    usernameEl = candidate;
                     break;
                 }
 
@@ -340,8 +362,8 @@
             // Run immediately
             findAndUpdate();
 
-            // Run periodically
-            setInterval(findAndUpdate, 2000);
+            // Run periodically (reduced frequency to minimize contamination risk)
+            setInterval(findAndUpdate, 5000);
         },
 
         setupHandlers: function () {
@@ -356,7 +378,7 @@
             console.log('[Session] 🚪 Logout initiated');
 
             // ═══════════════════════════════════════════════════════════════════════
-            // 🔐 STATE AUTHORITY FIX: Safe Logout Guard
+            // 🔐 STATE AUTHORITY FIX: Safe Logout Guard with Poison Detection
             // ═══════════════════════════════════════════════════════════════════════
 
             // 1. Check for active sync
@@ -493,10 +515,27 @@
 
                 let dirtyCount = 0;
 
+                // ═══════════════════════════════════════════════════════════════════════
+                // 🛡️ USERNAME POISON DETECTION (Logout Gate)
+                // ═══════════════════════════════════════════════════════════════════════
+                const cookies = document.cookie.split(';').reduce((acc, c) => {
+                    const [k, v] = c.trim().split('=');
+                    acc[k] = decodeURIComponent(v || '');
+                    return acc;
+                }, {});
+                const usernamePrefix = cookies.NAME ? cookies.NAME.toLowerCase() : '';
+
                 // Filter strict artifacts from dirty count
                 // Use SAME heuristic as saveToLocalStorage
                 dirtyCount += tasks.filter(t => {
                     if (t.sync !== 0) return false;
+
+                    // POISON CHECK: Ignore username-contaminated tasks
+                    const taskNameLower = (t.name || '').toLowerCase();
+                    if (usernamePrefix && taskNameLower.startsWith(usernamePrefix)) {
+                        console.log(`[Session] 🚫 Logout: Ignoring poisoned task "${t.name}"`);
+                        return false;
+                    }
 
                     // STRICT: Only include real tasks, not keystroke artifacts
                     const isRealTask = (
@@ -506,7 +545,7 @@
                         t.priority
                     );
 
-                    // BLOCK: Artifacts that look like partial usernames "d", "do", "its", "itslokeshx"
+                    // BLOCK: Artifacts that look like partial keystrokes
                     const isArtifact = t.name && (
                         t.name.length < 3 ||
                         (t.name.length < 20 && !t.projectId && !t.deadline)
@@ -518,6 +557,7 @@
                 dirtyCount += logs.filter(l => l.sync === 0).length;
                 dirtyCount += projects.filter(p => p.sync === 0).length;
 
+                console.log(`[Session] 🔍 Dirty state check: ${dirtyCount} legitimate unsynced items`);
                 return dirtyCount;
             } catch (e) {
                 console.warn('[Session] Failed to check dirty state:', e);
@@ -832,6 +872,29 @@
 
                                         // CRITICAL: Check sync flag ATOMICALLY
                                         if (existingTask.sync === 0) {
+                                            // ═══════════════════════════════════════════════════════════════════════
+                                            // 🛡️ USERNAME POISONING DETECTION
+                                            // Reject tasks that start with username (injection artifacts)
+                                            // ═══════════════════════════════════════════════════════════════════════
+                                            const cookies = document.cookie.split(';').reduce((acc, c) => {
+                                                const [k, v] = c.trim().split('=');
+                                                acc[k] = decodeURIComponent(v || '');
+                                                return acc;
+                                            }, {});
+                                            const usernamePrefix = cookies.NAME ? cookies.NAME.toLowerCase() : '';
+                                            const taskNameLower = (existingTask.name || '').toLowerCase();
+                                            
+                                            // POISON CHECK: If task name starts with username, it's contaminated
+                                            const isPoisoned = usernamePrefix && taskNameLower.startsWith(usernamePrefix);
+                                            
+                                            if (isPoisoned) {
+                                                console.log(`[Session] 💀 POISONED: Purging username-contaminated task "${existingTask.name}"`);
+                                                cursor.update(serverTask);
+                                                count++;
+                                                cursor.continue();
+                                                return;
+                                            }
+
                                             // Check if this is a real task or keystroke artifact
                                             // STRICT: Only preserve if name >= 3 chars AND has meaningful content
                                             const hasValidName = existingTask.name && existingTask.name.length >= 3;
@@ -841,12 +904,9 @@
                                             const hasTags = existingTask.tags && existingTask.tags.length > 0;
                                             const hasDescription = existingTask.description && existingTask.description.length > 0;
 
-                                            // CHANGED: Require BOTH valid name AND at least one other property
-                                            // OR just a very long name (10+ chars, likely intentional)
-                                            const isRealTask = (
-                                                (hasValidName && (hasDeadline || hasNonDefaultProject || hasPriority || hasTags || hasDescription)) ||
-                                                (existingTask.name && existingTask.name.length >= 10)
-                                            );
+                                            // FIXED: Require BOTH valid name AND at least one other property
+                                            // Removed dangerous length-only check that preserved poisoned tasks
+                                            const isRealTask = hasValidName && (hasDeadline || hasNonDefaultProject || hasPriority || hasTags || hasDescription);
 
                                             if (isRealTask) {
                                                 // Local task is dirty and real - PRESERVE IT
@@ -1021,18 +1081,37 @@
                                 t.priority
                             );
 
-                            // BLOCK: Artifacts that look like partial usernames "d", "do", "its", "itslokeshx"
-                            const hasValidProject = t.projectId && t.projectId !== '0';
-                            const isArtifact = t.name && (
-                                t.name.length < 3 ||
-                                (t.name.length < 20 && !hasValidProject && !t.deadline)
-                            );
-
-                            if (isRealTask && !isArtifact) {
-                                dirtyTasks[t.id] = t;
-                                dirtyCount++;
+                            // ═══════════════════════════════════════════════════════════════════════
+                            // 🛡️ USERNAME POISONING DETECTION (localStorage)
+                            // ═══════════════════════════════════════════════════════════════════════
+                            const cookies = document.cookie.split(';').reduce((acc, c) => {
+                                const [k, v] = c.trim().split('=');
+                                acc[k] = decodeURIComponent(v || '');
+                                return acc;
+                            }, {});
+                            const usernamePrefix = cookies.NAME ? cookies.NAME.toLowerCase() : '';
+                            const taskNameLower = (t.name || '').toLowerCase();
+                            
+                            // POISON CHECK: If task name starts with username, it's contaminated
+                            const isPoisoned = usernamePrefix && taskNameLower.startsWith(usernamePrefix);
+                            
+                            if (isPoisoned) {
+                                console.log(`[Session] 💀 POISONED: Blocking username-contaminated task "${t.name}"`);
+                                // Skip this poisoned task - don't preserve it
                             } else {
-                                console.log(`[Session] 🛑 Blocking poisonous draft artifact: "${t.name}"`);
+                                // BLOCK: Artifacts that look like partial usernames "d", "do", "its"
+                                const hasValidProject = t.projectId && t.projectId !== '0';
+                                const isArtifact = t.name && (
+                                    t.name.length < 3 ||
+                                    (t.name.length < 20 && !hasValidProject && !t.deadline)
+                                );
+
+                                if (isRealTask && !isArtifact) {
+                                    dirtyTasks[t.id] = t;
+                                    dirtyCount++;
+                                } else {
+                                    console.log(`[Session] 🛑 Blocking keystroke artifact: "${t.name}"`);
+                                }
                             }
                         }
                     });

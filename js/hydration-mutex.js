@@ -245,6 +245,34 @@
          * STATE 4: Persist data to IndexedDB and localStorage
          */
         async _persistData(data) {
+            // ═══════════════════════════════════════════════════════════════════════
+            // 🛡️ POISON PURGE: Remove username-contaminated tasks BEFORE persistence
+            // ═══════════════════════════════════════════════════════════════════════
+            if (data.tasks && Array.isArray(data.tasks)) {
+                const cookies = document.cookie.split(';').reduce((acc, c) => {
+                    const [k, v] = c.trim().split('=');
+                    acc[k] = decodeURIComponent(v || '');
+                    return acc;
+                }, {});
+                const usernamePrefix = cookies.NAME ? cookies.NAME.toLowerCase() : '';
+                
+                if (usernamePrefix) {
+                    const originalCount = data.tasks.length;
+                    data.tasks = data.tasks.filter(t => {
+                        const taskNameLower = (t.name || '').toLowerCase();
+                        const isPoisoned = taskNameLower.startsWith(usernamePrefix);
+                        if (isPoisoned) {
+                            console.log(`[Mutex] 💀 PURGING poisoned task: "${t.name}"`);
+                        }
+                        return !isPoisoned;
+                    });
+                    const purgedCount = originalCount - data.tasks.length;
+                    if (purgedCount > 0) {
+                        console.log(`[Mutex] 🧹 Purged ${purgedCount} username-contaminated tasks`);
+                    }
+                }
+            }
+
             // Write to IndexedDB (atomic transaction)
             if (window.SessionManager && window.SessionManager.saveToIndexedDB) {
                 await window.SessionManager.saveToIndexedDB(data);
