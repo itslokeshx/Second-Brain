@@ -277,9 +277,6 @@
 
                 console.log('[Session] ✅ UI updated for:', username);
 
-                // ✅ FIX: Override main.js username display
-                this.forceUsernameDisplay(username);
-
             } else {
                 if (userDisplay) {
                     userDisplay.textContent = 'Not logged in';
@@ -292,79 +289,6 @@
             }
         },
 
-        // ✅ NEW: Force correct username display by overriding main.js
-        forceUsernameDisplay: function (userEmail) {
-            // Extract username from email
-            const username = userEmail.split('@')[0];
-
-            // Find the actual username element used by main.js
-            const findAndUpdate = () => {
-                // ═══════════════════════════════════════════════════════════════════════
-                // 🛡️ CRITICAL SECURITY: WHITELIST-ONLY APPROACH
-                // Only update elements in header/menu contexts - NEVER task/input contexts
-                // ═══════════════════════════════════════════════════════════════════════
-                
-                // WHITELIST: Only header/userinfo containers
-                const safeContainers = document.querySelectorAll('[class*="HomeHeader"], [class*="userinfo"], [class*="UserMenu"]');
-                let usernameEl = null;
-
-                for (const container of safeContainers) {
-                    // Find username display ONLY within safe containers
-                    const candidate = container.querySelector('[class*="username"]');
-                    
-                    if (!candidate) continue;
-
-                    // ⛔ FIREWALL 1: Reject Inputs, Textareas, Editable Elements
-                    if (candidate.tagName === 'INPUT' || candidate.tagName === 'TEXTAREA' || candidate.isContentEditable) {
-                        continue;
-                    }
-
-                    // ⛔ FIREWALL 2: Reject Form Contexts
-                    if (candidate.closest('form')) {
-                        continue;
-                    }
-
-                    // ⛔ FIREWALL 3: Reject Task/Editor/Draft Contexts  
-                    const className = candidate.className || '';
-                    if (typeof className === 'string' && (
-                        className.includes('input') ||
-                        className.includes('task') ||
-                        className.includes('Task') ||
-                        className.includes('editor') ||
-                        className.includes('draft') ||
-                        className.includes('placeholder')
-                    )) {
-                        continue;
-                    }
-
-                    // ⛔ FIREWALL 4: Reject if parent has task-related classes
-                    const parent = candidate.parentElement;
-                    const parentClass = parent ? (parent.className || '') : '';
-                    if (typeof parentClass === 'string' && (
-                        parentClass.includes('task') ||
-                        parentClass.includes('Task') ||
-                        parentClass.includes('input')
-                    )) {
-                        continue;
-                    }
-
-                    // Found a safe candidate
-                    usernameEl = candidate;
-                    break;
-                }
-
-                if (usernameEl && usernameEl.textContent !== username) {
-                    console.log('[Session] Setting header username to:', username);
-                    usernameEl.textContent = username;
-                }
-            };
-
-            // Run immediately
-            findAndUpdate();
-
-            // Run periodically (reduced frequency to minimize contamination risk)
-            setInterval(findAndUpdate, 5000);
-        },
 
         setupHandlers: function () {
             // Logout handler
@@ -387,7 +311,11 @@
                 if (!proceed) return;
             }
 
-            // 2. Check for dirty (unsynced) tasks
+            // 2. HARD RESET: Purge all poisoned tasks BEFORE checking dirty state
+            // This ensures accurate dirty count without contamination
+            this.purgeAllPoisonedTasks();
+
+            // 3. Check for dirty (unsynced) tasks
             // We only check localStorage as it's the fast replication layer
             // We use the new STRICT HELPER to ignore keystroke artifacts
             const dirtyCount = this.checkDirtyState();
@@ -501,6 +429,73 @@
         // ═══════════════════════════════════════════════════════════════════════
         // 🔐 HELPER HELPERS
         // ═══════════════════════════════════════════════════════════════════════
+
+        purgeAllPoisonedTasks: function () {
+            try {
+                // Get username from cookies
+                const cookies = document.cookie.split(';').reduce((acc, c) => {
+                    const [k, v] = c.trim().split('=');
+                    acc[k] = decodeURIComponent(v || '');
+                    return acc;
+                }, {});
+                const usernamePrefix = cookies.NAME ? cookies.NAME.toLowerCase() : '';
+
+                if (!usernamePrefix) {
+                    console.log('[Session] No username found - skipping poison purge');
+                    return;
+                }
+
+                // Purge from localStorage
+                const tasks = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
+                const originalCount = tasks.length;
+                const cleanTasks = tasks.filter(t => {
+                    const taskNameLower = (t.name || '').toLowerCase();
+                    const isPoisoned = taskNameLower.startsWith(usernamePrefix);
+                    if (isPoisoned) {
+                        console.log(`[Session] 💀 PURGE: Removing poisoned task "${t.name}" from localStorage`);
+                    }
+                    return !isPoisoned;
+                });
+
+                if (cleanTasks.length < originalCount) {
+                    localStorage.setItem('pomodoro-tasks', JSON.stringify(cleanTasks));
+                    console.log(`[Session] ✅ Purged ${originalCount - cleanTasks.length} poisoned tasks from localStorage`);
+                }
+
+                // Purge from IndexedDB
+                if (window.UserDB) {
+                    const userId = this.currentUser?.id || window.UserDB.getCurrentUserId();
+                    if (userId) {
+                        window.UserDB.openUserDB(userId).then(db => {
+                            const tx = db.transaction('Task', 'readwrite');
+                            const store = tx.objectStore('Task');
+                            const cursorReq = store.openCursor();
+
+                            let purgedCount = 0;
+                            cursorReq.onsuccess = (event) => {
+                                const cursor = event.target.result;
+                                if (cursor) {
+                                    const task = cursor.value;
+                                    const taskNameLower = (task.name || '').toLowerCase();
+                                    if (taskNameLower.startsWith(usernamePrefix)) {
+                                        console.log(`[Session] 💀 PURGE: Removing poisoned task "${task.name}" from IndexedDB`);
+                                        cursor.delete();
+                                        purgedCount++;
+                                    }
+                                    cursor.continue();
+                                } else if (purgedCount > 0) {
+                                    console.log(`[Session] ✅ Purged ${purgedCount} poisoned tasks from IndexedDB`);
+                                }
+                            };
+                        }).catch(err => {
+                            console.warn('[Session] Failed to purge from IndexedDB:', err);
+                        });
+                    }
+                }
+            } catch (e) {
+                console.warn('[Session] Poison purge failed:', e);
+            }
+        },
 
         checkActiveSync: function () {
             return window._syncInProgress === true;
@@ -883,10 +878,10 @@
                                             }, {});
                                             const usernamePrefix = cookies.NAME ? cookies.NAME.toLowerCase() : '';
                                             const taskNameLower = (existingTask.name || '').toLowerCase();
-                                            
+
                                             // POISON CHECK: If task name starts with username, it's contaminated
                                             const isPoisoned = usernamePrefix && taskNameLower.startsWith(usernamePrefix);
-                                            
+
                                             if (isPoisoned) {
                                                 console.log(`[Session] 💀 POISONED: Purging username-contaminated task "${existingTask.name}"`);
                                                 cursor.update(serverTask);
@@ -1091,10 +1086,10 @@
                             }, {});
                             const usernamePrefix = cookies.NAME ? cookies.NAME.toLowerCase() : '';
                             const taskNameLower = (t.name || '').toLowerCase();
-                            
+
                             // POISON CHECK: If task name starts with username, it's contaminated
                             const isPoisoned = usernamePrefix && taskNameLower.startsWith(usernamePrefix);
-                            
+
                             if (isPoisoned) {
                                 console.log(`[Session] 💀 POISONED: Blocking username-contaminated task "${t.name}"`);
                                 // Skip this poisoned task - don't preserve it

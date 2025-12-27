@@ -1,15 +1,6 @@
-/**
- * Username Poison Blocker - Aggressive DOM Protection
- * ═══════════════════════════════════════════════════════════════════════════
- * 
- * This script actively monitors and blocks username text from appearing in
- * task input fields, regardless of how main.js tries to inject it.
- * 
- * Strategy: MutationObserver + Active Scrubbing
- * ═══════════════════════════════════════════════════════════════════════════
- */
 
-(function() {
+
+(function () {
     'use strict';
 
     console.log('[Poison Blocker] 🛡️ Initializing aggressive DOM protection...');
@@ -24,7 +15,7 @@
             acc[k] = decodeURIComponent(v || '');
             return acc;
         }, {});
-        
+
         if (cookies.NAME) {
             username = cookies.NAME;
             usernamePrefix = username.toLowerCase();
@@ -39,7 +30,7 @@
         // Check element itself
         const className = el.className || '';
         const classStr = typeof className === 'string' ? className : className.toString();
-        
+
         if (classStr && (
             classStr.includes('task') ||
             classStr.includes('Task') ||
@@ -60,7 +51,7 @@
         while (parent && depth < 5) {
             const parentClass = parent.className || '';
             const parentClassStr = typeof parentClass === 'string' ? parentClass : parentClass.toString();
-            
+
             if (parentClassStr && (
                 parentClassStr.includes('task') ||
                 parentClassStr.includes('Task') ||
@@ -72,7 +63,7 @@
             )) {
                 return true;
             }
-            
+
             parent = parent.parentElement;
             depth++;
         }
@@ -93,14 +84,14 @@
             if (isTaskRelatedContext(el)) {
                 console.log('[Poison Blocker] 💀 BLOCKED username injection into:', el.className);
                 console.log('[Poison Blocker] 🧹 Poisoned text:', text);
-                
+
                 // Clear it
                 if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
                     el.value = '';
                 } else {
                     el.textContent = '';
                 }
-                
+
                 return true;
             }
         }
@@ -156,7 +147,7 @@
                 mutation.addedNodes.forEach(node => {
                     if (node.nodeType === Node.ELEMENT_NODE) {
                         scrubElement(node);
-                        
+
                         // Check all text nodes within added element
                         const textNodes = [];
                         const walker = document.createTreeWalker(
@@ -164,7 +155,7 @@
                             NodeFilter.SHOW_ELEMENT,
                             null
                         );
-                        
+
                         let currentNode;
                         while (currentNode = walker.nextNode()) {
                             scrubElement(currentNode);
@@ -183,7 +174,7 @@
     // Start observing when DOM is ready
     function startObserving() {
         updateUsernameFromCookies();
-        
+
         if (document.body) {
             observer.observe(document.body, {
                 childList: true,
@@ -193,11 +184,43 @@
                 attributes: true,
                 attributeFilter: ['value', 'contenteditable']
             });
-            
+
             console.log('[Poison Blocker] ✅ Active monitoring started');
-            
+
             // Initial scrub
             scrubTaskElements();
+
+            // ═══════════════════════════════════════════════════════════════════════
+            // 🛡️ WRITE BLOCKER: Intercept input events to prevent username injection
+            // ═══════════════════════════════════════════════════════════════════════
+            document.body.addEventListener('input', function (e) {
+                const target = e.target;
+                if (!target || !username) return;
+
+                // Only check task-related inputs
+                if (!isTaskRelatedContext(target)) return;
+
+                // Check if value contains username
+                const value = target.value || target.textContent || '';
+                const lowerValue = value.toLowerCase();
+
+                if (lowerValue.includes(usernamePrefix)) {
+                    console.log('[Poison Blocker] 🚫 WRITE BLOCKED: Prevented username injection via input event');
+
+                    // Clear the poisoned value
+                    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+                        target.value = '';
+                    } else {
+                        target.textContent = '';
+                    }
+
+                    // Prevent event propagation
+                    e.stopPropagation();
+                    e.preventDefault();
+                }
+            }, true); // Use capture phase to intercept early
+
+            console.log('[Poison Blocker] ✅ Input event blocker installed');
         } else {
             setTimeout(startObserving, 100);
         }
