@@ -770,13 +770,19 @@
                                         // CRITICAL: Check sync flag ATOMICALLY
                                         if (existingTask.sync === 0) {
                                             // Check if this is a real task or keystroke artifact
+                                            // STRICT: Only preserve if name >= 3 chars AND has meaningful content
+                                            const hasValidName = existingTask.name && existingTask.name.length >= 3;
+                                            const hasDeadline = existingTask.deadline && existingTask.deadline !== 0;
+                                            const hasNonDefaultProject = existingTask.projectId && existingTask.projectId !== '0' && existingTask.projectId !== 0;
+                                            const hasPriority = existingTask.priority && existingTask.priority > 0;
+                                            const hasTags = existingTask.tags && existingTask.tags.length > 0;
+                                            const hasDescription = existingTask.description && existingTask.description.length > 0;
+
+                                            // CHANGED: Require BOTH valid name AND at least one other property
+                                            // OR just a very long name (10+ chars, likely intentional)
                                             const isRealTask = (
-                                                (existingTask.name && existingTask.name.length >= 3) ||
-                                                existingTask.deadline ||
-                                                existingTask.projectId ||
-                                                existingTask.priority ||
-                                                existingTask.tags ||
-                                                existingTask.description
+                                                (hasValidName && (hasDeadline || hasNonDefaultProject || hasPriority || hasTags || hasDescription)) ||
+                                                (existingTask.name && existingTask.name.length >= 10)
                                             );
 
                                             if (isRealTask) {
@@ -924,14 +930,19 @@
                     const dirtyTasks = {};
                     existingTasks.forEach(t => {
                         if (t.sync === 0 && t.id) {
-                            // Only include real tasks, not keystroke artifacts
+                            // STRICT: Only include real tasks, not keystroke artifacts
+                            const hasValidName = t.name && t.name.length >= 3;
+                            const hasDeadline = t.deadline && t.deadline !== 0;
+                            const hasNonDefaultProject = t.projectId && t.projectId !== '0' && t.projectId !== 0;
+                            const hasPriority = t.priority && t.priority > 0;
+                            const hasTags = t.tags && t.tags.length > 0;
+                            const hasDescription = t.description && t.description.length > 0;
+
+                            // Require BOTH valid name AND at least one other property
+                            // OR just a very long name (10+ chars, likely intentional)
                             const isRealTask = (
-                                (t.name && t.name.length >= 3) ||
-                                t.deadline ||
-                                t.projectId ||
-                                t.priority ||
-                                t.tags ||
-                                t.description
+                                (hasValidName && (hasDeadline || hasNonDefaultProject || hasPriority || hasTags || hasDescription)) ||
+                                (t.name && t.name.length >= 10)
                             );
 
                             if (isRealTask) {
