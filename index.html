@@ -3,15 +3,12 @@
 
 <head>
     <meta charset="UTF-8">
-    <link rel="icon" type="image/png" sizes="32x32"
-        href="https://www.transparentpng.com/thumb/anonymous-mask/anonymous-mask-icon-png-25.png"
-        alt="anonymous mask icon png @transparentpng.com ">
+    <link rel="icon" type="image/png" sizes="32x32" alt="anonymous mask icon png @transparentpng.com ">
     <title>Second Brain</title>
     <link href="main.css" rel="stylesheet">
 </head>
 
 <body>
-    <!-- ✅ URL INTERCEPTOR: Must load FIRST to redirect localhost→Render -->
     <script src="js/url-interceptor.js"></script>
 
     <div id="root" style="height: 100%; width: 100%;"></div>
@@ -474,10 +471,9 @@
     <script src="js/blank-page-preventer.js"></script>
     <script src="js/force-reset.js"></script>
     <script src="js/data-sanitizer.js"></script>
-    <!-- ✅ CRITICAL: Mock Encryption to allow Render -->
     <script src="js/crypto-stub.js"></script>
     <script src="js/suppress-errors.js?v=1000"></script>
-    <script src="js/websocket-mock.js?v=1000"></script> <!-- ✅ Added WebSocket Mock -->
+    <script src="js/websocket-mock.js?v=1000"></script>
     <script src="js/notifications.js"></script>
     <script src="js/login-interceptor.js"></script>
     <script src="js/fix-json-only.js?v=2000"></script>
@@ -486,45 +482,34 @@
     <script src="js/cookie-patcher.js?v=3002"></script>
     <script src="js/main-patcher.js?v=2003"></script>
     <script src="js/config.js"></script>
-    <script src="js/system-projects.js?v=1003"></script> <!-- Definitions needed by SessionManager -->
+    <script src="js/system-projects.js?v=1003"></script>
     <script type="text/javascript" src="js/auth-fetch.js?v=1003"></script>
     <script type="text/javascript" src="js/sync-service.js?v=1002"></script>
 
-    <!-- ═══════════════════════════════════════════════════════════════════ -->
-    <!-- ✅ CRITICAL: HYDRATION INTEGRITY LAYER - MUST LOAD BEFORE session-manager -->
-    <!-- These scripts ensure IndexedDB operations are properly scoped to user -->
-    <!-- ═══════════════════════════════════════════════════════════════════ -->
-    <script src="js/db-recovery.js?v=1000"></script> <!-- Recovery tool: run window.resetDB() in console -->
-    <script src="js/user-db.js?v=1002"></script> <!-- User-scoped database helper - MUST load FIRST -->
-    <script src="js/indexeddb-open-interceptor.js?v=1002"></script> <!-- Redirect main.js DB opens to user-scoped DB -->
+
+    <script src="js/db-recovery.js?v=1000"></script>
+    <script src="js/user-db.js?v=1002"></script>
+    <script src="js/indexeddb-open-interceptor.js?v=1002"></script>
     <script src="js/indexeddb-guardian.js?v=1002"></script>
     <script src="js/guardian-loader.js?v=1000"></script>
 
-    <!-- ✅ CRITICAL: Write protector MUST load BEFORE main.js -->
     <script src="js/indexeddb-write-protector.js?v=1000"></script>
 
-    <!-- ✅ CRITICAL: Hydration mutex MUST load BEFORE session-manager to prevent race condition -->
-    <script src="js/hydration-mutex.js?v=1007"></script> <!-- Hydration state machine -->
+    <script src="js/hydration-mutex.js?v=1007"></script>
     <script src="js/hydration-gate.js?v=1002"></script>
 
-    <!-- ✅ CRITICAL: Username poison blocker MUST load BEFORE session-manager -->
 
-    <!-- ✅ NOW session-manager can safely check mutex state -->
     <script src="js/session-manager.js?v=1011"></script>
     <script src="js/logout-interceptor.js"></script>
 
     <script src="js/settings-fixer.js?v=1005"></script>
 
 
-    <!-- ✅ UI Cleanup: Hide unwanted features -->
     <script src="js/ui-cleanup.js?v=1000"></script>
 
-    <!-- ✅ Profile Image Fix: Replace undefined avatar with default -->
     <script src="js/profile-image-fix.js?v=1000"></script>
 
-    <!-- Hydration gate - validates session and ensures data ready -->
 
-    <!-- Hydration Gate: Wait for data before loading main.js -->
     <script>
         (async () => {
             console.log('[Loader] Waiting for hydration...');
@@ -532,7 +517,6 @@
 
             console.log('[Loader] Hydration result:', result);
 
-            // Always load main.js - it handles both login and authenticated states
             console.log('[Loader] Loading main.js...');
             const script = document.createElement('script');
             script.type = 'text/javascript';
@@ -540,7 +524,6 @@
             script.onload = () => {
                 console.log('[Loader] ✅ main.js loaded');
 
-                // Load username fixer AFTER main.js (direct DOM manipulation)
                 const fixerScript = document.createElement('script');
                 fixerScript.src = 'js/username-display-fixer.js?v=1000';
                 document.body.appendChild(fixerScript);
@@ -549,7 +532,6 @@
         })();
     </script>
 
-    <!-- Diagnostic: Check Redux state -->
     <script src="js/redux-diagnostic.js"></script>
 
     <script type="text/javascript" src="js/sync-button-handler.js"></script>
