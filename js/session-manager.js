@@ -11,6 +11,37 @@
         init: function () {
             console.log('[Session] Initializing dual-mode auth...');
 
+            // ═══════════════════════════════════════════════════════════════════════
+            // CRITICAL FIX: Detect recent logout and force clear cookies
+            // ═══════════════════════════════════════════════════════════════════════
+            const urlParams = new URLSearchParams(window.location.search);
+            const logoutTimestamp = urlParams.get('t');
+            
+            if (logoutTimestamp) {
+                const timeSinceLogout = Date.now() - parseInt(logoutTimestamp);
+                // If logged out within last 5 seconds
+                if (timeSinceLogout < 5000) {
+                    console.log('[Session] 🚪 Recent logout detected (', timeSinceLogout, 'ms ago)');
+                    
+                    // Force clear ALL cookies
+                    const allCookies = document.cookie.split(';');
+                    allCookies.forEach(cookie => {
+                        const name = cookie.trim().split('=')[0];
+                        if (name) {
+                            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+                            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${window.location.hostname}`;
+                        }
+                    });
+                    
+                    console.log('[Session] ✅ Forced cookie clear after logout');
+                    
+                    // Skip the rest of init - go straight to logged out state
+                    this.handleLoggedOut();
+                    return;
+                }
+            }
+
+
             // 🛠 If a previous patch forced an unrealistically high Version flag (e.g., 888), reset it
             // to let main.js run its preset-project upgrade (required for sidebar defaults).
             const storedVersion = Number(localStorage.getItem('Version') || '0');
