@@ -66,17 +66,17 @@
         console.log('\nTrying to find React root...');
 
         // Try to find React root
-        const appDiv = document.getElementById('app');
-        if (appDiv) {
-            const reactRoot = appDiv._reactRootContainer || appDiv._reactRoot;
+        const rootDiv = document.getElementById('root');
+        if (rootDiv) {
+            const reactRoot = rootDiv._reactRootContainer || rootDiv._reactRoot;
             if (reactRoot) {
                 console.log('✅ Found React root');
                 console.log('React version:', React?.version || 'unknown');
             } else {
-                console.log('❌ No React root found on #app');
+                console.log('❌ No React root found on #root');
             }
         } else {
-            console.log('❌ No #app element found');
+            console.log('❌ No #root element found');
         }
     }
 
