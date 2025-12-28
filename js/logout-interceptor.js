@@ -1,8 +1,10 @@
 /**
- * Logout Interceptor - Hook into React's native logout
+ * Logout Interceptor - Let React handle the dialog, hook the logout function
  * 
- * STRATEGY: Let React handle the logout dialog and flow naturally
- * We just monkey-patch the AccountManager's logout to ALSO call SessionManager
+ * STRATEGY: 
+ * 1. Let React show its beautiful logout dialog naturally
+ * 2. When user confirms, React calls AccountManager.logout()
+ * 3. We detect this and ALSO call SessionManager.logout()
  */
 
 (function () {
@@ -10,68 +12,61 @@
 
     console.log('[Logout Interceptor] Installing...');
 
-    // Wait for main.js to load and expose the AccountManager
+    // Wait for main.js to load
     const maxAttempts = 100; // 10 seconds
     let attempts = 0;
 
     const hookLogout = setInterval(() => {
         attempts++;
 
-        // Try to find React's AccountManager (exposed globally or via window)
-        // The AccountManager has a logout() method that React calls
+        // Check if SessionManager is ready
+        if (!window.SessionManager || !window.SessionManager.logout) {
+            if (attempts >= maxAttempts) {
+                console.error('[Logout Interceptor] ❌ SessionManager not found after 10s');
+                clearInterval(hookLogout);
+            }
+            return;
+        }
 
-        // Strategy 1: Look for global objects that might have logout
-        const possiblePaths = [
-            'window.AccountManager?.shared?.logout',
-            'window.UserManager?.shared?.logout',
-            'window.SessionManager?.logout'
-        ];
+        console.log('[Logout Interceptor] ✅ SessionManager found');
+        clearInterval(hookLogout);
 
-        let foundAccountManager = false;
+        // STRATEGY: Detect when React's AccountManager clears cookies
+        // This happens when the user confirms the logout dialog
 
-        // Check if SessionManager exists (our custom one)
-        if (window.SessionManager && window.SessionManager.logout) {
-            console.log('[Logout Interceptor] ✅ SessionManager found');
+        const originalCookieDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie');
+        const originalCookieSetter = originalCookieDescriptor.set;
 
-            // Now we need to find React's AccountManager
-            // It's exposed as a module, so we need to wait for main.js to fully load
+        let logoutDetected = false;
 
-            // Strategy: Intercept document.cookie setter to catch logout
-            const originalCookieSetter = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie').set;
+        Object.defineProperty(document, 'cookie', {
+            set: function (value) {
+                // Detect React's logout by watching for ACCT cookie being cleared
+                if (value.includes('ACCT=') && (value.includes('ACCT=""') || value.includes('ACCT=;'))) {
+                    if (!logoutDetected) {
+                        logoutDetected = true;
+                        console.log('[Logout Interceptor] 🎯 React logout detected (ACCT cleared)');
 
-            Object.defineProperty(document, 'cookie', {
-                set: function (value) {
-                    // Check if this is a logout operation (clearing ACCT cookie)
-                    if (value.includes('ACCT=;') || value.includes('ACCT=""')) {
-                        console.log('[Logout Interceptor] 🎯 Detected React logout (ACCT cookie cleared)');
-
-                        // Call our SessionManager logout
-                        // Use setTimeout to let React finish its logout first
+                        // Let React finish its logout first, then call ours
                         setTimeout(() => {
+                            console.log('[Logout Interceptor] 🔄 Calling SessionManager.logout()...');
                             if (window.SessionManager && window.SessionManager.logout) {
-                                console.log('[Logout Interceptor] 🔄 Triggering SessionManager cleanup...');
                                 window.SessionManager.logout();
                             }
                         }, 100);
                     }
+                }
 
-                    // Call original setter
-                    originalCookieSetter.call(this, value);
-                },
-                get: Object.getOwnPropertyDescriptor(Document.prototype, 'cookie').get
-            });
+                // Call original setter
+                return originalCookieSetter.call(this, value);
+            },
+            get: originalCookieDescriptor.get,
+            configurable: true
+        });
 
-            console.log('[Logout Interceptor] ✅ Cookie setter intercepted');
-            console.log('[Logout Interceptor] 🚀 Will trigger SessionManager when React logs out');
-
-            clearInterval(hookLogout);
-            foundAccountManager = true;
-        }
-
-        if (!foundAccountManager && attempts >= maxAttempts) {
-            console.error('[Logout Interceptor] ❌ Could not hook into logout after 10s');
-            clearInterval(hookLogout);
-        }
+        console.log('[Logout Interceptor] ✅ Cookie interceptor installed');
+        console.log('[Logout Interceptor] 🚀 React dialog will show naturally');
+        console.log('[Logout Interceptor] 🎨 Using React\'s beautiful logout UI');
 
     }, 100);
 
