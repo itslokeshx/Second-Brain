@@ -702,6 +702,7 @@
     <!-- Hydration gate - validates session and ensures data ready -->
 
     <!-- Hydration Gate: Wait for data before loading main.js -->
+    <!-- Hydration Gate: Wait for data before loading main.js -->
     <script>
         (async () => {
             console.log('[Loader] Waiting for hydration...');
@@ -711,6 +712,15 @@
 
             if (result.ready) {
                 console.log('[Loader] ✅ Data ready - loading main.js');
+                
+                // SHOW LOADER before loading main.js
+                const loader = document.getElementById('app-loader');
+                if (loader) {
+                    loader.style.display = 'flex';
+                    loader.style.opacity = '1';
+                    console.log('[Loader] 🎨 Showing loader for main.js loading...');
+                }
+                
                 const script = document.createElement('script');
                 script.type = 'text/javascript';
                 script.src = 'js/main.js';
