@@ -319,14 +319,23 @@
 
             }
         },
-
         setupHandlers: function () {
-            // ✅ REMOVED: Event delegation for logout button
-            // React handles the logout button click and shows its beautiful dialog
-            // Our logout-interceptor.js detects when React's logout completes
-            // and calls SessionManager.logout() to clean up our state
-
-            console.log('[Session] ✅ Handlers ready (logout delegated to React)');
+            // ✅ Direct click handler for Sign Out button
+            document.body.addEventListener('click', (e) => {
+                const text = e.target.textContent?.trim();
+                const isSignOut = text === 'Sign Out' || text === 'Logout';
+                const isInDropdown = e.target.closest('[class*="UserDropdownMenu"], [class*="UserMenu"]');
+                
+                if (isSignOut && isInDropdown) {
+                    console.log('[Session] Sign Out clicked - triggering logout');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                    this.logout();
+                }
+            }, true);
+            
+            console.log('[Session] ✅ Logout handler installed');
         },
 
 
