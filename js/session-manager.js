@@ -321,36 +321,12 @@
         },
 
         setupHandlers: function () {
-            // ✅ FIX: Use EVENT DELEGATION with CSS Modules-aware selectors
-            // React uses CSS Modules which obfuscate class names (e.g., UserDropdownMenu-menu-KviKX)
-            // We must target both the obfuscated classes AND text content for robustness
-
-            console.log('[Session] Setting up logout handler via event delegation...');
-
-            document.body.addEventListener('click', (e) => {
-                // Check if clicked element or its parent is the logout button
-                // CSS Modules classes: UserDropdownMenu-menu-*, UserMenu-logout-*, etc.
-                const logoutBtn = e.target.closest(
-                    '.logout-btn, #logout-button, [data-logout], .UserMenu-logout, ' +
-                    '[class*="UserDropdownMenu-menu"], ' +
-                    '[class*="UserMenu-logout"], ' +
-                    '[class*="logout"]'
-                );
-
-                // ALSO check text content (most reliable for CSS Modules)
-                const isSignOutText = e.target.textContent?.trim() === 'Sign Out' ||
-                    e.target.innerText?.trim() === 'Sign Out' ||
-                    e.target.textContent?.trim() === 'Logout';
-
-                if (logoutBtn || isSignOutText) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('[Session] Logout button clicked via delegation');
-                    this.logout();
-                }
-            });
-
-            console.log('[Session] ✅ Logout handler installed (event delegation + text matching)');
+            // ✅ REMOVED: Event delegation for logout button
+            // React handles the logout button click and shows its beautiful dialog
+            // Our logout-interceptor.js detects when React's logout completes
+            // and calls SessionManager.logout() to clean up our state
+            
+            console.log('[Session] ✅ Handlers ready (logout delegated to React)');
         },
 
 
