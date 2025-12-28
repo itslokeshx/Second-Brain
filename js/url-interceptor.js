@@ -1,6 +1,7 @@
 /**
  * URL Interceptor - Redirect localhost API calls to Render backend
  * This patches main.js's hardcoded localhost:3000 references
+ * AND injects Auth Tokens for cross-domain requests
  */
 
 (function () {
@@ -26,6 +27,46 @@
 
             // CRITICAL: Enable credentials for cross-domain auth
             this.withCredentials = true;
+
+            // INJECT TOKEN MANUALLY (Fix for 401 errors on legacy requests)
+            // Legacy code (main.js) relies on cookies, which fail on cross-domain POSTs
+            // We manually inject the Authorization header if we have a token
+            try {
+                const token = localStorage.getItem('authToken') || (window.SessionManager && window.SessionManager.token);
+
+                if (token) {
+                    const originalSetRequestHeader = this.setRequestHeader;
+                    let authHeaderSet = false;
+
+                    // 1. Wrap setRequestHeader to track if Authorization is set
+                    this.setRequestHeader = function (header, value) {
+                        try {
+                            if (header && header.toLowerCase() === 'authorization') authHeaderSet = true;
+                            return originalSetRequestHeader.apply(this, arguments);
+                        } catch (e) {
+                            return originalSetRequestHeader.apply(this, arguments);
+                        }
+                    };
+
+                    // 2. Wrap send to inject header if missing
+                    const originalSendFn = this.send;
+                    this.send = function () {
+                        if (!authHeaderSet && token) {
+                            try {
+                                // XHR must use the ORIGINAL setRequestHeader to work
+                                originalSetRequestHeader.call(this, 'Authorization', 'Bearer ' + token);
+                                console.log('[URL Interceptor] 💉 Injected Bearer token');
+                            } catch (e) {
+                                // If XHR state is wrong (shouldn't happen in send), warn but proceed
+                                console.warn('[URL Interceptor] Failed to inject token:', e);
+                            }
+                        }
+                        return originalSendFn.apply(this, arguments);
+                    };
+                }
+            } catch (e) {
+                console.error('[URL Interceptor] Token injection setup failed:', e);
+            }
 
             return originalOpen.call(this, method, newUrl, ...args);
         }
