@@ -52,7 +52,7 @@ app.use(session({
 // CORS - MUST be before body parsers
 const allowedOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000', 'http://localhost:8000', 'https://second-brain-hub.vercel.app', 'https://itslokeshx.github.io/Second-Brain/'];
+    : ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000', 'http://localhost:8000', 'https://second-brain-hub.vercel.app', 'https://itslokeshx.github.io', 'https://itslokeshx.github.io/Second-Brain/'];
 
 app.use(cors({
     origin: function (origin, callback) {
