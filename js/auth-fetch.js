@@ -55,6 +55,15 @@
                 if (response.status === 401) {
                     console.error('[AuthFetch] ❌ 401 Unauthorized - Session expired');
 
+                    // CRITICAL: Don't redirect if we're already in logout state
+                    // Check for ?logout=1 parameter to prevent infinite loop
+                    const isAlreadyLoggingOut = window.location.search.includes('logout=1');
+
+                    if (isAlreadyLoggingOut) {
+                        console.log('[AuthFetch] ⏭️ Already in logout state - skipping redirect');
+                        throw new Error('Session expired - please login again');
+                    }
+
                     // Trigger logout
                     if (window.SessionManager?.handleLoggedOut) {
                         console.log('[AuthFetch] Triggering logout...');
