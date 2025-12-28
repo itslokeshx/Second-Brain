@@ -37,13 +37,13 @@
                     <!-- Tomato body -->
                     <circle cx="50" cy="55" r="35" fill="#FF6B6B" style="
                         animation: pulse 2s ease-in-out infinite;
-                    "/>
+                    " />
                     <!-- Leaf -->
                     <path d="M 50 20 Q 45 25, 50 30 Q 55 25, 50 20" fill="#4ECDC4" style="
                         animation: leaf 2s ease-in-out infinite;
-                    "/>
+                    " />
                     <!-- Shine -->
-                    <circle cx="40" cy="45" r="8" fill="rgba(255,255,255,0.3)"/>
+                    <circle cx="40" cy="45" r="8" fill="rgba(255,255,255,0.3)" />
                 </svg>
             </div>
 
@@ -86,31 +86,77 @@
 
     <style>
         @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
         }
 
         @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
         }
 
         @keyframes leaf {
-            0%, 100% { transform: rotate(0deg); }
-            50% { transform: rotate(5deg); }
+
+            0%,
+            100% {
+                transform: rotate(0deg);
+            }
+
+            50% {
+                transform: rotate(5deg);
+            }
         }
 
         @keyframes progress {
-            0% { width: 0%; margin-left: 0%; }
-            50% { width: 70%; margin-left: 0%; }
-            100% { width: 0%; margin-left: 100%; }
+            0% {
+                width: 0%;
+                margin-left: 0%;
+            }
+
+            50% {
+                width: 70%;
+                margin-left: 0%;
+            }
+
+            100% {
+                width: 0%;
+                margin-left: 100%;
+            }
         }
 
         @keyframes dots {
-            0%, 20% { content: ''; }
-            40% { content: '.'; }
-            60% { content: '..'; }
-            80%, 100% { content: '...'; }
+
+            0%,
+            20% {
+                content: '';
+            }
+
+            40% {
+                content: '.';
+            }
+
+            60% {
+                content: '..';
+            }
+
+            80%,
+            100% {
+                content: '...';
+            }
         }
 
         .dots::after {
@@ -120,13 +166,13 @@
     </style>
 
     <script>
-        // Hide loader when React mounts or after max 30 seconds
+        // SIMPLE LOADER CONTROL - No premature hiding!
         let loaderHidden = false;
-        
-        window.hideAppLoader = function() {
+
+        window.hideAppLoader = function () {
             if (loaderHidden) return;
             loaderHidden = true;
-            
+
             console.log('[Loader] 🎨 Hiding loader...');
             const loader = document.getElementById('app-loader');
             if (loader) {
@@ -139,104 +185,11 @@
             }
         };
 
-        // Method 1: Watch for React rendering to #root
-        const observer = new MutationObserver(() => {
-            const root = document.getElementById('root');
-            if (root && root.children.length > 0) {
-                console.log('[Loader] Detected React render in #root');
-                setTimeout(window.hideAppLoader, 1000);
-                observer.disconnect();
-            }
-        });
-
-        const rootElement = document.getElementById('root');
-        if (rootElement) {
-            observer.observe(rootElement, { childList: true, subtree: true });
-        }
-
-        // Method 2: Watch for ANY visible content in body
-        const bodyObserver = new MutationObserver(() => {
-            // Check if there's visible content (not just scripts)
-            const visibleElements = Array.from(document.body.children).filter(el => {
-                return el.id !== 'app-loader' && 
-                       el.tagName !== 'SCRIPT' && 
-                       el.offsetHeight > 0;
-            });
-            
-            if (visibleElements.length > 0) {
-                console.log('[Loader] Detected visible content in body');
-                setTimeout(window.hideAppLoader, 1000);
-                bodyObserver.disconnect();
-            }
-        });
-        
-        bodyObserver.observe(document.body, { childList: true, subtree: true });
-
-        // Method 3: Check for React app class or data attributes
-        const checkInterval = setInterval(() => {
-            const hasReactApp = document.querySelector('[data-reactroot]') || 
-                               document.querySelector('.App') ||
-                               document.querySelector('[class*="App"]');
-            
-            if (hasReactApp) {
-                console.log('[Loader] Detected React app element');
-                setTimeout(window.hideAppLoader, 1000);
-                clearInterval(checkInterval);
-            }
-        }, 500);
-
-        // Method 4: Fallback - hide after 25 seconds max
-        setTimeout(() => {
-            console.log('[Loader] Timeout reached - hiding loader');
-            window.hideAppLoader();
-            clearInterval(checkInterval);
-        }, 25000);
-
-        // Method 5: Hide on window load as final backup
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                console.log('[Loader] Window loaded - hiding loader');
-                window.hideAppLoader();
-            }, 3000);
-        });
+        // DO NOT hide loader automatically - let main.js control it
+        console.log('[Loader] Waiting for main.js to load...');
     </script>
-    <div id="root" style="height: 100%; width: 100%;"></div>
-    <div id="modal-root"></div>
-
-    <div id="modal-root"></div>
-
-    <!-- Fallback Sync Button (Visible if main UI fails) -->
-    <div id="fallback-sync-btn" class="sync-button"
-        style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: #333; color: white; padding: 10px; border-radius: 5px; cursor: pointer; display: none;">
-        🔄 Sync
+    <div id="task-deadline-width" class="small-font" style="display: inline-block; position: absolute; top: -10000px">
     </div>
-
-    <!-- ✅ URL INTERCEPTOR: Must load FIRST to redirect localhost→Render -->
-    <script src="js/url-interceptor.js"></script>
-
-    <!-- Hidden Elements to prevent auth-ui.js crash -->
-    <div style="display: none;">
-        <span id="username-display"></span>
-        <button id="auth-btn">Login / Sync</button>
-        <div id="auth-modal">
-            <div id="login-form">
-                <input id="login-email"><input id="login-password"><button id="btn-login"></button>
-                <p id="login-error"></p>
-                <div id="show-register"></div>
-            </div>
-            <div id="register-form">
-                <input id="reg-username"><input id="reg-email"><input id="reg-password"><button
-                    id="btn-register"></button>
-                <p id="reg-error"></p>
-                <div id="show-login"></div>
-            </div>
-            <span class="close-modal"></span>
-        </div>
-    </div>
-
-    <div>
-        <div id="task-deadline-width" class="small-font"
-            style="display: inline-block; position: absolute; top: -10000px"></div>
     </div>
     <script type="text/javascript">
         window.I18N_DATA = {
@@ -752,7 +705,7 @@
 
             if (result.ready) {
                 console.log('[Loader] ✅ Data ready - loading main.js');
-                
+
                 // SHOW LOADER before loading main.js
                 const loader = document.getElementById('app-loader');
                 if (loader) {
@@ -760,10 +713,41 @@
                     loader.style.opacity = '1';
                     console.log('[Loader] 🎨 Showing loader for main.js loading...');
                 }
-                
+
                 const script = document.createElement('script');
                 script.type = 'text/javascript';
                 script.src = 'js/main.js';
+
+                // CRITICAL: Set maximum timeout to FORCE hide after 30 seconds
+                const maxTimeout = setTimeout(() => {
+                    console.log('[Loader] ⏰ Max timeout (30s) - force hiding loader');
+                    if (window.hideAppLoader) {
+                        window.hideAppLoader();
+                    }
+                }, 30000);
+
+                // Hide loader when main.js finishes loading
+                script.onload = function () {
+                    console.log('[Loader] ✅ main.js loaded, waiting for React render...');
+                    // Give React 3 seconds to render
+                    setTimeout(() => {
+                        console.log('[Loader] 🎨 Hiding loader after React render delay');
+                        clearTimeout(maxTimeout); // Cancel max timeout
+                        if (window.hideAppLoader) {
+                            window.hideAppLoader();
+                        }
+                    }, 3000);
+                };
+
+                // Failsafe: If onload doesn't fire, hide after script is added + 25 seconds
+                setTimeout(() => {
+                    console.log('[Loader] 🔧 Failsafe timeout - hiding loader');
+                    clearTimeout(maxTimeout);
+                    if (window.hideAppLoader) {
+                        window.hideAppLoader();
+                    }
+                }, 25000);
+
                 document.body.appendChild(script);
             } else {
                 console.log('[Loader] ❌ Not ready:', result.reason);
