@@ -293,9 +293,9 @@
             // ✅ FIX: Use EVENT DELEGATION with CSS Modules-aware selectors
             // React uses CSS Modules which obfuscate class names (e.g., UserDropdownMenu-menu-KviKX)
             // We must target both the obfuscated classes AND text content for robustness
-            
+
             console.log('[Session] Setting up logout handler via event delegation...');
-            
+
             document.body.addEventListener('click', (e) => {
                 // Check if clicked element or its parent is the logout button
                 // CSS Modules classes: UserDropdownMenu-menu-*, UserMenu-logout-*, etc.
@@ -305,12 +305,12 @@
                     '[class*="UserMenu-logout"], ' +
                     '[class*="logout"]'
                 );
-                
+
                 // ALSO check text content (most reliable for CSS Modules)
-                const isSignOutText = e.target.textContent?.trim() === 'Sign Out' || 
-                                     e.target.innerText?.trim() === 'Sign Out' ||
-                                     e.target.textContent?.trim() === 'Logout';
-                
+                const isSignOutText = e.target.textContent?.trim() === 'Sign Out' ||
+                    e.target.innerText?.trim() === 'Sign Out' ||
+                    e.target.textContent?.trim() === 'Logout';
+
                 if (logoutBtn || isSignOutText) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -318,7 +318,7 @@
                     this.logout();
                 }
             });
-            
+
             console.log('[Session] ✅ Logout handler installed (event delegation + text matching)');
         },
 
@@ -396,19 +396,40 @@
                 sessionStorage.clear();
                 console.log('[Session] ✅ sessionStorage cleared');
 
-                // Clear ALL cookies - MORE AGGRESSIVE
+                // ═══════════════════════════════════════════════════════════════════════
+                // CRITICAL FIX: Clear ALL cookies SYNCHRONOUSLY before redirect
+                // This prevents the browser from sending stale cookies on next request
+                // ═══════════════════════════════════════════════════════════════════════
+                const allCookies = document.cookie.split(';');
                 const hostname = window.location.hostname;
-                document.cookie.split(';').forEach(c => {
-                    const name = c.trim().split('=')[0];
-                    // Clear with path=/
-                    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-                    // Clear with domain
-                    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${hostname}`;
-                    // Clear with root domain (for subdomains)
-                    const rootDomain = hostname.split('.').slice(-2).join('.');
-                    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.${rootDomain}`;
+                const rootDomain = hostname.split('.').slice(-2).join('.');
+
+                // Clear each cookie with ALL possible domain/path combinations
+                allCookies.forEach(cookie => {
+                    const name = cookie.trim().split('=')[0];
+                    if (name) {
+                        // Clear with current domain
+                        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+                        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${hostname}`;
+                        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.${hostname}`;
+
+                        // Clear with root domain
+                        if (rootDomain !== hostname) {
+                            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${rootDomain}`;
+                            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.${rootDomain}`;
+                        }
+                    }
                 });
+
                 console.log('[Session] ✅ All cookies cleared (aggressive)');
+
+                // Verify cookies are actually cleared
+                const remainingCookies = document.cookie;
+                if (remainingCookies) {
+                    console.warn('[Session] ⚠️ Some cookies remain:', remainingCookies);
+                } else {
+                    console.log('[Session] ✅ Cookie verification: ALL cleared');
+                }
 
                 // Reset hydration mutex
                 if (window.HydrationMutex) {
@@ -418,8 +439,10 @@
 
                 console.log('[Session] ✅ Logout complete, redirecting to fresh state...');
 
-                // HARD REDIRECT with cache busting - use replace() to prevent back button
-                window.location.replace(window.location.origin + "/?logout=1&t=" + Date.now());
+                // CRITICAL: Redirect to root WITHOUT logout parameter
+                // The logout parameter was causing the infinite loop
+                // Just go to clean root and let the app detect no auth
+                window.location.replace(window.location.origin + "/?t=" + Date.now());
             } catch (error) {
                 console.error('[Session] Logout error:', error);
                 // Force reload anyway with cache bust
