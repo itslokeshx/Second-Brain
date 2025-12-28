@@ -24,6 +24,17 @@
             const validCookies = cookiePairs.filter(pair => {
                 const [key, value] = pair.split('=');
 
+                // ═══════════════════════════════════════════════════════════════════════
+                // 🛡️ NUCLEAR OPTION: Block NAME cookie from React
+                // React (main.js) reads NAME cookie and injects it into task inputs
+                // This causes "hope369" to appear in task fields
+                // Solution: Completely hide NAME cookie from document.cookie reads
+                // ═══════════════════════════════════════════════════════════════════════
+                if (key === 'NAME') {
+                    // Silently filter out - don't log to avoid spam
+                    return false;
+                }
+
                 // Remove auth cookies with undefined/null/empty values
                 if (key === 'ACCT' || key === 'UID' || key === 'PID' || key === 'JSESSIONID') {
                     if (!value || value === 'undefined' || value === 'null' || value.trim() === '') {
@@ -45,4 +56,5 @@
 
 
     console.log('[Cookie Patcher] ✅ Active - Invalid cookies will be filtered from reads');
+    console.log('[Cookie Patcher] 🛡️ NAME cookie BLOCKED from React - prevents username injection');
 })();
