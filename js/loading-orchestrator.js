@@ -124,10 +124,24 @@
         if (hasReloadedAfterLogin) {
             setPhase('authReload', true);
 
-            // End on first animation frame (first paint)
-            requestAnimationFrame(() => {
-                setPhase('authReload', false);
-            });
+            // ✅ FIX: Don't end immediately - let it overlap with hydration
+            // authReload will end when hydration phase starts (seamless transition)
+            // We listen for hydration phase starting
+            const checkHydrationStarted = () => {
+                if (state.phases.hydrate) {
+                    // Hydration started - end authReload
+                    console.log('[Loader] Hydration started - ending authReload phase');
+                    setPhase('authReload', false);
+                } else {
+                    // Keep checking
+                    requestAnimationFrame(checkHydrationStarted);
+                }
+            };
+
+            // Start checking after a brief delay (let page settle)
+            setTimeout(() => {
+                requestAnimationFrame(checkHydrationStarted);
+            }, 100);
         }
     }
 
