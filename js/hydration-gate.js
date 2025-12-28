@@ -53,16 +53,28 @@
             console.log('[Hydration Gate] ✅ User ID:', userId);
 
             // Step 3: Use HydrationMutex for atomic hydration
-            // This ensures deterministic state transitions
-            if (!window.HydrationMutex) {
-                console.error('[Hydration Gate] ❌ HydrationMutex not available');
+            // Wait for mutex to load (it might not be ready immediately)
+            let mutex = window.HydrationMutex;
+            let retries = 0;
+            const maxRetries = 20; // 20 * 100ms = 2 seconds max wait
+            
+            while (!mutex && retries < maxRetries) {
+                console.log(`[Hydration Gate] ⏳ Waiting for HydrationMutex... (${retries + 1}/${maxRetries})`);
+                await new Promise(resolve => setTimeout(resolve, 100));
+                mutex = window.HydrationMutex;
+                retries++;
+            }
+
+            if (!mutex) {
+                console.error('[Hydration Gate] ❌ HydrationMutex not available after waiting');
                 return { ready: false, reason: 'no-mutex' };
             }
 
+            console.log('[Hydration Gate] ✅ HydrationMutex loaded');
             console.log('[Hydration Gate] 🔒 Acquiring hydration mutex...');
 
             try {
-                const result = await window.HydrationMutex.acquire(userId);
+                const result = await mutex.acquire(userId);
 
                 if (result.success && result.state === 'READY') {
                     console.log('[Hydration Gate] ✅ Hydration complete via mutex');
