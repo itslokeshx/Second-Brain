@@ -188,8 +188,14 @@
         // DO NOT hide loader automatically - let main.js control it
         console.log('[Loader] Waiting for main.js to load...');
     </script>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- CRITICAL: React Root Container -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div id="root" style="height: 100%; width: 100%;"></div>
+    <div id="modal-root"></div>
+
     <div id="task-deadline-width" class="small-font" style="display: inline-block; position: absolute; top: -10000px">
-    </div>
     </div>
     <script type="text/javascript">
         window.I18N_DATA = {
