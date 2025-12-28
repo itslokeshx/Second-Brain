@@ -482,12 +482,14 @@
 
                 console.log('[Session] ✅ Cookie clear delay complete, redirecting...');
 
-                // Redirect to root with timestamp
-                window.location.replace(window.location.origin + "/?t=" + Date.now());
+                // Redirect to root (preserve base path for GitHub Pages)
+                const basePath = window.location.pathname.split('?')[0];
+                window.location.replace(window.location.origin + basePath);
             } catch (error) {
                 console.error('[Session] Logout error:', error);
-                // Force reload anyway with cache bust
-                window.location.replace(window.location.origin + "/?logout=1&t=" + Date.now());
+                // Force reload anyway
+                const basePath = window.location.pathname.split('?')[0];
+                window.location.replace(window.location.origin + basePath);
             }
         },
 
