@@ -370,12 +370,19 @@
                 sessionStorage.clear();
                 console.log('[Session] ✅ sessionStorage cleared');
 
-                // Clear ALL cookies
+                // Clear ALL cookies - MORE AGGRESSIVE
+                const hostname = window.location.hostname;
                 document.cookie.split(';').forEach(c => {
                     const name = c.trim().split('=')[0];
-                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/';
+                    // Clear with path=/
+                    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+                    // Clear with domain
+                    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${hostname}`;
+                    // Clear with root domain (for subdomains)
+                    const rootDomain = hostname.split('.').slice(-2).join('.');
+                    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.${rootDomain}`;
                 });
-                console.log('[Session] ✅ All cookies cleared');
+                console.log('[Session] ✅ All cookies cleared (aggressive)');
 
                 // Reset hydration mutex
                 if (window.HydrationMutex) {
@@ -383,14 +390,14 @@
                     console.log('[Session] ✅ Hydration mutex reset');
                 }
 
-                console.log('[Session] ✅ Logout complete, reloading...');
+                console.log('[Session] ✅ Logout complete, redirecting to fresh state...');
 
-                // Reload to fresh state
-                window.location.href = window.location.origin + "/";
+                // HARD REDIRECT with cache busting - use replace() to prevent back button
+                window.location.replace(window.location.origin + "/?logout=1&t=" + Date.now());
             } catch (error) {
                 console.error('[Session] Logout error:', error);
-                // Force reload anyway
-                window.location.href = window.location.origin + "/";
+                // Force reload anyway with cache bust
+                window.location.replace(window.location.origin + "/?logout=1&t=" + Date.now());
             }
         },
 
