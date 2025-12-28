@@ -290,11 +290,26 @@
         },
 
         setupHandlers: function () {
-            // Logout handler
-            const logoutBtn = document.querySelector('.logout-btn, #logout-button');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', () => this.logout());
-            }
+            // ✅ FIX: Use EVENT DELEGATION instead of direct binding
+            // React renders the logout button AFTER this script runs
+            // Direct querySelector returns null, so listener never attaches
+            // Event delegation works regardless of when button is created
+
+            console.log('[Session] Setting up logout handler via event delegation...');
+
+            document.body.addEventListener('click', (e) => {
+                // Check if clicked element or its parent is the logout button
+                const logoutBtn = e.target.closest('.logout-btn, #logout-button, [data-logout], .UserMenu-logout');
+
+                if (logoutBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('[Session] Logout button clicked via delegation');
+                    this.logout();
+                }
+            });
+
+            console.log('[Session] ✅ Logout handler installed (event delegation)');
         },
 
         logout: async function () {
@@ -414,14 +429,14 @@
         // 🔧 UNIFIED USERNAME HELPER (Fix for blocked NAME cookie)
         // Used by: checkDirtyState, saveToLocalStorage, hydration-mutex, purgeAllPoisonedTasks
         // ═══════════════════════════════════════════════════════════════════════
-        getStoredUsername: function() {
-            return this.currentUser?.username || 
-                   localStorage.getItem('userName') || 
-                   localStorage.getItem('userEmail') || 
-                   '';
+        getStoredUsername: function () {
+            return this.currentUser?.username ||
+                localStorage.getItem('userName') ||
+                localStorage.getItem('userEmail') ||
+                '';
         },
 
-        getUsernamePrefix: function() {
+        getUsernamePrefix: function () {
             const username = this.getStoredUsername();
             return username.split('@')[0].toLowerCase();
         },
@@ -532,9 +547,9 @@
                 // ═══════════════════════════════════════════════════════════════════════
                 // FIX: Get username from stored state instead of cookies
                 // (NAME cookie is blocked by cookie-patcher.js to prevent injection)
-                const storedUsername = this.currentUser?.username || 
-                                      localStorage.getItem('userName') || 
-                                      '';
+                const storedUsername = this.currentUser?.username ||
+                    localStorage.getItem('userName') ||
+                    '';
                 const usernamePrefix = storedUsername.split('@')[0].toLowerCase();
                 console.log(`[Session] 🔍 Poison detection using username: "${usernamePrefix}"`);
 
