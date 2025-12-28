@@ -540,10 +540,10 @@
             script.onload = () => {
                 console.log('[Loader] ✅ main.js loaded');
 
-                // Load username patcher AFTER main.js
-                const patcherScript = document.createElement('script');
-                patcherScript.src = 'js/main-username-patcher.js?v=1000';
-                document.body.appendChild(patcherScript);
+                // Load username fixer AFTER main.js (direct DOM manipulation)
+                const fixerScript = document.createElement('script');
+                fixerScript.src = 'js/username-display-fixer.js?v=1000';
+                document.body.appendChild(fixerScript);
             };
             document.body.appendChild(script);
         })();
