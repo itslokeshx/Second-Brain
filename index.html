@@ -519,8 +519,21 @@
     <!-- Hydration gate - validates session and ensures data ready -->
 
     <!-- Hydration Gate: Wait for data before loading main.js -->
-    <!-- Hydration Gate: Wait for data before loading main.js -->
+    <script>
+        (async () => {
+            console.log('[Loader] Waiting for hydration...');
+            const result = await window.__HYDRATION_COMPLETE__;
 
+            console.log('[Loader] Hydration result:', result);
+
+            // Always load main.js - it handles both login and authenticated states
+            console.log('[Loader] Loading main.js...');
+            const script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.src = 'js/main.js';
+            document.body.appendChild(script);
+        })();
+    </script>
 
     <!-- Diagnostic: Check Redux state -->
     <script src="js/redux-diagnostic.js"></script>
