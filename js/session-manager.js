@@ -339,8 +339,8 @@
 
             // 1. Check for active sync
             if (window._syncInProgress) {
-                const proceed = confirm('Sync is currently in progress! Logging out now may cause data loss.\n\nAre you sure you want to force logout?');
-                if (!proceed) return;
+                // ✅ REMOVED: Browser confirm() - React shows the dialog
+                console.log('[Session] ⚠️ Sync in progress, but proceeding with logout');
             }
 
             // 2. HARD RESET: Purge all poisoned tasks BEFORE checking dirty state
@@ -353,8 +353,8 @@
             const dirtyCount = this.checkDirtyState();
 
             if (dirtyCount > 0) {
-                const proceed = confirm(`⚠️ You have ${dirtyCount} unsynced items!\n\nLogging out will DESTROY this data.\n\nAre you sure you want to logout?`);
-                if (!proceed) return;
+                // ✅ REMOVED: Browser confirm() - React shows the dialog
+                console.log(`[Session] ⚠️ ${dirtyCount} unsynced items, but proceeding with logout`);
             }
 
             try {
