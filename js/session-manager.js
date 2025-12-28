@@ -16,13 +16,13 @@
             // ═══════════════════════════════════════════════════════════════════════
             const urlParams = new URLSearchParams(window.location.search);
             const logoutTimestamp = urlParams.get('t');
-            
+
             if (logoutTimestamp) {
                 const timeSinceLogout = Date.now() - parseInt(logoutTimestamp);
                 // If logged out within last 5 seconds
                 if (timeSinceLogout < 5000) {
                     console.log('[Session] 🚪 Recent logout detected (', timeSinceLogout, 'ms ago)');
-                    
+
                     // Force clear ALL cookies
                     const allCookies = document.cookie.split(';');
                     allCookies.forEach(cookie => {
@@ -32,9 +32,9 @@
                             document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${window.location.hostname}`;
                         }
                     });
-                    
+
                     console.log('[Session] ✅ Forced cookie clear after logout');
-                    
+
                     // Skip the rest of init - go straight to logged out state
                     this.handleLoggedOut();
                     return;
@@ -325,7 +325,7 @@
             // React handles the logout button click and shows its beautiful dialog
             // Our logout-interceptor.js detects when React's logout completes
             // and calls SessionManager.logout() to clean up our state
-            
+
             console.log('[Session] ✅ Handlers ready (logout delegated to React)');
         },
 
@@ -444,11 +444,15 @@
                     console.log('[Session] ✅ Hydration mutex reset');
                 }
 
-                console.log('[Session] ✅ Logout complete, redirecting to fresh state...');
+                console.log('[Session] ✅ Logout complete, waiting for cookies to clear...');
 
-                // CRITICAL: Redirect to root WITHOUT logout parameter
-                // The logout parameter was causing the infinite loop
-                // Just go to clean root and let the app detect no auth
+                // CRITICAL: Wait for browser to process cookie deletion
+                // Without this delay, cookies may still exist when page reloads
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                console.log('[Session] ✅ Cookie clear delay complete, redirecting...');
+
+                // Redirect to root with timestamp
                 window.location.replace(window.location.origin + "/?t=" + Date.now());
             } catch (error) {
                 console.error('[Session] Logout error:', error);
