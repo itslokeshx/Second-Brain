@@ -428,9 +428,37 @@
         const originalPut = IDBObjectStore.prototype.put;
 
         IDBObjectStore.prototype.put = function (value, key) {
-            if (this.name === 'Task') {
+            const storeName = this.name;
+
+            // ✅ TASK SPY: Detect task writes
+            if (storeName === 'Task') {
                 console.log(`[Guardian] 🕵️ Task PUT Detected: id=${value.id} state=${value.state} sync=${value.sync}`);
             }
+
+            // ✅ POMODORO SPY + LOCALSTORAGE SYNC
+            if (storeName === 'Pomodoro') {
+                console.log(`[Guardian] 🕵️ Pomodoro PUT Detected: id=${value.id}`);
+
+                // ✅ FIX: Automatically sync to localStorage
+                try {
+                    const existingLogs = JSON.parse(localStorage.getItem('pomodoro-pomodoros') || '[]');
+                    const existingIndex = existingLogs.findIndex(log => log.id === value.id);
+
+                    if (existingIndex >= 0) {
+                        existingLogs[existingIndex] = value;
+                        console.log(`[Guardian] 📝 Updated pomodoro in localStorage: ${value.id}`);
+                    } else {
+                        existingLogs.push(value);
+                        console.log(`[Guardian] ➕ Added new pomodoro to localStorage: ${value.id}`);
+                    }
+
+                    localStorage.setItem('pomodoro-pomodoros', JSON.stringify(existingLogs));
+                    console.log(`[Guardian] ✅ localStorage synced: ${existingLogs.length} total logs`);
+                } catch (e) {
+                    console.error('[Guardian] ❌ Failed to sync pomodoro to localStorage:', e);
+                }
+            }
+
             return originalPut.call(this, value, key);
         };
 
