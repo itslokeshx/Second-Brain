@@ -513,9 +513,6 @@
     <script src="js/session-manager.js?v=1011"></script>
     <script src="js/logout-interceptor.js"></script>
 
-    <!-- ✅ Username Display Fix: Patch AccountManager to use ACCT cookie -->
-    <script src="js/main-username-patcher.js?v=1000"></script>
-
     <script src="js/settings-fixer.js?v=1005"></script>
 
 
@@ -540,6 +537,14 @@
             const script = document.createElement('script');
             script.type = 'text/javascript';
             script.src = 'js/main.js';
+            script.onload = () => {
+                console.log('[Loader] ✅ main.js loaded');
+
+                // Load username patcher AFTER main.js
+                const patcherScript = document.createElement('script');
+                patcherScript.src = 'js/main-username-patcher.js?v=1000';
+                document.body.appendChild(patcherScript);
+            };
             document.body.appendChild(script);
         })();
     </script>
