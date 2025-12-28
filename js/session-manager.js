@@ -167,6 +167,12 @@
                     if (!hasReloadedAfterLogin) {
                         console.log('[Session] 🔄 First login - reloading immediately for UI render...');
                         sessionStorage.setItem('reloaded-after-login', 'true');
+
+                        // ✅ Set loader phase before reload
+                        if (window.__SB_LOADER) {
+                            window.__SB_LOADER.setPhase('authReload', true);
+                        }
+
                         // Reload immediately without waiting for data
                         window.location.reload();
                         return; // Stop execution here
@@ -351,6 +357,11 @@
 
         logout: async function () {
             console.log('[Session] 🚪 Logout initiated');
+
+            // ✅ Set loader phase for logout
+            if (window.__SB_LOADER) {
+                window.__SB_LOADER.setPhase('logout', true);
+            }
 
             // ═══════════════════════════════════════════════════════════════════════
             // 🔐 STATE AUTHORITY FIX: Safe Logout Guard with Poison Detection
