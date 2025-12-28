@@ -23,6 +23,10 @@
             // Replace localhost:3000 with Render backend
             const newUrl = url.replace(/https?:\/\/localhost:3000/, BACKEND_URL);
             console.log(`[URL Interceptor] Redirected: ${url} → ${newUrl}`);
+
+            // CRITICAL: Enable credentials for cross-domain auth
+            this.withCredentials = true;
+
             return originalOpen.call(this, method, newUrl, ...args);
         }
 
