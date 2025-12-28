@@ -163,8 +163,7 @@
          * STATE 1: Validate authentication with retry
          */
         async _validateAuth() {
-            const authToken = localStorage.getItem('authToken');
-            if (!authToken) {
+            if (!window.AuthFetch?.isAuthenticated()) {
                 throw new Error('No auth token');
             }
 
@@ -176,13 +175,7 @@
                         : 'http://localhost:3000/v64/user/config';
 
                     const response = await fetch(apiUrl, {
-                        credentials: 'include',
-                        headers: {
-                            'X-Session-Token': authToken,
-                            'Content-Type': 'application/json'
-                        }
-                    });
-
+                    const response = await window.AuthFetch.get(apiUrl);
                     if (response.ok) {
                         console.log('[Mutex] ✅ Auth validated');
                         return;

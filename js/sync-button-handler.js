@@ -82,9 +82,11 @@
     /**
      * Properly check authentication by validating token with server
      */
+    /**
+     * Properly check authentication using centralized AuthFetch
+     */
     async function checkAuthentication() {
-        const authToken = localStorage.getItem('authToken');
-        if (!authToken) {
+        if (!window.AuthFetch?.isAuthenticated()) {
             return false;
         }
 
@@ -93,14 +95,7 @@
                 ? window.AppConfig.getApiUrl('/v64/user/config')
                 : 'http://localhost:3000/v64/user/config';
 
-            const response = await fetch(apiUrl, {
-                credentials: 'include',
-                headers: {
-                    'X-Session-Token': authToken,
-                    'Content-Type': 'application/json'
-                }
-            });
-
+            const response = await window.AuthFetch.get(apiUrl);
             return response.ok;
         } catch (error) {
             console.error('[Sync Button] Auth check failed:', error);
@@ -332,55 +327,66 @@
                 console.log('[Sync Button] ✅ Sync completed successfully:', result);
 
                 // ═══════════════════════════════════════════════════════════════════════
-                // 🔧 CRITICAL FIX: Update sync flags after successful sync
-                // This prevents false "unsynced items" warnings during logout
+                // 🔧 PHASE 3 FIX: Backend-Authoritative Dirty State
+                // Only mark items as synced if backend ACKed them
                 // ═══════════════════════════════════════════════════════════════════════
                 try {
-                    console.log('[Sync Button] 📝 Updating sync flags in localStorage...');
+                    console.log('[Sync Button] 📝 Updating sync flags (backend-authoritative)...');
 
-                    // Update tasks
+                    // Create sets of IDs that were SENT to backend
+                    const sentTaskIds = new Set(data.tasks.map(t => t.id));
+                    const sentProjectIds = new Set(data.projects.map(p => p.id));
+                    const sentLogIds = new Set(data.pomodoroLogs.map(l => l.id));
+
+                    // Update tasks - ONLY those we sent AND backend confirmed
                     const tasks = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
                     let tasksUpdated = 0;
                     tasks.forEach(t => {
-                        if (t.sync === 0) {
-                            t.sync = 1;
-                            tasksUpdated++;
+                        if (sentTaskIds.has(t.id) && result.success) {
+                            if (t.sync === 0) {
+                                t.sync = 1;
+                                tasksUpdated++;
+                            }
                         }
                     });
                     if (tasksUpdated > 0) {
                         localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
-                        console.log(`[Sync Button] ✅ Marked ${tasksUpdated} tasks as synced`);
+                        console.log(`[Sync Button] ✅ Marked ${tasksUpdated} tasks as synced (backend ACKed)`);
                     }
 
                     // Update projects
                     const projects = JSON.parse(localStorage.getItem('pomodoro-projects') || '[]');
                     let projectsUpdated = 0;
                     projects.forEach(p => {
-                        if (p.sync === 0) {
-                            p.sync = 1;
-                            projectsUpdated++;
+                        if (sentProjectIds.has(p.id) && result.success) {
+                            if (p.sync === 0) {
+                                p.sync = 1;
+                                projectsUpdated++;
+                            }
                         }
                     });
                     if (projectsUpdated > 0) {
                         localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
-                        console.log(`[Sync Button] ✅ Marked ${projectsUpdated} projects as synced`);
+                        console.log(`[Sync Button] ✅ Marked ${projectsUpdated} projects as synced (backend ACKed)`);
                     }
 
                     // Update logs
                     const logs = JSON.parse(localStorage.getItem('pomodoro-pomodoros') || '[]');
                     let logsUpdated = 0;
                     logs.forEach(l => {
-                        if (l.sync === 0) {
-                            l.sync = 1;
-                            logsUpdated++;
+                        if (sentLogIds.has(l.id) && result.success) {
+                            if (l.sync === 0) {
+                                l.sync = 1;
+                                logsUpdated++;
+                            }
                         }
                     });
                     if (logsUpdated > 0) {
                         localStorage.setItem('pomodoro-pomodoros', JSON.stringify(logs));
-                        console.log(`[Sync Button] ✅ Marked ${logsUpdated} logs as synced`);
+                        console.log(`[Sync Button] ✅ Marked ${logsUpdated} logs as synced (backend ACKed)`);
                     }
 
-                    console.log('[Sync Button] ✅ All sync flags updated - logout will now be clean');
+                    console.log('[Sync Button] ✅ Sync flags updated (backend-authoritative)');
                 } catch (e) {
                     console.warn('[Sync Button] ⚠️ Failed to update sync flags:', e);
                 }
