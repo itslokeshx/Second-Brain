@@ -123,41 +123,81 @@
         // Hide loader when React mounts or after max 30 seconds
         let loaderHidden = false;
         
-        function hideLoader() {
+        window.hideAppLoader = function() {
             if (loaderHidden) return;
             loaderHidden = true;
             
+            console.log('[Loader] 🎨 Hiding loader...');
             const loader = document.getElementById('app-loader');
             if (loader) {
                 loader.style.opacity = '0';
                 loader.style.transition = 'opacity 0.5s ease';
                 setTimeout(() => {
                     loader.style.display = 'none';
+                    console.log('[Loader] ✅ Loader hidden');
                 }, 500);
             }
-        }
+        };
 
-        // Hide when React renders content
+        // Method 1: Watch for React rendering to #root
         const observer = new MutationObserver(() => {
             const root = document.getElementById('root');
             if (root && root.children.length > 0) {
-                setTimeout(hideLoader, 500); // Small delay to ensure UI is painted
+                console.log('[Loader] Detected React render in #root');
+                setTimeout(window.hideAppLoader, 1000);
                 observer.disconnect();
             }
         });
 
-        // Start observing
         const rootElement = document.getElementById('root');
         if (rootElement) {
             observer.observe(rootElement, { childList: true, subtree: true });
         }
 
-        // Fallback: hide after 30 seconds max
-        setTimeout(hideLoader, 30000);
+        // Method 2: Watch for ANY visible content in body
+        const bodyObserver = new MutationObserver(() => {
+            // Check if there's visible content (not just scripts)
+            const visibleElements = Array.from(document.body.children).filter(el => {
+                return el.id !== 'app-loader' && 
+                       el.tagName !== 'SCRIPT' && 
+                       el.offsetHeight > 0;
+            });
+            
+            if (visibleElements.length > 0) {
+                console.log('[Loader] Detected visible content in body');
+                setTimeout(window.hideAppLoader, 1000);
+                bodyObserver.disconnect();
+            }
+        });
+        
+        bodyObserver.observe(document.body, { childList: true, subtree: true });
 
-        // Also hide on window load as backup
+        // Method 3: Check for React app class or data attributes
+        const checkInterval = setInterval(() => {
+            const hasReactApp = document.querySelector('[data-reactroot]') || 
+                               document.querySelector('.App') ||
+                               document.querySelector('[class*="App"]');
+            
+            if (hasReactApp) {
+                console.log('[Loader] Detected React app element');
+                setTimeout(window.hideAppLoader, 1000);
+                clearInterval(checkInterval);
+            }
+        }, 500);
+
+        // Method 4: Fallback - hide after 25 seconds max
+        setTimeout(() => {
+            console.log('[Loader] Timeout reached - hiding loader');
+            window.hideAppLoader();
+            clearInterval(checkInterval);
+        }, 25000);
+
+        // Method 5: Hide on window load as final backup
         window.addEventListener('load', () => {
-            setTimeout(hideLoader, 2000);
+            setTimeout(() => {
+                console.log('[Loader] Window loaded - hiding loader');
+                window.hideAppLoader();
+            }, 3000);
         });
     </script>
     <div id="root" style="height: 100%; width: 100%;"></div>
