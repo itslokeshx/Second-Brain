@@ -162,6 +162,16 @@
                     this.startPeriodicCheck();
                     console.log('[Session] ✅ Authenticated:', data.user.email);
 
+                    // ✅ IMMEDIATE RELOAD: Reload right after login to ensure UI renders properly
+                    const hasReloadedAfterLogin = sessionStorage.getItem('reloaded-after-login');
+                    if (!hasReloadedAfterLogin) {
+                        console.log('[Session] 🔄 First login - reloading immediately for UI render...');
+                        sessionStorage.setItem('reloaded-after-login', 'true');
+                        // Reload immediately without waiting for data
+                        window.location.reload();
+                        return; // Stop execution here
+                    }
+
                     // ✅ AUTO-LOAD DATA: Only if mutex hasn't already handled it
                     if (window.HydrationMutex && window.HydrationMutex.isHandling()) {
                         console.log('[Session] ⏭️ Skipping data load - mutex is handling it');
@@ -325,7 +335,7 @@
                 const text = e.target.textContent?.trim();
                 const isSignOut = text === 'Sign Out' || text === 'Logout';
                 const isInDropdown = e.target.closest('[class*="UserDropdownMenu"], [class*="UserMenu"]');
-                
+
                 if (isSignOut && isInDropdown) {
                     console.log('[Session] Sign Out clicked - triggering logout');
                     e.preventDefault();
@@ -334,7 +344,7 @@
                     this.logout();
                 }
             }, true);
-            
+
             console.log('[Session] ✅ Logout handler installed');
         },
 
@@ -694,17 +704,10 @@
                 // Ensure sidebar data
                 this.ensureLocalSidebarData();
 
-                // Only reload ONCE (first time after login)
-                if (!hasReloadedAfterSync && (data.projects?.length > 0 || data.tasks?.length > 0)) {
-                    console.log('[Session] 🔄 First data load - reloading page to render UI...');
-                    sessionStorage.setItem('reloaded-after-sync', 'true');
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 100);
-                    return;
-                }
+                // ✅ REMOVED: Reload now happens immediately after login, not here
+                // No need to reload after data loads
 
-                console.log('[Session] ✅ Data load complete (no reload needed)');
+                console.log('[Session] ✅ Data load complete');
 
             } catch (error) {
                 console.error('[Session] Data load failed:', error);
