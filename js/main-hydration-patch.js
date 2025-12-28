@@ -15,14 +15,8 @@
 
     console.log('[Main Patch] Installing hydration detection...');
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // PHASE START: Set hydration phase when main.js loads
-    // ═══════════════════════════════════════════════════════════════════════
-
-    if (window.__SB_LOADER) {
-        window.__SB_LOADER.setPhase('hydrate', true);
-        console.log('[Main Patch] ✅ Hydration phase started');
-    }
+    // ✅ NOTE: Hydration phase is already started in index.html
+    // This patch only handles the END of hydration (SB_HYDRATION_DONE event)
 
     // ═══════════════════════════════════════════════════════════════════════
     // PHASE END: Detect when React finishes rendering
@@ -77,10 +71,9 @@
     }
     pollHydration.attempts = 0;
 
-    // Start polling after a short delay (let main.js initialize)
-    setTimeout(() => {
-        requestAnimationFrame(pollHydration);
-    }, 500);
+    // ✅ FIX: Start polling IMMEDIATELY (no delay)
+    // This ensures hydration phase overlaps with nav phase
+    requestAnimationFrame(pollHydration);
 
     console.log('[Main Patch] ✅ Hydration detection installed');
 

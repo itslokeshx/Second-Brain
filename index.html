@@ -544,6 +544,13 @@
 
             console.log('[Loader] Hydration result:', result);
 
+            // ✅ FIX: Start hydration phase BEFORE loading main.js
+            // This ensures loader stays visible during nav→hydrate transition
+            if (window.__SB_LOADER) {
+                window.__SB_LOADER.setPhase('hydrate', true);
+                console.log('[Loader] ✅ Hydration phase started (before main.js)');
+            }
+
             console.log('[Loader] Loading main.js...');
 
             // Load hydration patch BEFORE main.js
