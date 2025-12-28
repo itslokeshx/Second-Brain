@@ -704,10 +704,18 @@
                 // Ensure sidebar data
                 this.ensureLocalSidebarData();
 
-                // ✅ REMOVED: Reload now happens immediately after login, not here
-                // No need to reload after data loads
+                // ✅ RELOAD AFTER DATA LOAD: Only reload ONCE (first time after sync)
+                const hasReloadedAfterSync = sessionStorage.getItem('reloaded-after-sync');
+                if (!hasReloadedAfterSync && (data.projects?.length > 0 || data.tasks?.length > 0)) {
+                    console.log('[Session] 🔄 First data load - reloading page to render UI...');
+                    sessionStorage.setItem('reloaded-after-sync', 'true');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 100);
+                    return;
+                }
 
-                console.log('[Session] ✅ Data load complete');
+                console.log('[Session] ✅ Data load complete (no reload needed)');
 
             } catch (error) {
                 console.error('[Session] Data load failed:', error);
