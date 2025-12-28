@@ -23,6 +23,13 @@
             return originalDescriptor.get.call(this);
         },
         set: function (value) {
+            // ✅ BYPASS: Allow cookie clearing (logout)
+            // If setting cookie with expired date, allow it through
+            if (value.includes('expires=Thu, 01 Jan 1970')) {
+                console.log('[Cookie Protector] ✅ Allowing cookie clear:', value.split(';')[0]);
+                return originalDescriptor.set.call(this, value);
+            }
+
             // Parse the cookie being set
             const [cookiePair] = value.split(';');
             const [key, val] = cookiePair.split('=');
