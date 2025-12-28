@@ -54,3 +54,10 @@ diagnostic-sync.js
 
 # Optional: Brain artifacts (if you don't want to commit them)
 # .gemini/
+
+# Security: Debug/temporary files with credentials
+backend/debug*.js
+backend/debug*.txt
+backend/cleanup*.js
+backend/*-dump.js
+**/debug_uri.txt
