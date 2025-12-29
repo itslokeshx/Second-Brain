@@ -1054,6 +1054,16 @@
                                             }
                                         } else {
                                             // Local task is clean - safe to overwrite with server version
+
+                                            // 🛡️ RECALCULATION DEFENSE: 
+                                            // The server often sends actualPomoNum: 0. 
+                                            // If locally we know better, preserve our count!
+                                            if (existingTask.actualPomoNum > 0 && (!serverTask.actualPomoNum || serverTask.actualPomoNum === 0)) {
+                                                console.log(`[Session] 🛡️ Preserving local actualPomoNum (${existingTask.actualPomoNum}) against server zero for task "${serverTask.name}"`);
+                                                serverTask.actualPomoNum = existingTask.actualPomoNum;
+                                                serverTask.estimatedTime = existingTask.estimatedTime || 0; // also preserve estimated
+                                            }
+
                                             cursor.update(serverTask);
                                             count++;
                                         }
