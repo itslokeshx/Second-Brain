@@ -81,7 +81,28 @@
                             }
                         }, 500); // Small delay to let cookies settle
 
-                        // ✅ NO RELOAD - Let main.js render the UI naturally
+                        // ✅ RELOAD TRIGGER: Reload after first login/register to ensure UI renders
+                        const isRegister = url.includes('/register');
+                        const reloadKey = isRegister ? 'reloaded-after-register' : 'reloaded-after-login';
+                        const hasReloaded = sessionStorage.getItem(reloadKey);
+
+                        if (!hasReloaded) {
+                            console.log(`[Login Interceptor] 🔄 First ${isRegister ? 'registration' : 'login'} - reloading for UI render...`);
+                            sessionStorage.setItem(reloadKey, 'true');
+
+                            // Set loader phase before reload
+                            if (window.__SB_LOADER) {
+                                window.__SB_LOADER.setPhase('authReload', true);
+                            }
+
+                            // Reload after a short delay to let cookies settle
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 800);
+                            return; // Stop execution
+                        }
+
+                        // ✅ NO RELOAD - Let main.js render the UI naturally (second time)
                         console.log('[Login Interceptor] Allowing main.js to render UI...');
                     }
                 } catch (e) {
