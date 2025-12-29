@@ -1,99 +1,128 @@
 # 🧠 Second Brain
 
-> **Local-first productivity system with cloud sync**
-> A self-hosted Focus To-Do–style app built with a custom backend and MongoDB.
+> **Self-hosted backend & cloud sync for Focus To-Do (offline-first productivity app)**
+> Custom Node.js + MongoDB backend that enables cross-device sync for a local-only frontend.
 
-<p align="center">
-  <a href="https://itslokeshx.github.io/Second-Brain/">Live Demo</a> ·
-  <a href="#features">Features</a> ·
-  <a href="#tech-stack">Tech Stack</a> ·
-  <a href="#architecture">Architecture</a>
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/status-active-success" />
-  <img src="https://img.shields.io/badge/license-MIT-blue" />
-  <img src="https://img.shields.io/badge/backend-Node.js-brightgreen" />
-  <img src="https://img.shields.io/badge/database-MongoDB-green" />
-</p>
+🌐 **Live App:** [https://second-brain-hub.vercel.app/](https://second-brain-hub.vercel.app/)
 
 ---
 
-## ✨ What is Second Brain?
+## 📖 Overview
 
-**Second Brain** is a modern productivity web app that helps users:
+**Second Brain** is a **self-hosted backend and sync system** built to extend the Focus To-Do web app.
 
-* manage tasks & projects
-* focus using Pomodoro sessions
-* work offline-first
-* sync data securely to the cloud
+After using Focus To-Do for **3+ years**, I hit a hard limitation:
 
-It is designed as a **self-hosted, privacy-friendly alternative** to Focus To-Do, giving full control over data and infrastructure.
+* ❌ Free users are **locked to one device**
+* ❌ Data is stored **only locally**
+* ❌ No way to sync across devices without paid plans
+
+So instead of migrating away, I **reverse-engineered the app’s data flow** and built a **fully working custom backend** that enables:
+
+* ☁️ Cloud sync using MongoDB
+* 🔄 Cross-device continuity
+* 📴 Offline-first behavior (cloud as backup, not dependency)
+* 🔐 Session-based authentication
+
+⚠️ **Important:**
+The **frontend UI is unchanged** (original Focus To-Do production bundle).
+**All engineering work is backend, sync logic, and integration.**
 
 ---
 
-## 🚀 Features
+## 🚀 What I Built (My Contribution)
+
+### 🔧 Backend System (Core Work)
+
+* Custom **Node.js + Express backend**
+* MongoDB-based persistence layer
+* Session-based authentication (Focus To-Do compatible)
+* Sync APIs that match the original app’s expected format
+* Data normalization to prevent UI crashes
+* Cross-device data hydration
+
+### 🔄 Sync Architecture
+
+* Local-first (IndexedDB remains primary)
+* Manual sync (explicit → no silent overwrites)
+* Cloud used as **backup & transport**
+* Handles:
+
+  * tasks
+  * projects
+  * pomodoro logs
+  * derived focus metrics
+
+### 🛡️ Stability & Compatibility
+
+* Preserves **original UI & UX**
+* No frontend rewrites
+* Works with legacy production React bundle
+* Prevents:
+
+  * blank UI after login
+  * data loss after reload
+  * corrupted sync states
+
+---
+
+## ✨ Features Enabled
 
 ### 📝 Tasks & Projects
 
-* Create, edit, complete, and archive tasks
-* Project & folder organization
+* Full task lifecycle (create, edit, complete, archive)
+* Projects & folders
 * Priorities, tags, subtasks, notes
 * Recurring tasks & deadlines
 
-### 🍅 Pomodoro Focus
+### 🍅 Pomodoro Tracking
 
-* Custom Pomodoro & break durations
-* Task-level focus tracking
+* Focus sessions per task
 * Estimated vs actual focus time
+* Pomodoro history synced across devices
 
-### ☁️ Sync & Storage
+### ☁️ Cloud Sync
 
-* Local-first with **IndexedDB**
-* Manual cloud sync with **MongoDB**
-* Secure session-based authentication
-* Fully usable offline
+* MongoDB-backed storage
+* Secure sessions
+* Manual sync button
+* Cross-device continuity
 
-### 🎨 Experience
+### 📴 Offline-First
 
-* Dark / Light mode
-* Clean, distraction-free UI
-* Focus reports & stats
+* App works fully offline after load
+* No cloud dependency for daily use
+* Sync only when you choose
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-Frontend (React Bundle)
- ├─ IndexedDB (Primary Storage)
- ├─ localStorage (Session / Fallback)
- └─ Sync Interceptors
+Frontend (unchanged)
+ ├─ Production React bundle (Focus To-Do)
+ ├─ IndexedDB (primary storage)
+ └─ localStorage (session state)
 
-Backend (Node + Express)
- ├─ Authentication
- ├─ Sync API
- └─ MongoDB Atlas
+Backend (custom)
+ ├─ Node.js + Express
+ ├─ Auth & session handling
+ ├─ Sync APIs (Focus-compatible)
+ └─ MongoDB Atlas (cloud backup)
 ```
 
-**Design principles**
+**Design philosophy**
 
-* Offline-first
-* Cloud as backup, not dependency
-* Explicit sync (no silent data loss)
+* Local-first
+* Cloud as optional layer
+* Zero UI breakage
+* Full data ownership
 
 ---
 
 ## 🛠️ Tech Stack
 
-**Frontend**
-
-* React (production bundle)
-* IndexedDB
-* Vanilla JavaScript
-* HTML5, CSS
-
-**Backend**
+### Backend (My Work)
 
 * Node.js
 * Express.js
@@ -101,11 +130,18 @@ Backend (Node + Express)
 * Mongoose
 * express-session
 
-**Deployment**
+### Frontend (Unmodified)
 
-* GitHub Pages (Frontend)
-* Render (Backend)
-* MongoDB Atlas (DB)
+* React (production bundle)
+* IndexedDB
+* Vanilla JavaScript
+* HTML5, CSS
+
+### Deployment
+
+* Frontend: Vercel
+* Backend: Render
+* Database: MongoDB Atlas
 
 ---
 
@@ -140,7 +176,7 @@ PORT=3000
 python3 -m http.server 5173
 ```
 
-Open:
+Open
 👉 `http://localhost:5173`
 
 ---
@@ -149,8 +185,8 @@ Open:
 
 ```
 Second-Brain/
-├── backend/        # Node + Express backend
-├── js/             # Frontend logic & interceptors
+├── backend/        # Custom Node + Express backend
+├── js/             # Frontend integration & interceptors
 ├── css/            # Styles
 ├── assets/         # Images & audio
 ├── index.html
@@ -171,14 +207,15 @@ MIT License
 
 ## 📬 Contact
 
-* GitHub: [itslokeshx](https://github.com/itslokeshx)
+* GitHub: [https://github.com/itslokeshx](https://github.com/itslokeshx)
 * Issues: Bug reports & feature requests
 
 ---
 
 <div align="center">
 
-**Built with focus by Lokesh**
-⭐ Star the repo if it helped you
+**Built with persistence by Lokesh**
+⭐ Star the repo if you value local-first software
 
 </div>
+
