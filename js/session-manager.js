@@ -1226,10 +1226,7 @@
                         }
                     });
 
-                    // ✅ CRITICAL FIX: Save to BOTH keys for compatibility
-                    // React/main.js reads from 'tasks', but we also keep 'pomodoro-tasks' for legacy
                     localStorage.setItem('pomodoro-tasks', JSON.stringify(mergedTasks));
-                    localStorage.setItem('tasks', JSON.stringify(mergedTasks)); // ← FIX: React reads from this key!
                     console.log(`[Session] ✅ Saved ${mergedTasks.length} tasks (${dirtyCount} preserved dirty)`);
                 }
 
