@@ -615,17 +615,18 @@ app.post('/api/sync/all', verifySession, async (req, res) => {
         if (pomodoroLogs.length > 0) {
             // ✅ CRITICAL: Normalize pomodoros before saving to prevent data corruption
             const normalizedPomodoros = pomodoroLogs.map(p => {
-                // Calculate duration if missing but times exist
+                // Calculate duration if missing or zero but times exist
                 let duration = p.duration;
                 if ((!duration || duration === 0) && p.startTime && p.endTime && p.endTime > p.startTime) {
                     duration = p.endTime - p.startTime;
+                    console.log(`[Sync All] Calculated pomodoro duration: ${duration}ms from times`);
                 }
 
                 return {
                     ...p,
                     userId: userId,
-                    // Ensure duration fields are numeric
-                    duration: duration !== undefined ? Number(duration) : 0,
+                    // Ensure duration fields are numeric (use calculated duration if available)
+                    duration: duration && duration > 0 ? Number(duration) : 0,
                     startTime: p.startTime !== undefined ? Number(p.startTime) : 0,
                     endTime: p.endTime !== undefined ? Number(p.endTime) : 0
                 };
