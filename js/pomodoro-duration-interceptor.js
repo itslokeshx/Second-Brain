@@ -16,6 +16,13 @@
     IDBObjectStore.prototype.put = function (value, key) {
         // Only intercept Pomodoro store
         if (this.name === 'Pomodoro' && value && value.id) {
+            // ✅ CRITICAL FIX: Skip if this is a hydration write (already has valid duration)
+            // Only track NEW pomodoros that are being created by the timer
+            if (value.duration && value.duration > 0 && value.startTime && value.startTime > 0) {
+                console.log(`[Pomodoro Interceptor] ⏭️ Skipping hydration write for ${value.id.substring(0, 8)} (duration: ${value.duration}ms)`);
+                return originalPut.call(this, value, key);
+            }
+
             const now = Date.now();
 
             // If this is a new pomodoro without duration fields, add them

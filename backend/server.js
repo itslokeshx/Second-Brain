@@ -622,13 +622,24 @@ app.post('/api/sync/all', verifySession, async (req, res) => {
                     console.log(`[Sync All] Calculated pomodoro duration: ${duration}ms from times`);
                 }
 
+                // ✅ CRITICAL FIX: Only save valid Pomodoro schema fields
+                // DO NOT spread ...p as it includes invalid fields like pomodoroInterval
                 return {
-                    ...p,
+                    id: p.id,
+                    taskId: p.taskId || '',
+                    subtaskId: p.subtaskId || '',
                     userId: userId,
-                    // Ensure duration fields are numeric (use calculated duration if available)
+                    objType: 'POMODORO',
+                    state: p.state !== undefined ? Number(p.state) : 0,
+                    sync: p.sync !== undefined ? Number(p.sync) : 0,
+                    status: p.status || 'completed',
+                    isManual: p.isManual || false,
+                    // Time tracking fields
                     duration: duration && duration > 0 ? Number(duration) : 0,
                     startTime: p.startTime !== undefined ? Number(p.startTime) : 0,
-                    endTime: p.endTime !== undefined ? Number(p.endTime) : 0
+                    endTime: p.endTime !== undefined ? Number(p.endTime) : 0,
+                    createdAt: p.createdAt || new Date()
+                    // ❌ Explicitly NOT including: pomodoroInterval, interval, or any task fields
                 };
             });
 
