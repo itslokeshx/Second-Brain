@@ -581,12 +581,28 @@ app.post('/api/sync/all', verifySession, async (req, res) => {
             console.log(`[Sync All] Projects synced: ${projectsSynced}`);
         }
 
-        // Sync Tasks
+        // Sync Tasks (with normalization)
         if (tasks.length > 0) {
-            const ops = tasks.map(t => ({
+            // ✅ CRITICAL: Normalize tasks before saving to prevent data corruption
+            const normalizedTasks = tasks.map(t => ({
+                ...t,
+                userId: userId,
+                // Ensure duration fields are numeric
+                estimatePomoNum: t.estimatePomoNum !== undefined ? Number(t.estimatePomoNum) : 0,
+                actualPomoNum: t.actualPomoNum !== undefined ? Number(t.actualPomoNum) : 0,
+                estimatedPomodoros: t.estimatedPomodoros !== undefined ? Number(t.estimatedPomodoros) : (t.estimatePomoNum || 0),
+                actPomodoros: t.actPomodoros !== undefined ? Number(t.actPomodoros) : (t.actualPomoNum || 0),
+                pomodoroInterval: t.pomodoroInterval !== undefined && t.pomodoroInterval > 0 ? Number(t.pomodoroInterval) : 1500,
+                // Ensure other numeric fields
+                state: t.state !== undefined ? Number(t.state) : 0,
+                priority: t.priority !== undefined ? Number(t.priority) : 0,
+                sortOrder: t.sortOrder !== undefined ? Number(t.sortOrder) : 0
+            }));
+
+            const ops = normalizedTasks.map(t => ({
                 updateOne: {
                     filter: { id: t.id, userId: userId },
-                    update: { $set: { ...t, userId: userId } },
+                    update: { $set: t },
                     upsert: true
                 }
             }));
@@ -595,12 +611,30 @@ app.post('/api/sync/all', verifySession, async (req, res) => {
             console.log(`[Sync All] Tasks synced: ${tasksSynced}`);
         }
 
-        // Sync Pomodoro Logs
+        // Sync Pomodoro Logs (with normalization)
         if (pomodoroLogs.length > 0) {
-            const ops = pomodoroLogs.map(l => ({
+            // ✅ CRITICAL: Normalize pomodoros before saving to prevent data corruption
+            const normalizedPomodoros = pomodoroLogs.map(p => {
+                // Calculate duration if missing but times exist
+                let duration = p.duration;
+                if ((!duration || duration === 0) && p.startTime && p.endTime && p.endTime > p.startTime) {
+                    duration = p.endTime - p.startTime;
+                }
+
+                return {
+                    ...p,
+                    userId: userId,
+                    // Ensure duration fields are numeric
+                    duration: duration !== undefined ? Number(duration) : 0,
+                    startTime: p.startTime !== undefined ? Number(p.startTime) : 0,
+                    endTime: p.endTime !== undefined ? Number(p.endTime) : 0
+                };
+            });
+
+            const ops = normalizedPomodoros.map(l => ({
                 updateOne: {
                     filter: { id: l.id, userId: userId },
-                    update: { $set: { ...l, userId: userId } },
+                    update: { $set: l },
                     upsert: true
                 }
             }));
