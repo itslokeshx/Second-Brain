@@ -6,8 +6,63 @@
 
 (function () {
     console.log('\n═══════════════════════════════════════════════════════════════════');
-    console.log('🔍 FINAL POMODORO FIX VERIFICATION');
+    console.log('🔍 CRASH DIAGNOSTIC (LocalStorage Check)');
     console.log('═══════════════════════════════════════════════════════════════════\n');
+
+    try {
+        const projectsRaw = localStorage.getItem('pomodoro-projects');
+        const tasksRaw = localStorage.getItem('pomodoro-tasks');
+        const listRaw = localStorage.getItem('custom-project-list');
+
+        if (!projectsRaw || !tasksRaw) {
+            console.warn('⚠️ LocalStorage MISSING essential keys (projects/tasks).');
+            // This explains "0m" but not the crash (unless main.js crashes on null)
+        } else {
+            const projects = JSON.parse(projectsRaw);
+            const tasks = JSON.parse(tasksRaw);
+
+            console.log(`📦 LocalStorage: ${projects.length} Projects, ${tasks.length} Tasks`);
+
+            // 1. Check Project Structure
+            if (!Array.isArray(projects)) {
+                console.error('❌ CRASH RISK: projects is NOT an array!');
+            } else {
+                // Check if map lookup works
+                const pMap = {};
+                projects.forEach(p => pMap[p.id] = p);
+
+                // 2. Check for Orphan Tasks (Common crash cause)
+                let orphans = 0;
+                tasks.forEach(t => {
+                    if (t.projectId && !pMap[t.projectId]) {
+                        orphans++;
+                        console.error(`❌ ORPHAN TASK: "${t.name}" refs missing project "${t.projectId}"`);
+                    }
+                });
+
+                if (orphans > 0) console.error(`Found ${orphans} orphan tasks. This causes crashes when completing tasks.`);
+                else console.log('✅ No orphan tasks found.');
+
+                // 3. Check Custom List (Sidebar crash cause)
+                if (listRaw) {
+                    const list = JSON.parse(listRaw);
+                    if (Array.isArray(list)) {
+                        let missingListItems = 0;
+                        list.forEach(id => {
+                            if (!pMap[id]) {
+                                missingListItems++;
+                                console.error(`❌ BROKEN SIDEBAR: ID "${id}" in custom-project-list NOT found in projects.`);
+                            }
+                        });
+                        if (missingListItems > 0) console.error(`Found ${missingListItems} broken sidebar items. This crashes the UI render.`);
+                        else console.log('✅ Sidebar list is coherent.');
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.error('❌ Error assessing LocalStorage:', e);
+    }
 
     const userId = document.cookie.split(';').find(c => c.trim().startsWith('UID='))?.split('=')[1];
 
