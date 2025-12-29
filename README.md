@@ -1,5 +1,3 @@
----
-
 # 🧠 Second Brain
 
 > **Local-first productivity system with cloud sync**
@@ -184,5 +182,3 @@ MIT License
 ⭐ Star the repo if it helped you
 
 </div>
-
----
