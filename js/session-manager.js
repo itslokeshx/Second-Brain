@@ -567,8 +567,9 @@
                 });
 
                 if (cleanTasks.length < originalCount) {
-                    localStorage.setItem('pomodoro-tasks', JSON.stringify(cleanTasks));
-                    console.log(`[Session] ✅ Purged ${originalCount - cleanTasks.length} poisoned tasks from localStorage`);
+                    // ❌ DISABLED: localStorage persistence causes task operation failures
+                    // localStorage.setItem('pomodoro-tasks', JSON.stringify(cleanTasks));
+                    console.log(`[Session] ⏭️ Skipped purging ${originalCount - cleanTasks.length} poisoned tasks from localStorage`);
                 }
 
                 // Purge from IndexedDB
@@ -773,7 +774,7 @@
 
                 const projectOrder = projects.map(p => p.id);
                 if (!localStorage.getItem('pomodoro-projectOrder')) {
-                    localStorage.setItem('pomodoro-projectOrder', JSON.stringify(projectOrder));
+                    // localStorage.setItem('pomodoro-projectOrder', JSON.stringify(projectOrder));
                     console.log(`[Session] ✅ Rebuilt pomodoro-projectOrder (${projectOrder.length} items)`);
                 }
 
@@ -1115,19 +1116,22 @@
                         document.cookie = `PID=${validPid}; path=/; max-age=31536000`;
                     }
 
-                    localStorage.setItem('pomodoro-projects', JSON.stringify(data.projects));
-                    console.log(`[Session] ✅ Saved ${data.projects.length} projects`);
+                    // ❌ DISABLED: localStorage persistence causes task operation failures
+                    // localStorage.setItem('pomodoro-projects', JSON.stringify(data.projects));
+                    console.log(`[Session] ⏭️ Skipped saving ${data.projects.length} projects to localStorage`);
 
                     // ✅ CRITICAL: Create and save project order
                     // Without this, main.js might not know how to list the projects
                     const projectOrder = data.projects.map(p => p.id);
-                    localStorage.setItem('pomodoro-projectOrder', JSON.stringify(projectOrder));
-                    console.log(`[Session] ✅ Saved projectOrder (${projectOrder.length} items)`);
+                    // ❌ DISABLED: localStorage persistence causes task operation failures
+                    // localStorage.setItem('pomodoro-projectOrder', JSON.stringify(projectOrder));
+                    console.log(`[Session] ⏭️ Skipped saving projectOrder (${projectOrder.length} items)`);
 
                     // ✅ CRITICAL: Sidebar Project List
                     // main.js uses 'custom-project-list' to determine what shows in the sidebar
-                    localStorage.setItem('custom-project-list', JSON.stringify(projectOrder));
-                    console.log(`[Session] ✅ Saved custom-project-list (${projectOrder.length} items)`);
+                    // ❌ DISABLED: localStorage persistence causes task operation failures
+                    // localStorage.setItem('custom-project-list', JSON.stringify(projectOrder));
+                    console.log(`[Session] ⏭️ Skipped saving custom-project-list (${projectOrder.length} items)`);
 
                     // ═══════════════════════════════════════════════════════════════
                     // 🕒 TIME AUTHORITY FIX: Persist Server Timestamp
@@ -1226,12 +1230,14 @@
                         }
                     });
 
-                    localStorage.setItem('pomodoro-tasks', JSON.stringify(mergedTasks));
+                    // ❌ DISABLED: localStorage persistence causes task operation failures
+                    // localStorage.setItem('pomodoro-tasks', JSON.stringify(mergedTasks));
                     console.log(`[Session] ✅ Saved ${mergedTasks.length} tasks (${dirtyCount} preserved dirty)`);
                 }
 
                 if (data.pomodoros && data.pomodoros.length > 0) {
-                    localStorage.setItem('pomodoro-pomodoros', JSON.stringify(data.pomodoros));
+                    // ❌ DISABLED: localStorage persistence causes task operation failures
+                    // localStorage.setItem('pomodoro-pomodoros', JSON.stringify(data.pomodoros));
                     console.log(`[Session] ✅ Saved ${data.pomodoros.length} pomodoros`);
                 }
 
