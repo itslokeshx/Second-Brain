@@ -809,6 +809,43 @@
             }
         },
 
+        // ✅ NEW: Recalculate derived stats (elapsed/estimated) from logs
+        // This ensures tasks don't lose their state during sync/reload
+        recalculateTaskStats: function (tasks, pomodoros) {
+            if (!tasks || !Array.isArray(tasks)) return tasks;
+            if (!pomodoros || !Array.isArray(pomodoros)) return tasks;
+
+            console.log('[Session] 🔄 Recalculating task stats from ' + pomodoros.length + ' logs...');
+
+            // Count completed pomodoros per task
+            const pomoCounts = {};
+            pomodoros.forEach(p => {
+                if (p.taskId && p.status === 'completed') {
+                    pomoCounts[p.taskId] = (pomoCounts[p.taskId] || 0) + 1;
+                }
+            });
+
+            // Update tasks
+            return tasks.map(t => {
+                // 1. Update actualPomoNum (elapsed time source)
+                const realCount = pomoCounts[t.id] || 0;
+
+                // Only update if missing or different (trust the logs)
+                if (t.actualPomoNum !== realCount) {
+                    // console.log(`[Session] 🔧 Fixed actualPomoNum for "${t.name}": ${t.actualPomoNum} -> ${realCount}`);
+                    t.actualPomoNum = realCount;
+                }
+
+                // 2. Sanitize estimatedTime
+                if (t.estimatedTime === undefined || t.estimatedTime === null || isNaN(t.estimatedTime)) {
+                    // console.log(`[Session] 🔧 Fixed NaN estimatedTime for "${t.name}" -> 0`);
+                    t.estimatedTime = 0;
+                }
+
+                return t;
+            });
+        },
+
         // ✅ NEW: Save to IndexedDB (Required for main.js rendering)
         // Uses two-phase approach: read dirty tasks FIRST, then write while preserving them
         saveToIndexedDB: function (data) {
@@ -940,10 +977,12 @@
                         // ✅ BULLETPROOF FIX: Use cursor-based iteration for atomic dirty check
                         // This ensures NO race condition - all reads/writes happen in same transaction
                         if (taskStoreName && data.tasks && data.tasks.length > 0) {
+                            // ✅ FIX: Recalculate stats before saving
+                            const processedTasks = this.recalculateTaskStats(data.tasks, data.pomodoros);
                             const taskStore = tx.objectStore(taskStoreName);
 
                             // Build map of server tasks for quick lookup
-                            const serverTaskMap = new Map(data.tasks.map(t => {
+                            const serverTaskMap = new Map(processedTasks.map(t => {
                                 if (!t.id && t._id) t.id = t._id;
                                 return [t.id, t];
                             }));
@@ -1214,7 +1253,11 @@
                     }
 
                     // Merge server tasks, respecting local dirty state
-                    const mergedTasks = data.tasks.map(serverTask => {
+                    // Merge server tasks, respecting local dirty state
+                    // ✅ FIX: Recalculate stats before merging/saving
+                    const processedServerTasks = this.recalculateTaskStats(data.tasks, data.pomodoros);
+
+                    const mergedTasks = processedServerTasks.map(serverTask => {
                         if (dirtyTasks[serverTask.id]) {
                             console.log(`[Session] ⏭️ localStorage: Keeping local dirty task "${serverTask.name}"`);
                             return dirtyTasks[serverTask.id]; // Keep local version
