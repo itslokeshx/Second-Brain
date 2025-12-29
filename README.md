@@ -214,7 +214,7 @@ MIT License
 
 <div align="center">
 
-**Built with persistence by Lokesh**
+**Built by Lokesh**
 ⭐ Star the repo if you value local-first software
 
 </div>
