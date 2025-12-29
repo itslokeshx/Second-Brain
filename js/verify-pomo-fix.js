@@ -4,7 +4,11 @@
 // Run this after reloading the page to verify the actualPomoNum fix
 // ═══════════════════════════════════════════════════════════════════
 
-(function () {
+// ═══════════════════════════════════════════════════════════════════
+// 🔍 VERIFICATION LOGIC
+// ═══════════════════════════════════════════════════════════════════
+
+window.runVerification = function () {
     console.log('\n═══════════════════════════════════════════════════════════════════');
     console.log('🔍 CRASH DIAGNOSTIC (LocalStorage Check)');
     console.log('═══════════════════════════════════════════════════════════════════\n');
@@ -67,15 +71,25 @@
     const userId = document.cookie.split(';').find(c => c.trim().startsWith('UID='))?.split('=')[1];
 
     if (!userId) {
-        console.error('❌ No user ID found in cookies');
+        console.log('ℹ️ Waiting for User ID...');
+        // If run too early, don't crash
         return;
     }
 
     const dbName = `PomodoroDB6_${userId}`;
+    console.log(`🔍 Inspecting Database: ${dbName}`);
+
+    // Open without version to avoid triggering upgrade/creation of empty DB
     const request = indexedDB.open(dbName);
 
     request.onsuccess = (e) => {
         const db = e.target.result;
+
+        if (!db.objectStoreNames.contains('Task')) {
+            console.warn('⚠️ Database exists but "Task" store is missing.');
+            console.warn('   The app likely hasn\'t finished initializing the DB schema yet.');
+            return;
+        }
 
         // Get all tasks
         const taskTx = db.transaction('Task', 'readonly');
@@ -119,22 +133,26 @@
 
                     const status = isCorrect ? '✅' : '❌';
 
-                    console.log(`${status} Task: ${task.name || task.id.substring(0, 8)}`);
-                    console.log(`   Expected actualPomoNum: ${expectedCount}`);
-                    console.log(`   Actual actualPomoNum: ${actualCount}`);
+                    // Only log mismatches or first few to avoid spam
+                    if (!isCorrect || tasks.length < 10) {
+                        console.log(`${status} Task: ${task.name || task.id.substring(0, 8)}`);
+                        console.log(`   Expected actualPomoNum: ${expectedCount}`);
+                        console.log(`   Actual actualPomoNum: ${actualCount}`);
 
-                    if (expectedCount > 0) {
-                        const elapsedMs = actualCount * (task.pomodoroInterval || 1500) * 1000;
-                        const elapsedMin = Math.floor(elapsedMs / 60000);
-                        console.log(`   UI should show: ${elapsedMin}m elapsed`);
+                        if (!isCorrect && expectedCount > 0) {
+                            const elapsedMs = actualCount * (task.pomodoroInterval || 1500) * 1000;
+                            const elapsedMin = Math.floor(elapsedMs / 60000);
+                            console.log(`   UI should show: ${elapsedMin}m elapsed`);
+                        }
+                        if (!isCorrect) console.log('');
                     }
-                    console.log('');
                 });
 
                 console.log('═══════════════════════════════════════════════════════════════════');
-                console.log('🎯 POMODORO DETAILS:\n');
+                console.log('🎯 POMODORO DETAILS (Last 5):\n');
 
-                pomodoros.forEach(p => {
+                // Show last 5 logs only
+                pomodoros.slice(-5).forEach(p => {
                     const durationMin = Math.floor((p.duration || 0) / 60000);
                     const durationSec = Math.floor(((p.duration || 0) % 60000) / 1000);
                     console.log(`   ${p.id.substring(0, 8)}: ${durationMin}m ${durationSec}s (${p.status || 'unknown'})`);
@@ -147,7 +165,7 @@
                     console.log('✅ UI should display correct elapsed times');
                 } else {
                     console.log('❌ SOME TASKS HAVE INCORRECT actualPomoNum');
-                    console.log('⚠️  Try reloading the page to fetch fresh data from backend');
+                    console.log('⚠️  Try triggering a sync/reload to recalculate.');
                 }
 
                 console.log('═══════════════════════════════════════════════════════════════════\n');
@@ -156,14 +174,13 @@
     };
 
     request.onerror = () => {
-        console.error('❌ Failed to open IndexedDB');
+        console.error('❌ Failed to open IndexedDB or DB not initialized yet.');
     };
-})();
+};
 
-console.log('✅ Final verification script loaded');
-console.log('📝 This script will run automatically on page load');
-console.log('💡 Or run manually: window.verifyPomoFix()');
+console.log('✅ Verification script ready - Auto-execution disabled for stability');
+console.log('💡 Run manually: window.verifyPomoFix()');
 
 window.verifyPomoFix = function () {
-    location.reload();
+    window.runVerification();
 };
