@@ -491,6 +491,25 @@ app.post(['/v64/sync', '/api/sync-data'], verifySession, async (req, res) => {
             };
         });
 
+        // 3. Normalize Pomodoro Logs (ensure duration fields)
+        const normalizedPomodoros = pomodoros.map(p => {
+            // Calculate duration if missing but times exist
+            let duration = p.duration;
+            if ((!duration || duration === 0) && p.startTime && p.endTime && p.endTime > p.startTime) {
+                duration = p.endTime - p.startTime;
+            }
+
+            return {
+                ...p,
+                // ✅ CRITICAL FIX: Explicitly preserve duration fields with defaults
+                duration: duration !== undefined ? Number(duration) : 0,
+                startTime: p.startTime !== undefined ? Number(p.startTime) : 0,
+                endTime: p.endTime !== undefined ? Number(p.endTime) : 0,
+                // Ensure other fields
+                sync: p.sync !== undefined ? Number(p.sync) : 1
+            };
+        });
+
         // Get user info for response
         const user = await User.findById(userId);
 
@@ -507,7 +526,7 @@ app.post(['/v64/sync', '/api/sync-data'], verifySession, async (req, res) => {
             update_time: Date.now(),
             projects: normalizedProjects,
             tasks: normalizedTasks,
-            pomodoros: pomodoros || [],
+            pomodoros: normalizedPomodoros, // ✅ Use normalized pomodoros
             subtasks: [],
             schedules: [],
             project_member: [],
