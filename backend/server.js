@@ -519,6 +519,25 @@ app.post(['/v64/sync', '/api/sync-data'], verifySession, async (req, res) => {
             };
         });
 
+        // ✅ CRITICAL FIX: Count pomodoros per task and update actualPomoNum
+        // This ensures the UI shows correct elapsed time when loading data
+        const pomodorosByTask = {};
+        for (const pomo of normalizedPomodoros) {
+            if (pomo.taskId && pomo.status === 'completed') {
+                pomodorosByTask[pomo.taskId] = (pomodorosByTask[pomo.taskId] || 0) + 1;
+            }
+        }
+
+        // Update actualPomoNum in normalized tasks
+        normalizedTasks.forEach(task => {
+            const count = pomodorosByTask[task.id] || 0;
+            if (count > 0) {
+                task.actualPomoNum = count;
+                task.actPomodoros = count;
+                console.log(`[v64/sync] Task ${task.id.substring(0, 8)} has ${count} completed pomodoros`);
+            }
+        });
+
         // Get user info for response
         const user = await User.findById(userId);
 
