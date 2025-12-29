@@ -478,7 +478,16 @@ app.post(['/v64/sync', '/api/sync-data'], verifySession, async (req, res) => {
                 priority: t.priority !== undefined ? t.priority : 0,
                 completed: t.completed || false,
                 deleted: t.deleted || false,
-                sortOrder: t.sortOrder !== undefined ? t.sortOrder : 0
+                sortOrder: t.sortOrder !== undefined ? t.sortOrder : 0,
+                // ✅ CRITICAL FIX: Explicitly preserve duration fields with defaults
+                estimatePomoNum: t.estimatePomoNum !== undefined ? Number(t.estimatePomoNum) : 0,
+                actualPomoNum: t.actualPomoNum !== undefined ? Number(t.actualPomoNum) : 0,
+                estimatedPomodoros: t.estimatedPomodoros !== undefined ? Number(t.estimatedPomodoros) : (t.estimatePomoNum || 0),
+                actPomodoros: t.actPomodoros !== undefined ? Number(t.actPomodoros) : (t.actualPomoNum || 0),
+                pomodoroInterval: t.pomodoroInterval !== undefined && t.pomodoroInterval > 0 ? Number(t.pomodoroInterval) : 1500,
+                // Ensure state and sync fields
+                state: t.state !== undefined ? Number(t.state) : 0,
+                sync: t.sync !== undefined ? Number(t.sync) : 1
             };
         });
 
