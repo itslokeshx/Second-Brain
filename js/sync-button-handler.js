@@ -311,7 +311,7 @@
 
                         // Update storage with cleaned data to prevent recurrence
                         try {
-                            localStorage.setItem('tasks', JSON.stringify(data.tasks));
+                            // localStorage.setItem('tasks', JSON.stringify(data.tasks));
                         } catch (e) {
                             console.warn('[Sync Button] Cleanup storage update failed:', e);
                         }
@@ -350,7 +350,7 @@
                         }
                     });
                     if (tasksUpdated > 0) {
-                        localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
+                        // localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
                         console.log(`[Sync Button] ✅ Marked ${tasksUpdated} tasks as synced (backend ACKed)`);
                     }
 
@@ -366,7 +366,7 @@
                         }
                     });
                     if (projectsUpdated > 0) {
-                        localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
+                        // localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
                         console.log(`[Sync Button] ✅ Marked ${projectsUpdated} projects as synced (backend ACKed)`);
                     }
 
@@ -382,7 +382,7 @@
                         }
                     });
                     if (logsUpdated > 0) {
-                        localStorage.setItem('pomodoro-pomodoros', JSON.stringify(logs));
+                        // localStorage.setItem('pomodoro-pomodoros', JSON.stringify(logs));
                         console.log(`[Sync Button] ✅ Marked ${logsUpdated} logs as synced (backend ACKed)`);
                     }
 

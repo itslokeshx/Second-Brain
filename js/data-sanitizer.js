@@ -72,7 +72,7 @@
                         sync: 1         // Mark as dirty so it syncs
                     };
                     projects.unshift(defaultProject);
-                    localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
+                    // localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
                     fixedCount++;
                 }
 
@@ -93,7 +93,7 @@
 
                 if (orphanedCount > 0) {
                     console.warn(`[Data Sanitizer] ⚠️ Reassigned ${orphanedCount} orphaned tasks.`);
-                    localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
+                    // localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
                 }
 
                 // ✅ NEW: Ensure Duration Fields on Tasks
@@ -140,7 +140,7 @@
 
                 if (durationFixCount > 0) {
                     console.warn(`[Data Sanitizer] ✅ Fixed duration fields on ${durationFixCount} tasks.`);
-                    localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
+                    // localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
                 }
 
                 // ✅ NEW: Ensure Duration Fields on Pomodoro Logs
@@ -185,7 +185,7 @@
 
                     if (pomodoroFixCount > 0) {
                         console.warn(`[Data Sanitizer] ✅ Fixed duration fields on ${pomodoroFixCount} pomodoro logs.`);
-                        localStorage.setItem('pomodoro-pomodoros', JSON.stringify(pomodoros));
+                        // localStorage.setItem('pomodoro-pomodoros', JSON.stringify(pomodoros));
                     }
                 }
 
@@ -207,7 +207,7 @@
                 });
 
                 if (projectsChanged) {
-                    localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
+                    // localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
                 }
 
                 // D. Ensure custom-project-list integrity (Safety Check)
@@ -235,7 +235,7 @@
                         console.log('[Data Sanitizer] Added Default Project to Sidebar List.');
                     }
 
-                    localStorage.setItem('custom-project-list', JSON.stringify(customList));
+                    // localStorage.setItem('custom-project-list', JSON.stringify(customList));
                 } else {
                     console.warn(`[Data Sanitizer] ⚠️ Project list suspicious (len=${projects.length}). Skipping sidebar filtering to prevent collapse.`);
                 }

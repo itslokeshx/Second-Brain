@@ -38,7 +38,7 @@
         });
 
         // Save cleaned tasks back
-        localStorage.setItem('tasks', JSON.stringify(cleanedTasks));
+        // localStorage.setItem('tasks', JSON.stringify(cleanedTasks));
 
         const removedCount = originalCount - cleanedTasks.length;
         console.log(`[Cleanup] ✅ Complete! Removed ${removedCount} keystroke artifacts`);

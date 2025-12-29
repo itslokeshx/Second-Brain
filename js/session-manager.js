@@ -792,7 +792,7 @@
                     if (!customList.includes(id)) customList.push(id);
                 });
 
-                localStorage.setItem('custom-project-list', JSON.stringify(customList));
+                // localStorage.setItem('custom-project-list', JSON.stringify(customList));
                 console.log(`[Session] ✅ Ensured custom-project-list (${customList.length} items)`);
 
                 // Dispatch storage events to trigger React/legacy listeners

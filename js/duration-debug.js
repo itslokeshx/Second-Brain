@@ -368,8 +368,8 @@
                 });
 
                 // Save back to localStorage
-                localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
-                localStorage.setItem('pomodoro-pomodoros', JSON.stringify(pomodoros));
+                // localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
+                // localStorage.setItem('pomodoro-pomodoros', JSON.stringify(pomodoros));
 
                 console.log(`✅ Fixed ${tasksFix} tasks`);
                 console.log(`✅ Fixed ${pomodorosFix} pomodoro logs`);

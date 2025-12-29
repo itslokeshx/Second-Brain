@@ -386,14 +386,14 @@
 
                 if (projects && projects.length > 0) {
                     // 1. Projects
-                    localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
+                    // localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
 
                     // 2. Project Order
                     const projectOrder = projects.map(p => p.id);
-                    localStorage.setItem('pomodoro-projectOrder', JSON.stringify(projectOrder));
+                    // localStorage.setItem('pomodoro-projectOrder', JSON.stringify(projectOrder));
 
                     // 3. Custom Project List - CRITICAL for sidebar rendering in main.js
-                    localStorage.setItem('custom-project-list', JSON.stringify(projectOrder));
+                    // localStorage.setItem('custom-project-list', JSON.stringify(projectOrder));
 
                     console.log('[Mutex] ✅ Populated localStorage from IndexedDB:', projects.length, 'projects');
                 } else {
@@ -404,7 +404,7 @@
                 if (!localStorage.getItem('custom-project-list')) {
                     const projects = JSON.parse(localStorage.getItem('pomodoro-projects'));
                     const projectOrder = projects.map(p => p.id);
-                    localStorage.setItem('custom-project-list', JSON.stringify(projectOrder));
+                    // localStorage.setItem('custom-project-list', JSON.stringify(projectOrder));
                     console.log('[Mutex] 🔧 Repaired missing custom-project-list');
                 }
                 console.log('[Mutex] ✅ localStorage fully verified');
