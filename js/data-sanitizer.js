@@ -93,6 +93,100 @@
                 localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
             }
 
+            // ✅ NEW: Ensure Duration Fields on Tasks
+            let durationFixCount = 0;
+            tasks = tasks.map(task => {
+                let fixed = false;
+
+                // Ensure estimatePomoNum is numeric (default 0)
+                if (typeof task.estimatePomoNum !== 'number' || isNaN(task.estimatePomoNum)) {
+                    task.estimatePomoNum = 0;
+                    fixed = true;
+                }
+
+                // Ensure actualPomoNum is numeric (default 0)
+                if (typeof task.actualPomoNum !== 'number' || isNaN(task.actualPomoNum)) {
+                    task.actualPomoNum = 0;
+                    fixed = true;
+                }
+
+                // Ensure alias fields are in sync
+                if (typeof task.estimatedPomodoros !== 'number' || isNaN(task.estimatedPomodoros)) {
+                    task.estimatedPomodoros = task.estimatePomoNum || 0;
+                    fixed = true;
+                }
+
+                if (typeof task.actPomodoros !== 'number' || isNaN(task.actPomodoros)) {
+                    task.actPomodoros = task.actualPomoNum || 0;
+                    fixed = true;
+                }
+
+                // Ensure pomodoroInterval exists (default 1500 = 25 minutes in seconds)
+                if (typeof task.pomodoroInterval !== 'number' || isNaN(task.pomodoroInterval) || task.pomodoroInterval <= 0) {
+                    task.pomodoroInterval = 1500;
+                    fixed = true;
+                }
+
+                if (fixed) {
+                    durationFixCount++;
+                    task.sync = 0; // Mark as dirty to sync the fix
+                }
+
+                return task;
+            });
+
+            if (durationFixCount > 0) {
+                console.warn(`[Data Sanitizer] ✅ Fixed duration fields on ${durationFixCount} tasks.`);
+                localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
+            }
+
+            // ✅ NEW: Ensure Duration Fields on Pomodoro Logs
+            const pomodorosRaw = localStorage.getItem('pomodoro-pomodoros') || '[]';
+            let pomodoros = JSON.parse(pomodorosRaw);
+            let pomodoroFixCount = 0;
+
+            if (Array.isArray(pomodoros)) {
+                pomodoros = pomodoros.map(pomo => {
+                    let fixed = false;
+
+                    // Ensure duration is numeric (default 0)
+                    if (typeof pomo.duration !== 'number' || isNaN(pomo.duration)) {
+                        // Try to calculate from startTime and endTime if available
+                        if (pomo.startTime && pomo.endTime && typeof pomo.startTime === 'number' && typeof pomo.endTime === 'number') {
+                            pomo.duration = pomo.endTime - pomo.startTime;
+                        } else {
+                            pomo.duration = 0;
+                        }
+                        fixed = true;
+                    }
+
+                    // Ensure startTime is numeric (default 0)
+                    if (typeof pomo.startTime !== 'number' || isNaN(pomo.startTime)) {
+                        pomo.startTime = 0;
+                        fixed = true;
+                    }
+
+                    // Ensure endTime is numeric (default 0)
+                    if (typeof pomo.endTime !== 'number' || isNaN(pomo.endTime)) {
+                        pomo.endTime = 0;
+                        fixed = true;
+                    }
+
+                    if (fixed) {
+                        pomodoroFixCount++;
+                        pomo.sync = 0; // Mark as dirty to sync the fix
+                    }
+
+                    return pomo;
+                });
+
+                if (pomodoroFixCount > 0) {
+                    console.warn(`[Data Sanitizer] ✅ Fixed duration fields on ${pomodoroFixCount} pomodoro logs.`);
+                    localStorage.setItem('pomodoro-pomodoros', JSON.stringify(pomodoros));
+                }
+            }
+
+
             // C. Fix Project Nesting (Orphaned Folders)
             let projectsChanged = false;
             projects = projects.map(p => {

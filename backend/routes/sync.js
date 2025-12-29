@@ -77,6 +77,17 @@ router.post('/all', authMiddleware, async (req, res) => {
             console.log(`[Sync All] Syncing ${tasks.length} tasks...`);
 
             for (const task of tasks) {
+                // ✅ Log duration fields for debugging
+                if (task.estimatePomoNum !== undefined || task.actualPomoNum !== undefined) {
+                    console.log(`[Sync All] Task "${task.name}" duration fields:`, {
+                        estimatePomoNum: task.estimatePomoNum,
+                        actualPomoNum: task.actualPomoNum,
+                        estimatedPomodoros: task.estimatedPomodoros,
+                        actPomodoros: task.actPomodoros,
+                        pomodoroInterval: task.pomodoroInterval
+                    });
+                }
+
                 await Task.findOneAndUpdate(
                     { userId, id: task.id },
                     {
@@ -96,6 +107,17 @@ router.post('/all', authMiddleware, async (req, res) => {
             console.log(`[Sync All] Syncing ${pomodoroLogs.length} logs...`);
 
             for (const log of pomodoroLogs) {
+                // ✅ Log duration fields for debugging
+                if (log.duration !== undefined || log.startTime !== undefined || log.endTime !== undefined) {
+                    console.log(`[Sync All] Pomodoro log duration fields:`, {
+                        id: log.id,
+                        duration: log.duration,
+                        startTime: log.startTime,
+                        endTime: log.endTime,
+                        taskId: log.taskId
+                    });
+                }
+
                 await Pomodoro.findOneAndUpdate(
                     { userId, id: log.id },
                     {
