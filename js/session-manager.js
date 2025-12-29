@@ -1116,22 +1116,22 @@
                         document.cookie = `PID=${validPid}; path=/; max-age=31536000`;
                     }
 
-                    // ❌ DISABLED: localStorage persistence causes task operation failures
-                    // localStorage.setItem('pomodoro-projects', JSON.stringify(data.projects));
-                    console.log(`[Session] ⏭️ Skipped saving ${data.projects.length} projects to localStorage`);
+                    // ✅ RESTORED: Needed for sidebar UI
+                    localStorage.setItem('pomodoro-projects', JSON.stringify(data.projects));
+                    console.log(`[Session] ✅ Saved ${data.projects.length} projects to localStorage`);
 
                     // ✅ CRITICAL: Create and save project order
                     // Without this, main.js might not know how to list the projects
                     const projectOrder = data.projects.map(p => p.id);
-                    // ❌ DISABLED: localStorage persistence causes task operation failures
-                    // localStorage.setItem('pomodoro-projectOrder', JSON.stringify(projectOrder));
-                    console.log(`[Session] ⏭️ Skipped saving projectOrder (${projectOrder.length} items)`);
+                    // ✅ RESTORED: Needed for sidebar UI
+                    localStorage.setItem('pomodoro-projectOrder', JSON.stringify(projectOrder));
+                    console.log(`[Session] ✅ Saved projectOrder (${projectOrder.length} items)`);
 
                     // ✅ CRITICAL: Sidebar Project List
                     // main.js uses 'custom-project-list' to determine what shows in the sidebar
-                    // ❌ DISABLED: localStorage persistence causes task operation failures
-                    // localStorage.setItem('custom-project-list', JSON.stringify(projectOrder));
-                    console.log(`[Session] ⏭️ Skipped saving custom-project-list (${projectOrder.length} items)`);
+                    // ✅ RESTORED: Needed for sidebar UI
+                    localStorage.setItem('custom-project-list', JSON.stringify(projectOrder));
+                    console.log(`[Session] ✅ Saved custom-project-list (${projectOrder.length} items)`);
 
                     // ═══════════════════════════════════════════════════════════════
                     // 🕒 TIME AUTHORITY FIX: Persist Server Timestamp
@@ -1230,14 +1230,14 @@
                         }
                     });
 
-                    // ❌ DISABLED: localStorage persistence causes task operation failures
-                    // localStorage.setItem('pomodoro-tasks', JSON.stringify(mergedTasks));
+                    // ✅ RESTORED: localStorage persistence needed for main.js UI
+                    localStorage.setItem('pomodoro-tasks', JSON.stringify(mergedTasks));
                     console.log(`[Session] ✅ Saved ${mergedTasks.length} tasks (${dirtyCount} preserved dirty)`);
                 }
 
                 if (data.pomodoros && data.pomodoros.length > 0) {
-                    // ❌ DISABLED: localStorage persistence causes task operation failures
-                    // localStorage.setItem('pomodoro-pomodoros', JSON.stringify(data.pomodoros));
+                    // ✅ RESTORED: localStorage persistence needed for main.js UI
+                    localStorage.setItem('pomodoro-pomodoros', JSON.stringify(data.pomodoros));
                     console.log(`[Session] ✅ Saved ${data.pomodoros.length} pomodoros`);
                 }
 
