@@ -116,9 +116,9 @@
             const state = window.HydrationMutex.getState();
             console.warn('[Sync Button] ⚠️ Hydration not ready:', state.state);
             if (window.showNotification) {
-                window.showNotification('Please wait for data to load... (' + state.state + ')', 'warning', 3000);
+                window.showNotification('Reload the page and wait (' + state.state + ')', 'warning', 3000);
             } else {
-                alert('Please wait for data to load...');
+                alert('Reload the page and wait...');
             }
             return;
         }
