@@ -653,6 +653,29 @@ app.post('/api/sync/all', verifySession, async (req, res) => {
             const result = await Pomodoro.bulkWrite(ops);
             logsSynced = result.upsertedCount + result.modifiedCount;
             console.log(`[Sync All] Logs synced: ${logsSynced}`);
+
+            // ✅ CRITICAL FIX: Update task actualPomoNum based on actual pomodoro count
+            // Group pomodoros by taskId
+            const pomodorosByTask = {};
+            for (const pomo of normalizedPomodoros) {
+                if (pomo.taskId) {
+                    pomodorosByTask[pomo.taskId] = (pomodorosByTask[pomo.taskId] || 0) + 1;
+                }
+            }
+
+            // Update each task's actualPomoNum
+            for (const [taskId, count] of Object.entries(pomodorosByTask)) {
+                await Task.updateOne(
+                    { id: taskId, userId: userId },
+                    {
+                        $set: {
+                            actualPomoNum: count,
+                            actPomodoros: count
+                        }
+                    }
+                );
+                console.log(`[Sync All] Updated task ${taskId.substring(0, 8)} actualPomoNum: ${count}`);
+            }
         }
 
         console.log(`[Sync All] ✅ Complete - P:${projectsSynced} T:${tasksSynced} L:${logsSynced}`);
