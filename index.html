@@ -6,17 +6,11 @@
     <title>Second Brain</title>
     <link href="main.css" rel="stylesheet">
     <link href="css/neural-loader.css" rel="stylesheet">
-
-    <!-- ✅ CRITICAL: Loading orchestrator MUST load FIRST -->
     <script src="js/loading-orchestrator.js"></script>
 </head>
 
 <body>
     <script src="js/url-interceptor.js"></script>
-
-    <!-- ═══════════════════════════════════════════════════════════════════ -->
-    <!-- NEURAL LOADER - Premium Loading Animation -->
-    <!-- ═══════════════════════════════════════════════════════════════════ -->
     <div id="sb-loader" class="sb-loader">
         <div class="sb-loader-backdrop"></div>
         <div class="sb-loader-content">
@@ -541,30 +535,21 @@
     <script src="js/ui-cleanup.js?v=1000"></script>
 
     <script src="js/profile-image-fix.js?v=1000"></script>
-
+    <script src="js/rate-us-redirect.js?v=1000"></script>
 
     <script>
         (async () => {
             console.log('[Loader] Waiting for hydration...');
             const result = await window.__HYDRATION_COMPLETE__;
-
             console.log('[Loader] Hydration result:', result);
-
-            // ✅ FIX: Start hydration phase BEFORE loading main.js
-            // This ensures loader stays visible during nav→hydrate transition
             if (window.__SB_LOADER) {
                 window.__SB_LOADER.setPhase('hydrate', true);
                 console.log('[Loader] ✅ Hydration phase started (before main.js)');
             }
-
             console.log('[Loader] Loading main.js...');
-
-            // Load hydration patch BEFORE main.js
             const patchScript = document.createElement('script');
             patchScript.src = 'js/main-hydration-patch.js';
             document.body.appendChild(patchScript);
-
-            // Then load main.js
             const script = document.createElement('script');
             script.type = 'text/javascript';
             script.src = 'js/main.js';
