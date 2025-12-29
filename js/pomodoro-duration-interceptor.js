@@ -18,7 +18,8 @@
         if (this.name === 'Pomodoro' && value && value.id) {
             // ✅ CRITICAL FIX: Skip if this is a hydration write (already has valid duration)
             // Only track NEW pomodoros that are being created by the timer
-            if (value.duration && value.duration > 0 && value.startTime && value.startTime > 0) {
+            // We prioritize duration > 0 as the source of truth, even if startTime is default/0
+            if (value.duration && value.duration > 0) {
                 console.log(`[Pomodoro Interceptor] ⏭️ Skipping hydration write for ${value.id.substring(0, 8)} (duration: ${value.duration}ms)`);
                 return originalPut.call(this, value, key);
             }

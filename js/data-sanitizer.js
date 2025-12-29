@@ -154,13 +154,21 @@
 
                         // Ensure duration is numeric (default 0)
                         if (typeof pomo.duration !== 'number' || isNaN(pomo.duration)) {
-                            // Try to calculate from startTime and endTime if available
-                            if (pomo.startTime && pomo.endTime && typeof pomo.startTime === 'number' && typeof pomo.endTime === 'number') {
-                                pomo.duration = pomo.endTime - pomo.startTime;
+                            // ✅ CRITICAL FIX: Try to parse string duration first
+                            // Trust duration > 0 even if startTime is missing/0 (Sync payload default)
+                            const parsedDuration = Number(pomo.duration);
+                            if (!isNaN(parsedDuration) && parsedDuration > 0) {
+                                pomo.duration = parsedDuration;
+                                fixed = true;
                             } else {
-                                pomo.duration = 0;
+                                // Try to calculate from startTime and endTime if available
+                                if (pomo.startTime && pomo.endTime && typeof pomo.startTime === 'number' && typeof pomo.endTime === 'number') {
+                                    pomo.duration = pomo.endTime - pomo.startTime;
+                                } else {
+                                    pomo.duration = 0;
+                                }
+                                fixed = true;
                             }
-                            fixed = true;
                         }
 
                         // Ensure startTime is numeric (default 0)
