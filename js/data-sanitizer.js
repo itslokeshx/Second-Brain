@@ -96,35 +96,61 @@
                     // localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
                 }
 
-                // ✅ NEW: Ensure Duration Fields on Tasks
+                // A. Load Pomodoros for accurate stats recalculation
+                const pomodorosRaw = localStorage.getItem('pomodoro-pomodoros') || '[]';
+                let pomodoros = [];
+                try {
+                    pomodoros = JSON.parse(pomodorosRaw);
+                } catch (e) { pomodoros = []; }
+
+                const pomodorosByTask = {};
+                if (Array.isArray(pomodoros)) {
+                    pomodoros.forEach(p => {
+                        if (p.taskId && p.status === 'completed') {
+                            pomodorosByTask[p.taskId] = (pomodorosByTask[p.taskId] || 0) + 1;
+                        }
+                    });
+                }
+
+                // B. Fix Tasks
                 let durationFixCount = 0;
                 tasks = tasks.map(task => {
                     let fixed = false;
 
-                    // Ensure estimatePomoNum is numeric (default 0)
+                    // 1. Recalculate actualPomoNum from logs (Source of Truth)
+                    const realCount = pomodorosByTask[task.id] || 0;
+
+                    // Update if missing or incorrect
+                    if (task.actualPomoNum !== realCount) {
+                        // console.log(`[Data Sanitizer] 🔧 Fixing actualPomoNum for "${task.name}": ${task.actualPomoNum} -> ${realCount}`);
+                        task.actualPomoNum = realCount;
+                        fixed = true;
+                    }
+
+                    // 2. Sanitize estimatePomoNum (default 0)
                     if (typeof task.estimatePomoNum !== 'number' || isNaN(task.estimatePomoNum)) {
                         task.estimatePomoNum = 0;
                         fixed = true;
                     }
 
-                    // Ensure actualPomoNum is numeric (default 0)
-                    if (typeof task.actualPomoNum !== 'number' || isNaN(task.actualPomoNum)) {
-                        task.actualPomoNum = 0;
+                    // 3. Sanitize estimatedTime (prevent NaN)
+                    if (typeof task.estimatedTime !== 'number' || isNaN(task.estimatedTime)) {
+                        task.estimatedTime = 0;
                         fixed = true;
                     }
 
-                    // Ensure alias fields are in sync
-                    if (typeof task.estimatedPomodoros !== 'number' || isNaN(task.estimatedPomodoros)) {
-                        task.estimatedPomodoros = task.estimatePomoNum || 0;
+                    // 4. Ensure alias fields are in sync
+                    if (task.estimatedPomodoros !== task.estimatePomoNum) {
+                        task.estimatedPomodoros = task.estimatePomoNum;
                         fixed = true;
                     }
 
-                    if (typeof task.actPomodoros !== 'number' || isNaN(task.actPomodoros)) {
-                        task.actPomodoros = task.actualPomoNum || 0;
+                    if (task.actPomodoros !== task.actualPomoNum) {
+                        task.actPomodoros = task.actualPomoNum;
                         fixed = true;
                     }
 
-                    // Ensure pomodoroInterval exists (default 1500 = 25 minutes in seconds)
+                    // 5. Ensure pomodoroInterval exists (default 1500 = 25 minutes)
                     if (typeof task.pomodoroInterval !== 'number' || isNaN(task.pomodoroInterval) || task.pomodoroInterval <= 0) {
                         task.pomodoroInterval = 1500;
                         fixed = true;
@@ -139,13 +165,18 @@
                 });
 
                 if (durationFixCount > 0) {
-                    console.warn(`[Data Sanitizer] ✅ Fixed duration fields on ${durationFixCount} tasks.`);
-                    // localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
+                    console.warn(`[Data Sanitizer] ✅ Fixed duration/stats on ${durationFixCount} tasks.`);
+                    localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
+                    // Force sidebar/task list update
+                    window.dispatchEvent(new StorageEvent('storage', {
+                        key: 'pomodoro-tasks',
+                        newValue: localStorage.getItem('pomodoro-tasks'),
+                        storageArea: localStorage
+                    }));
                 }
 
-                // ✅ NEW: Ensure Duration Fields on Pomodoro Logs
-                const pomodorosRaw = localStorage.getItem('pomodoro-pomodoros') || '[]';
-                let pomodoros = JSON.parse(pomodorosRaw);
+                // C. Ensure Duration Fields on Pomodoro Logs
+                // pomodoros is already loaded above
                 let pomodoroFixCount = 0;
 
                 if (Array.isArray(pomodoros)) {
