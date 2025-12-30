@@ -757,6 +757,25 @@ app.get('/api/sync/load', verifySession, async (req, res) => {
             sync: 1
         }));
 
+        // ✅ CRITICAL FIX: Count pomodoros per task and update actualPomoNum
+        // This ensures the UI shows correct elapsed time when loading data
+        const pomodorosByTask = {};
+        for (const pomo of normalizedLogs) {
+            if (pomo.taskId && (pomo.status === 'completed' || !pomo.status)) { // Default to completed if status missing
+                pomodorosByTask[pomo.taskId] = (pomodorosByTask[pomo.taskId] || 0) + 1;
+            }
+        }
+
+        // Update actualPomoNum in normalized tasks
+        normalizedTasks.forEach(task => {
+            const count = pomodorosByTask[task.id] || 0;
+            if (count > 0) {
+                console.log(`[Sync Load] Task ${task.id.substring(0, 8)}: updating actualPomoNum ${task.actualPomoNum} -> ${count}`);
+                task.actualPomoNum = count;
+                task.actPomodoros = count;
+            }
+        });
+
         console.log('[Sync Load] Data loaded:', {
             projects: projects.length,
             tasks: normalizedTasks.length,
