@@ -716,6 +716,77 @@ app.post('/api/sync/all', verifySession, async (req, res) => {
     }
 });
 
+// ✅ LOAD ALL DATA FROM SERVER (GET endpoint for data retrieval)
+app.get('/api/sync/load', verifySession, async (req, res) => {
+    console.log('[Sync Load] Loading data for user:', req.userId);
+
+    try {
+        const userId = req.userId;
+
+        // Get data from MongoDB collections
+        const [projects, tasks, logs, user] = await Promise.all([
+            Project.find({ userId }).select('-_id -__v -userId').lean(),
+            Task.find({ userId }).select('-_id -__v -userId').lean(),
+            Pomodoro.find({ userId }).select('-_id -__v -userId').lean(),
+            User.findById(userId).select('email name lastSyncTime')
+        ]);
+
+        // ✅ CRITICAL FIX: Normalize numeric fields to prevent NaN/undefined issues
+        // Tasks - ensure all time-related fields are Numbers
+        const normalizedTasks = tasks.map(t => ({
+            ...t,
+            estimatePomoNum: Number(t.estimatePomoNum) || 0,
+            actualPomoNum: Number(t.actualPomoNum) || 0,
+            estimatedPomodoros: Number(t.estimatedPomodoros) || Number(t.estimatePomoNum) || 0,
+            actPomodoros: Number(t.actPomodoros) || Number(t.actualPomoNum) || 0,
+            pomodoroInterval: Number(t.pomodoroInterval) || 1500,
+            estimatedTime: Number(t.estimatedTime) || 0,
+            state: Number(t.state) || 0,
+            priority: Number(t.priority) || 0,
+            order: Number(t.order) || 0,
+            sortOrder: Number(t.sortOrder) || 0,
+            sync: 1  // Mark as synced when loading from server
+        }));
+
+        // Pomodoro Logs - ensure all duration fields are Numbers
+        const normalizedLogs = logs.map(l => ({
+            ...l,
+            duration: Number(l.duration) || 0,
+            startTime: Number(l.startTime) || 0,
+            endTime: Number(l.endTime) || 0,
+            sync: 1
+        }));
+
+        console.log('[Sync Load] Data loaded:', {
+            projects: projects.length,
+            tasks: normalizedTasks.length,
+            logs: normalizedLogs.length
+        });
+
+        res.json({
+            success: true,
+            data: {
+                projects: projects || [],
+                tasks: normalizedTasks,
+                pomodoroLogs: normalizedLogs,
+                settings: {},
+                user: {
+                    email: user?.email,
+                    name: user?.name,
+                    lastSyncTime: user?.lastSyncTime
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('[Sync Load] Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to load data: ' + error.message
+        });
+    }
+});
+
 // Debug Endpoint
 app.get('/debug/cookies', (req, res) => {
     res.json({
