@@ -696,16 +696,26 @@
             try {
                 // ALWAYS load from server to ensure we have latest data
                 console.log('[Session] Loading data from server...');
-                const data = await window.SyncService.loadAll();
+                const rawData = await window.SyncService.loadAll();
 
-                if (!data || (!data.projects?.length && !data.tasks?.length)) {
+                // ✅ CRITICAL FIX: Normalize response structure
+                // Handle both legacy (/api/sync-data) and new (/api/sync/load) response formats
+                const data = {
+                    projects: rawData.data?.projects || rawData.projects || [],
+                    tasks: rawData.data?.tasks || rawData.tasks || [],
+                    pomodoros: rawData.data?.pomodoroLogs || rawData.data?.pomodoros || rawData.pomodoros || rawData.pomodoroLogs || [],
+                    settings: rawData.data?.settings || rawData.settings || {}
+                };
+
+                if (!data.projects?.length && !data.tasks?.length) {
                     console.log('[Session] No data from server');
                     return;
                 }
 
                 console.log('[Session] Loaded from server:', {
-                    projects: data.projects?.length || 0,
-                    tasks: data.tasks?.length || 0
+                    projects: data.projects.length,
+                    tasks: data.tasks.length,
+                    pomodoros: data.pomodoros.length
                 });
 
                 // ALWAYS save to BOTH IndexedDB and localStorage
@@ -1054,6 +1064,16 @@
                                             }
                                         } else {
                                             // Local task is clean - safe to overwrite with server version
+
+                                            // ✅ CRITICAL FIX: Preserve local completion state
+                                            // If user completed a task locally, don't revert it when loading server data
+                                            if (existingTask.isFinished === true && serverTask.isFinished !== true) {
+                                                console.log(`[Session] 🛡️ Preserving local completion for "${serverTask.name}"`);
+                                                serverTask.isFinished = existingTask.isFinished;
+                                                serverTask.completed = existingTask.completed;
+                                                serverTask.finishedDate = existingTask.finishedDate || Date.now();
+                                                serverTask.sync = 0; // Mark as dirty to sync completion
+                                            }
 
                                             // 🛡️ RECALCULATION DEFENSE: 
                                             // The server often sends actualPomoNum: 0. 

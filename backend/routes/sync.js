@@ -317,10 +317,36 @@ router.get('/load', authMiddleware, async (req, res) => {
             User.findById(userId).select('email name lastSyncTime')
         ]);
 
+        // ✅ CRITICAL FIX: Normalize numeric fields to prevent NaN/undefined issues
+        // Tasks - ensure all time-related fields are Numbers
+        const normalizedTasks = tasks.map(t => ({
+            ...t,
+            estimatePomoNum: Number(t.estimatePomoNum) || 0,
+            actualPomoNum: Number(t.actualPomoNum) || 0,
+            estimatedPomodoros: Number(t.estimatedPomodoros) || Number(t.estimatePomoNum) || 0,
+            actPomodoros: Number(t.actPomodoros) || Number(t.actualPomoNum) || 0,
+            pomodoroInterval: Number(t.pomodoroInterval) || 1500,
+            estimatedTime: Number(t.estimatedTime) || 0,
+            state: Number(t.state) || 0,
+            priority: Number(t.priority) || 0,
+            order: Number(t.order) || 0,
+            sortOrder: Number(t.sortOrder) || 0,
+            sync: 1  // Mark as synced when loading from server
+        }));
+
+        // Pomodoro Logs - ensure all duration fields are Numbers
+        const normalizedLogs = logs.map(l => ({
+            ...l,
+            duration: Number(l.duration) || 0,
+            startTime: Number(l.startTime) || 0,
+            endTime: Number(l.endTime) || 0,
+            sync: 1
+        }));
+
         console.log('[Sync Load] Data loaded:', {
             projects: projects.length,
-            tasks: tasks.length,
-            logs: logs.length,
+            tasks: normalizedTasks.length,
+            logs: normalizedLogs.length,
             hasSettings: !!settings
         });
 
@@ -328,8 +354,8 @@ router.get('/load', authMiddleware, async (req, res) => {
             success: true,
             data: {
                 projects: projects || [],
-                tasks: tasks || [],
-                pomodoroLogs: logs || [],
+                tasks: normalizedTasks,
+                pomodoroLogs: normalizedLogs,
                 settings: settings || {},
                 user: {
                     email: user.email,

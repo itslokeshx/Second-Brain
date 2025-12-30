@@ -203,14 +203,17 @@
                         }
 
                         // Ensure startTime is numeric (default 0)
+                        // ✅ ENHANCED: Force numeric conversion for any type
+                        const startTimeNum = Number(pomo.startTime);
                         if (typeof pomo.startTime !== 'number' || isNaN(pomo.startTime)) {
-                            pomo.startTime = 0;
+                            pomo.startTime = !isNaN(startTimeNum) ? startTimeNum : 0;
                             fixed = true;
                         }
 
                         // Ensure endTime is numeric (default 0)
+                        const endTimeNum = Number(pomo.endTime);
                         if (typeof pomo.endTime !== 'number' || isNaN(pomo.endTime)) {
-                            pomo.endTime = 0;
+                            pomo.endTime = !isNaN(endTimeNum) ? endTimeNum : 0;
                             fixed = true;
                         }
 
