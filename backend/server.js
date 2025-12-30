@@ -725,9 +725,9 @@ app.get('/api/sync/load', verifySession, async (req, res) => {
 
         // Get data from MongoDB collections
         const [projects, tasks, logs, user] = await Promise.all([
-            Project.find({ userId }).select('-_id -__v -userId').lean(),
-            Task.find({ userId }).select('-_id -__v -userId').lean(),
-            Pomodoro.find({ userId }).select('-_id -__v -userId').lean(),
+            Project.find({ userId }).select('-_id -__v').lean(),
+            Task.find({ userId }).select('-_id -__v').lean(),
+            Pomodoro.find({ userId }).select('-_id -__v').lean(),
             User.findById(userId).select('email name lastSyncTime')
         ]);
 

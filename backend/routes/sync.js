@@ -310,9 +310,9 @@ router.get('/load', authMiddleware, async (req, res) => {
 
         // ✅ Get from SEPARATE collections
         const [projects, tasks, logs, settings, user] = await Promise.all([
-            Project.find({ userId }).select('-_id -__v -userId').lean(),
-            Task.find({ userId }).select('-_id -__v -userId').lean(),
-            Pomodoro.find({ userId }).select('-_id -__v -userId').lean(),
+            Project.find({ userId }).select('-_id -__v').lean(),
+            Task.find({ userId }).select('-_id -__v').lean(),
+            Pomodoro.find({ userId }).select('-_id -__v').lean(),
             Settings.findOne({ userId }).select('-_id -__v -userId').lean(),
             User.findById(userId).select('email name lastSyncTime')
         ]);
