@@ -36,7 +36,7 @@
         return val;
     };
 
-    // Intercept IndexedDB reads to ensure pomodoroInterval is always 1500
+    // Intercept IndexedDB reads to ensure pomodoroInterval is valid
     const originalIDBGet = IDBObjectStore.prototype.get;
     IDBObjectStore.prototype.get = function (key) {
         const request = originalIDBGet.call(this, key);
@@ -45,10 +45,14 @@
         request.onsuccess = function (event) {
             const result = event.target.result;
 
-            // Fix pomodoroInterval if it's wrong
-            if (result && result.pomodoroInterval && result.pomodoroInterval !== 1500) {
-                console.log(`[Time Patch] 🔧 Fixed pomodoroInterval: ${result.pomodoroInterval} → 1500`);
-                result.pomodoroInterval = 1500;
+            // Validate pomodoroInterval is a valid positive number
+            if (result && result.pomodoroInterval !== undefined) {
+                if (typeof result.pomodoroInterval !== 'number' ||
+                    isNaN(result.pomodoroInterval) ||
+                    result.pomodoroInterval <= 0) {
+                    console.log(`[Time Patch] 🔧 Fixed invalid pomodoroInterval: ${result.pomodoroInterval} → 1500 (default)`);
+                    result.pomodoroInterval = 1500; // Default fallback only
+                }
             }
 
             // Ensure actualPomoNum is a number
@@ -67,7 +71,7 @@
         return request;
     };
 
-    // Intercept IDBObjectStore.getAll to fix all tasks at once
+    // Intercept IDBObjectStore.getAll to validate all tasks at once
     const originalGetAll = IDBObjectStore.prototype.getAll;
     IDBObjectStore.prototype.getAll = function (query, count) {
         const request = originalGetAll.call(this, query, count);
@@ -78,9 +82,13 @@
 
             if (Array.isArray(results)) {
                 results.forEach(item => {
-                    // Fix pomodoroInterval
-                    if (item && item.pomodoroInterval && item.pomodoroInterval !== 1500) {
-                        item.pomodoroInterval = 1500;
+                    // Validate pomodoroInterval is a valid positive number
+                    if (item && item.pomodoroInterval !== undefined) {
+                        if (typeof item.pomodoroInterval !== 'number' ||
+                            isNaN(item.pomodoroInterval) ||
+                            item.pomodoroInterval <= 0) {
+                            item.pomodoroInterval = 1500; // Default fallback only
+                        }
                     }
 
                     // Fix actualPomoNum
@@ -108,5 +116,5 @@
     };
 
     console.log('[Time Patch] ✅ Installed - NaN values will be converted to 0');
-    console.log('[Time Patch] ✅ pomodoroInterval will be forced to 1500');
+    console.log('[Time Patch] ✅ pomodoroInterval will be validated (invalid → 1500 default)');
 })();

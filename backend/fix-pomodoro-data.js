@@ -33,7 +33,9 @@ async function fixPomodoroData() {
         }
 
         let fixed = 0;
-        const STANDARD_POMODORO_MS = 25 * 60 * 1000; // 25 minutes
+
+        // Load Task model to get pomodoroInterval
+        const Task = require('./models/Task');
 
         for (const pomo of corruptedPomos) {
             console.log(`\n🔍 Pomodoro ${pomo.id.substring(0, 8)}:`);
@@ -42,8 +44,24 @@ async function fixPomodoroData() {
             console.log(`   duration: ${pomo.duration}`);
             console.log(`   taskId: ${pomo.taskId || 'MISSING'}`);
 
+            // Get the task to find its pomodoroInterval
+            let pomoDurationMs = 25 * 60 * 1000; // Default fallback: 25 minutes
+
+            if (pomo.taskId) {
+                const task = await Task.findOne({ id: pomo.taskId });
+                if (task && task.pomodoroInterval) {
+                    // pomodoroInterval is in seconds, convert to milliseconds
+                    pomoDurationMs = task.pomodoroInterval * 1000;
+                    console.log(`   ✅ Found task interval: ${task.pomodoroInterval}s (${task.pomodoroInterval / 60}min)`);
+                } else {
+                    console.log(`   ⚠️ Task not found or no interval set, using default: 25min`);
+                }
+            } else {
+                console.log(`   ⚠️ No taskId, using default: 25min`);
+            }
+
             // Calculate endTime and duration
-            const endTime = pomo.endTime || (pomo.startTime + STANDARD_POMODORO_MS);
+            const endTime = pomo.endTime || (pomo.startTime + pomoDurationMs);
             const duration = endTime - pomo.startTime;
 
             console.log(`   ✅ Fixing: endTime=${endTime}, duration=${duration}ms (${Math.floor(duration / 1000 / 60)}min)`);
