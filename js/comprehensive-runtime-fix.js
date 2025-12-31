@@ -176,7 +176,7 @@
                     task.isFinished = !task.isFinished;
                     task.completed = task.isFinished;
                     task.finishedDate = task.isFinished ? Date.now() : 0;
-                    task.sync = 0;
+                    task.sync = 0; // Mark as needing sync
 
                     // Save to localStorage
                     localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
@@ -194,8 +194,62 @@
                         };
                     }
 
-                    // Trigger React update
+                    // CRITICAL: Force React Fiber to update
+                    const root = document.querySelector('#root');
+                    if (root) {
+                        const reactKey = Object.keys(root).find(k =>
+                            k.startsWith('__reactContainer') || k.startsWith('__reactInternalInstance')
+                        );
+
+                        if (reactKey) {
+                            const fiberRoot = root[reactKey];
+
+                            // Find and update task list components
+                            function forceUpdateTaskLists(node, depth = 0) {
+                                if (!node || depth > 30) return;
+
+                                // If this node has tasks array, update it
+                                if (node.memoizedProps && node.memoizedProps.tasks && Array.isArray(node.memoizedProps.tasks)) {
+                                    const taskIndex = node.memoizedProps.tasks.findIndex(t => t.id === taskId);
+                                    if (taskIndex !== -1) {
+                                        console.log('[Comprehensive Fix] Updating task in React Fiber:', task.name);
+                                        node.memoizedProps.tasks[taskIndex] = task;
+
+                                        // Force component to re-render by updating state version
+                                        if (node.stateNode && node.stateNode.forceUpdate) {
+                                            node.stateNode.forceUpdate();
+                                        }
+                                    }
+                                }
+
+                                // Traverse children
+                                let child = node.child;
+                                while (child) {
+                                    forceUpdateTaskLists(child, depth + 1);
+                                    child = child.sibling;
+                                }
+                            }
+
+                            forceUpdateTaskLists(fiberRoot);
+                        }
+                    }
+
+                    // Trigger React update via storage event
                     forceReactUpdate();
+
+                    // CRITICAL: Trigger sync to server
+                    if (window.SyncService && typeof window.SyncService.syncAll === 'function') {
+                        console.log('[Comprehensive Fix] Triggering sync to server...');
+                        setTimeout(() => {
+                            window.SyncService.syncAll().then(() => {
+                                console.log('[Comprehensive Fix] ✅ Synced to server');
+                            }).catch(err => {
+                                console.error('[Comprehensive Fix] Sync failed:', err);
+                            });
+                        }, 500); // Delay to ensure IndexedDB write completes
+                    } else {
+                        console.warn('[Comprehensive Fix] SyncService not available, data not synced to server');
+                    }
 
                     // Update checkbox visually
                     if (cb.tagName === 'INPUT') {
