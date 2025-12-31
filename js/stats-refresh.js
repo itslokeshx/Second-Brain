@@ -10,25 +10,30 @@
 
     // Listen for hydration complete event
     window.addEventListener('hydration-complete', () => {
-        console.log('[Stats Refresh] Hydration complete - triggering UI refresh...');
+        console.log('[Stats Refresh] Hydration complete - checking if reload needed...');
 
-        // Wait a bit for React to finish rendering
-        setTimeout(() => {
-            // Trigger a project change to force statistics recalculation
-            const currentProject = document.querySelector('.ProjectItem-root-1iGkr.ProjectItem-checked-385Hh');
+        // Check if this is the first load after sync
+        const needsReload = localStorage.getItem('_pendingUIRefresh');
 
-            if (currentProject) {
-                console.log('[Stats Refresh] Clicking current project to force refresh...');
-                currentProject.click();
+        if (needsReload === 'true') {
+            console.log('[Stats Refresh] 🔄 Reloading page to refresh UI statistics...');
+            localStorage.removeItem('_pendingUIRefresh');
 
-                // Small delay then click again to ensure it refreshes
-                setTimeout(() => {
-                    currentProject.click();
-                    console.log('[Stats Refresh] ✅ Statistics should now be updated');
-                }, 100);
-            }
-        }, 500);
+            // Small delay to ensure data is saved
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        } else {
+            console.log('[Stats Refresh] ✅ No reload needed');
+        }
+    });
+
+    // Listen for sync complete event (from sync-button-handler.js)
+    window.addEventListener('sync-complete', () => {
+        console.log('[Stats Refresh] Sync complete - marking for UI refresh...');
+        localStorage.setItem('_pendingUIRefresh', 'true');
     });
 
     console.log('[Stats Refresh] ✅ Refresh trigger installed');
 })();
+
