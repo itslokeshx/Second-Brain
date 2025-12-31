@@ -546,6 +546,14 @@
                 console.log('[Loader] ✅ Hydration phase started (before main.js)');
             }
             console.log('[Loader] Loading main.js...');
+
+            // ✅ CRITICAL: Load time calculation patch BEFORE main.js
+            const timePatchScript = document.createElement('script');
+            timePatchScript.src = 'js/main-time-patch.js';
+            document.body.appendChild(timePatchScript);
+
+            // Wait a tiny bit for the patch to install
+            await new Promise(resolve => setTimeout(resolve, 100));
             const patchScript = document.createElement('script');
             patchScript.src = 'js/main-hydration-patch.js';
             document.body.appendChild(patchScript);
