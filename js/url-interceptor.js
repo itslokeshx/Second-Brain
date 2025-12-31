@@ -7,9 +7,9 @@
 (function () {
     'use strict';
 
-    const BACKEND_URL = 'https://second-brain-backend-saxs.onrender.com';
+    const BACKEND_URL = 'http://localhost:3000';
 
-    console.log('[URL Interceptor] Installing localhost → Render redirector...');
+    console.log('[URL Interceptor] Installing localhost → Local Backend redirector...');
     console.log('[URL Interceptor] Target:', BACKEND_URL);
 
     // Store original XMLHttpRequest
@@ -85,5 +85,5 @@
         return originalFetch.call(this, url, options);
     };
 
-    console.log('[URL Interceptor] ✅ Installed - all localhost:3000 calls will redirect to Render');
+    console.log('[URL Interceptor] ✅ Installed - all localhost:3000 calls will use LOCAL backend');
 })();
