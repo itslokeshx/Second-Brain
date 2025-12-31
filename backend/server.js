@@ -731,6 +731,14 @@ app.get('/api/sync/load', verifySession, async (req, res) => {
             User.findById(userId).select('email name lastSyncTime')
         ]);
 
+        // Projects - ensure ownership fields
+        const normalizedProjects = projects.map(p => ({
+            ...p,
+            userId: p.userId.toString(),
+            uid: p.userId.toString(),
+            sync: 1
+        }));
+
         // ✅ CRITICAL FIX: Normalize numeric fields to prevent NaN/undefined issues
         // Tasks - ensure all time-related fields are Numbers
         const normalizedTasks = tasks.map(t => ({
@@ -753,6 +761,8 @@ app.get('/api/sync/load', verifySession, async (req, res) => {
         // Pomodoro Logs - ensure all duration fields are Numbers
         const normalizedLogs = logs.map(l => ({
             ...l,
+            userId: l.userId.toString(),
+            uid: l.userId.toString(),
             duration: Number(l.duration) || 0,
             startTime: Number(l.startTime) || 0,
             endTime: Number(l.endTime) || 0,
@@ -779,7 +789,7 @@ app.get('/api/sync/load', verifySession, async (req, res) => {
         });
 
         console.log('[Sync Load] Data loaded:', {
-            projects: projects.length,
+            projects: normalizedProjects.length,
             tasks: normalizedTasks.length,
             logs: normalizedLogs.length
         });
@@ -787,7 +797,7 @@ app.get('/api/sync/load', verifySession, async (req, res) => {
         res.json({
             success: true,
             data: {
-                projects: projects || [],
+                projects: normalizedProjects,
                 tasks: normalizedTasks,
                 pomodoroLogs: normalizedLogs,
                 settings: {},
