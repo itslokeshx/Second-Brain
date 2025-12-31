@@ -547,6 +547,28 @@
             }
             console.log('[Loader] Loading main.js...');
 
+            // ✅ EMERGENCY FIXES: Load BEFORE main.js to intercept all operations
+            console.log('[Loader] Loading emergency fixes...');
+
+            // Fix 1: NaN Emergency Fix (intercepts all Math operations)
+            const nanFixScript = document.createElement('script');
+            nanFixScript.src = 'js/nan-emergency-fix.js';
+            document.body.appendChild(nanFixScript);
+
+            // Fix 2: Checkbox Fix (manual event handler attachment)
+            const checkboxFixScript = document.createElement('script');
+            checkboxFixScript.src = 'js/checkbox-fix.js';
+            document.body.appendChild(checkboxFixScript);
+
+            // Fix 3: Data Layer Fix (default values for estimatePomoNum)
+            const dataFixScript = document.createElement('script');
+            dataFixScript.src = 'js/data-layer-fix.js';
+            document.body.appendChild(dataFixScript);
+
+            // Wait for emergency fixes to install
+            await new Promise(resolve => setTimeout(resolve, 200));
+            console.log('[Loader] ✅ Emergency fixes loaded');
+
             // ✅ CRITICAL: Load time calculation patch BEFORE main.js
             const timePatchScript = document.createElement('script');
             timePatchScript.src = 'js/main-time-patch.js';
