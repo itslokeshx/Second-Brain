@@ -439,11 +439,10 @@
 
                 alert(`✅ Synced: ${result.projectsSynced || 0} projects, ${result.tasksSynced || 0} tasks, ${result.logsSynced || 0} logs`);
 
-                // ✅ FORCE UI REFRESH: Reload page to ensure statistics display correctly
-                console.log('[Sync Button] 🔄 Reloading page to refresh UI statistics...');
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000); // Small delay to let user see the success message
+                // ✅ UI REFRESH: Let React update via storage events (no reload needed)
+                // Storage events are dispatched by session-manager.js (line 1330-1339)
+                // React listens to these events and updates UI automatically
+                console.log('[Sync Button] ✅ Sync complete - React will update via storage events');
             } catch (error) {
                 console.error('[Sync Button] ❌ Sync failed:', error);
                 // Even on error, ensure system projects exist

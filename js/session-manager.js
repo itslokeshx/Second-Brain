@@ -728,18 +728,9 @@
                 // Ensure sidebar data
                 this.ensureLocalSidebarData();
 
-                // ✅ RELOAD AFTER DATA LOAD: Only reload ONCE (first time after sync)
-                const hasReloadedAfterSync = sessionStorage.getItem('reloaded-after-sync');
-                if (!hasReloadedAfterSync && (data.projects?.length > 0 || data.tasks?.length > 0)) {
-                    console.log('[Session] 🔄 First data load - reloading page to render UI...');
-                    sessionStorage.setItem('reloaded-after-sync', 'true');
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 100);
-                    return;
-                }
-
-                console.log('[Session] ✅ Data load complete (no reload needed)');
+                // ✅ NO RELOAD NEEDED: Storage events already dispatched (line 1330-1339)
+                // React listens to storage events and updates UI automatically
+                console.log('[Session] ✅ Data loaded - storage events dispatched for React update');
 
             } catch (error) {
                 console.error('[Session] Data load failed:', error);
@@ -1326,9 +1317,15 @@
                 console.log('[Session] ✅ Legacy migration flags set');
                 console.log('[Session] ✅ localStorage updated');
 
-                // ✅ CRITICAL: Dispatch events for BOTH projects and order
-                console.log('[Session] Dispatching storage event to trigger UI update...');
-                const storageKeys = ['pomodoro-projects', 'pomodoro-projectOrder', 'custom-project-list'];
+                // ✅ CRITICAL: Dispatch events for ALL data types to trigger React update
+                console.log('[Session] Dispatching storage events to trigger UI update...');
+                const storageKeys = [
+                    'pomodoro-projects',
+                    'pomodoro-projectOrder',
+                    'custom-project-list',
+                    'pomodoro-tasks',
+                    'pomodoro-pomodoros'
+                ];
                 storageKeys.forEach(key => {
                     window.dispatchEvent(new StorageEvent('storage', {
                         key: key,

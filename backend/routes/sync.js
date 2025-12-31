@@ -317,23 +317,40 @@ router.get('/load', authMiddleware, async (req, res) => {
             User.findById(userId).select('email name lastSyncTime')
         ]);
 
-        // ✅ CRITICAL FIX: Normalize numeric fields to prevent NaN/undefined issues
-        // Tasks - ensure all time-related fields are Numbers
-        const normalizedTasks = tasks.map(t => ({
-            ...t,
-            userId: t.userId.toString(),
-            uid: t.userId.toString(),
-            estimatePomoNum: Number(t.estimatePomoNum) || 0,
-            actualPomoNum: Number(t.actualPomoNum) || 0,
-            estimatedPomodoros: Number(t.estimatedPomodoros) || Number(t.estimatePomoNum) || 0,
-            actPomodoros: Number(t.actPomodoros) || Number(t.actualPomoNum) || 0,
-            pomodoroInterval: Number(t.pomodoroInterval) || 1500,
-            estimatedTime: Number(t.estimatedTime) || 0,
-            state: Number(t.state) || 0,
-            priority: Number(t.priority) || 0,
-            order: Number(t.order) || 0,
-            sortOrder: Number(t.sortOrder) || 0,
-            sync: 1  // Mark as synced when loading from server
+        // ✅ CRITICAL FIX: Properly calculate derived fields from actual data
+        const normalizedTasks = await Promise.all(tasks.map(async (t) => {
+            // ✅ Count actual pomodoros for this task from logs
+            const actualPomoCount = await Pomodoro.countDocuments({
+                userId,
+                taskId: t.id
+            });
+
+            const pomoInterval = Number(t.pomodoroInterval) || 1500;
+            const estimateCount = Number(t.estimatePomoNum) || 0;
+
+            return {
+                ...t,
+                userId: t.userId.toString(),
+                uid: t.userId.toString(),
+
+                // ✅ Recalculate from actual logs (not stale MongoDB value)
+                actualPomoNum: actualPomoCount,
+                actPomodoros: actualPomoCount,
+
+                // ✅ Keep estimate values
+                estimatePomoNum: estimateCount,
+                estimatedPomodoros: estimateCount,
+
+                // ✅ FIXED: Calculate estimatedTime properly (was hardcoded to 0!)
+                estimatedTime: estimateCount * pomoInterval,
+
+                pomodoroInterval: pomoInterval,
+                state: Number(t.state) || 0,
+                priority: Number(t.priority) || 0,
+                order: Number(t.order) || 0,
+                sortOrder: Number(t.sortOrder) || 0,
+                sync: 1  // Mark as synced when loading from server
+            };
         }));
 
         // Pomodoro Logs - ensure all duration fields are Numbers
