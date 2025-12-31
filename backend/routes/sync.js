@@ -321,6 +321,8 @@ router.get('/load', authMiddleware, async (req, res) => {
         // Tasks - ensure all time-related fields are Numbers
         const normalizedTasks = tasks.map(t => ({
             ...t,
+            userId: t.userId.toString(),
+            uid: t.userId.toString(),
             estimatePomoNum: Number(t.estimatePomoNum) || 0,
             actualPomoNum: Number(t.actualPomoNum) || 0,
             estimatedPomodoros: Number(t.estimatedPomodoros) || Number(t.estimatePomoNum) || 0,

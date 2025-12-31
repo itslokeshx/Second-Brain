@@ -735,6 +735,8 @@ app.get('/api/sync/load', verifySession, async (req, res) => {
         // Tasks - ensure all time-related fields are Numbers
         const normalizedTasks = tasks.map(t => ({
             ...t,
+            userId: t.userId.toString(), // Ensure string for strict equality checks
+            uid: t.userId.toString(),    // Legacy frontend often expects 'uid'
             estimatePomoNum: Number(t.estimatePomoNum) || 0,
             actualPomoNum: Number(t.actualPomoNum) || 0,
             estimatedPomodoros: Number(t.estimatedPomodoros) || Number(t.estimatePomoNum) || 0,
