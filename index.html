@@ -547,6 +547,12 @@
             }
             console.log('[Loader] Loading main.js...');
 
+            // ✅ SETTINGS INIT: Initialize pomodoro settings FIRST
+            const settingsInitScript = document.createElement('script');
+            settingsInitScript.src = 'js/settings-initializer.js';
+            document.body.appendChild(settingsInitScript);
+            await new Promise(resolve => setTimeout(resolve, 100));
+
             // ✅ EMERGENCY FIXES: Load BEFORE main.js to intercept all operations
             console.log('[Loader] Loading emergency fixes...');
 
@@ -569,6 +575,12 @@
             await new Promise(resolve => setTimeout(resolve, 200));
             console.log('[Loader] ✅ Emergency fixes loaded');
 
+            // ✅ COMPREHENSIVE FIX: Final runtime patches for calculation and checkboxes
+            const comprehensiveFixScript = document.createElement('script');
+            comprehensiveFixScript.src = 'js/comprehensive-runtime-fix.js';
+            document.body.appendChild(comprehensiveFixScript);
+            await new Promise(resolve => setTimeout(resolve, 100));
+
             // ✅ CRITICAL: Load time calculation patch BEFORE main.js
             const timePatchScript = document.createElement('script');
             timePatchScript.src = 'js/main-time-patch.js';
@@ -588,6 +600,12 @@
                 const fixerScript = document.createElement('script');
                 fixerScript.src = 'js/username-display-fixer.js?v=1000';
                 document.body.appendChild(fixerScript);
+
+                // ✅ REACT FORCE PATCH: Aggressively fix time display after React loads
+                const reactForceScript = document.createElement('script');
+                reactForceScript.src = 'js/react-force-patch.js';
+                document.body.appendChild(reactForceScript);
+                console.log('[Loader] ✅ React force patch loaded');
             };
             document.body.appendChild(script);
         })();
