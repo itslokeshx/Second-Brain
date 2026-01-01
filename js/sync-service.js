@@ -37,25 +37,9 @@ class SyncService {
     // Load all data from MongoDB
     async loadAll() {
         try {
-            // ✅ FIX: Use GET /api/sync/load endpoint which returns properly structured data
-            const response = await window.AuthFetch.get(`${this.baseURL}/api/sync/load`);
+            const response = await window.AuthFetch.post(`${this.baseURL}/api/sync-data`, {});
             const result = await response.json();
-
             console.log('[Sync] ✅ Data loaded:', result);
-
-            // ✅ CRITICAL: Normalize response structure for consistent handling
-            // The /api/sync/load endpoint returns { success, data: { projects, tasks, pomodoroLogs, settings } }
-            if (result.success && result.data) {
-                return {
-                    projects: result.data.projects || [],
-                    tasks: result.data.tasks || [],
-                    pomodoros: result.data.pomodoroLogs || [],
-                    settings: result.data.settings || {},
-                    user: result.data.user || null
-                };
-            }
-
-            // Fallback: return as-is for legacy compatibility
             return result;
         } catch (error) {
             console.error('[Sync] ❌ Load failed:', error);

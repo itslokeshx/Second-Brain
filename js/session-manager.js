@@ -482,14 +482,12 @@
 
                 console.log('[Session] ✅ Cookie clear delay complete, redirecting...');
 
-                // Redirect to root (preserve base path for GitHub Pages)
-                const basePath = window.location.pathname.split('?')[0];
-                window.location.replace(window.location.origin + basePath);
+                // Redirect to root with timestamp
+                window.location.replace(window.location.origin + "/?t=" + Date.now());
             } catch (error) {
                 console.error('[Session] Logout error:', error);
-                // Force reload anyway
-                const basePath = window.location.pathname.split('?')[0];
-                window.location.replace(window.location.origin + basePath);
+                // Force reload anyway with cache bust
+                window.location.replace(window.location.origin + "/?logout=1&t=" + Date.now());
             }
         },
 
@@ -567,9 +565,8 @@
                 });
 
                 if (cleanTasks.length < originalCount) {
-                    // ❌ DISABLED: localStorage persistence causes task operation failures
-                    // localStorage.setItem('pomodoro-tasks', JSON.stringify(cleanTasks));
-                    console.log(`[Session] ⏭️ Skipped purging ${originalCount - cleanTasks.length} poisoned tasks from localStorage`);
+                    localStorage.setItem('pomodoro-tasks', JSON.stringify(cleanTasks));
+                    console.log(`[Session] ✅ Purged ${originalCount - cleanTasks.length} poisoned tasks from localStorage`);
                 }
 
                 // Purge from IndexedDB
@@ -696,31 +693,27 @@
             try {
                 // ALWAYS load from server to ensure we have latest data
                 console.log('[Session] Loading data from server...');
-                const rawData = await window.SyncService.loadAll();
+                const data = await window.SyncService.loadAll();
 
-                // ✅ CRITICAL FIX: Normalize response structure
-                // Handle both legacy (/api/sync-data) and new (/api/sync/load) response formats
-                const data = {
-                    projects: rawData.data?.projects || rawData.projects || [],
-                    tasks: rawData.data?.tasks || rawData.tasks || [],
-                    pomodoros: rawData.data?.pomodoroLogs || rawData.data?.pomodoros || rawData.pomodoros || rawData.pomodoroLogs || [],
-                    settings: rawData.data?.settings || rawData.settings || {}
-                };
-
-                if (!data.projects?.length && !data.tasks?.length) {
+                if (!data || (!data.projects?.length && !data.tasks?.length)) {
                     console.log('[Session] No data from server');
                     return;
                 }
 
                 console.log('[Session] Loaded from server:', {
-                    projects: data.projects.length,
-                    tasks: data.tasks.length,
-                    pomodoros: data.pomodoros.length
+                    projects: data.projects?.length || 0,
+                    tasks: data.tasks?.length || 0
                 });
 
                 // ALWAYS save to BOTH IndexedDB and localStorage
                 console.log('[Session] Saving to IndexedDB...');
                 await this.saveToIndexedDB(data);
+
+                // ✅ CRITICAL FIX: Recalculate task stats from pomodoro logs before saving
+                if (data.tasks && data.pomodoros) {
+                    console.log('[Session] 🔧 Recalculating task stats before saving to localStorage...');
+                    data.tasks = this.recalculateTaskStats(data.tasks, data.pomodoros);
+                }
 
                 console.log('[Session] Saving to localStorage...');
                 this.saveToLocalStorage(data);
@@ -728,9 +721,18 @@
                 // Ensure sidebar data
                 this.ensureLocalSidebarData();
 
-                // ✅ NO RELOAD NEEDED: Storage events already dispatched (line 1330-1339)
-                // React listens to storage events and updates UI automatically
-                console.log('[Session] ✅ Data loaded - storage events dispatched for React update');
+                // ✅ RELOAD AFTER DATA LOAD: Only reload ONCE (first time after sync)
+                const hasReloadedAfterSync = sessionStorage.getItem('reloaded-after-sync');
+                if (!hasReloadedAfterSync && (data.projects?.length > 0 || data.tasks?.length > 0)) {
+                    console.log('[Session] 🔄 First data load - reloading page to render UI...');
+                    sessionStorage.setItem('reloaded-after-sync', 'true');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 100);
+                    return;
+                }
+
+                console.log('[Session] ✅ Data load complete (no reload needed)');
 
             } catch (error) {
                 console.error('[Session] Data load failed:', error);
@@ -775,7 +777,7 @@
 
                 const projectOrder = projects.map(p => p.id);
                 if (!localStorage.getItem('pomodoro-projectOrder')) {
-                    // localStorage.setItem('pomodoro-projectOrder', JSON.stringify(projectOrder));
+                    localStorage.setItem('pomodoro-projectOrder', JSON.stringify(projectOrder));
                     console.log(`[Session] ✅ Rebuilt pomodoro-projectOrder (${projectOrder.length} items)`);
                 }
 
@@ -793,7 +795,7 @@
                     if (!customList.includes(id)) customList.push(id);
                 });
 
-                // localStorage.setItem('custom-project-list', JSON.stringify(customList));
+                localStorage.setItem('custom-project-list', JSON.stringify(customList));
                 console.log(`[Session] ✅ Ensured custom-project-list (${customList.length} items)`);
 
                 // Dispatch storage events to trigger React/legacy listeners
@@ -808,43 +810,6 @@
             } catch (e) {
                 console.error('[Session] ensureLocalSidebarData failed:', e);
             }
-        },
-
-        // ✅ NEW: Recalculate derived stats (elapsed/estimated) from logs
-        // This ensures tasks don't lose their state during sync/reload
-        recalculateTaskStats: function (tasks, pomodoros) {
-            if (!tasks || !Array.isArray(tasks)) return tasks;
-            if (!pomodoros || !Array.isArray(pomodoros)) return tasks;
-
-            console.log('[Session] 🔄 Recalculating task stats from ' + pomodoros.length + ' logs...');
-
-            // Count completed pomodoros per task
-            const pomoCounts = {};
-            pomodoros.forEach(p => {
-                if (p.taskId && p.status === 'completed') {
-                    pomoCounts[p.taskId] = (pomoCounts[p.taskId] || 0) + 1;
-                }
-            });
-
-            // Update tasks
-            return tasks.map(t => {
-                // 1. Update actualPomoNum (elapsed time source)
-                const realCount = pomoCounts[t.id] || 0;
-
-                // Only update if missing or different (trust the logs)
-                if (t.actualPomoNum !== realCount) {
-                    // console.log(`[Session] 🔧 Fixed actualPomoNum for "${t.name}": ${t.actualPomoNum} -> ${realCount}`);
-                    t.actualPomoNum = realCount;
-                }
-
-                // 2. Sanitize estimatedTime
-                if (t.estimatedTime === undefined || t.estimatedTime === null || isNaN(t.estimatedTime)) {
-                    // console.log(`[Session] 🔧 Fixed NaN estimatedTime for "${t.name}" -> 0`);
-                    t.estimatedTime = 0;
-                }
-
-                return t;
-            });
         },
 
         // ✅ NEW: Save to IndexedDB (Required for main.js rendering)
@@ -978,12 +943,10 @@
                         // ✅ BULLETPROOF FIX: Use cursor-based iteration for atomic dirty check
                         // This ensures NO race condition - all reads/writes happen in same transaction
                         if (taskStoreName && data.tasks && data.tasks.length > 0) {
-                            // ✅ FIX: Recalculate stats before saving
-                            const processedTasks = this.recalculateTaskStats(data.tasks, data.pomodoros);
                             const taskStore = tx.objectStore(taskStoreName);
 
                             // Build map of server tasks for quick lookup
-                            const serverTaskMap = new Map(processedTasks.map(t => {
+                            const serverTaskMap = new Map(data.tasks.map(t => {
                                 if (!t.id && t._id) t.id = t._id;
                                 return [t.id, t];
                             }));
@@ -1055,26 +1018,6 @@
                                             }
                                         } else {
                                             // Local task is clean - safe to overwrite with server version
-
-                                            // ✅ CRITICAL FIX: Preserve local completion state
-                                            // If user completed a task locally, don't revert it when loading server data
-                                            if (existingTask.isFinished === true && serverTask.isFinished !== true) {
-                                                console.log(`[Session] 🛡️ Preserving local completion for "${serverTask.name}"`);
-                                                serverTask.isFinished = existingTask.isFinished;
-                                                serverTask.completed = existingTask.completed;
-                                                serverTask.finishedDate = existingTask.finishedDate || Date.now();
-                                                serverTask.sync = 0; // Mark as dirty to sync completion
-                                            }
-
-                                            // 🛡️ RECALCULATION DEFENSE: 
-                                            // The server often sends actualPomoNum: 0. 
-                                            // If locally we know better, preserve our count!
-                                            if (existingTask.actualPomoNum > 0 && (!serverTask.actualPomoNum || serverTask.actualPomoNum === 0)) {
-                                                console.log(`[Session] 🛡️ Preserving local actualPomoNum (${existingTask.actualPomoNum}) against server zero for task "${serverTask.name}"`);
-                                                serverTask.actualPomoNum = existingTask.actualPomoNum;
-                                                serverTask.estimatedTime = existingTask.estimatedTime || 0; // also preserve estimated
-                                            }
-
                                             cursor.update(serverTask);
                                             count++;
                                         }
@@ -1151,6 +1094,73 @@
             });
         },
 
+        // ═══════════════════════════════════════════════════════════════════════
+        // 🔧 CRITICAL FIX: Recalculate Task Statistics from Pomodoro Logs
+        // This fixes the "0m/NaN" bug after sync by ensuring task stats are derived
+        // from actual pomodoro logs rather than relying on potentially stale values
+        // ═══════════════════════════════════════════════════════════════════════
+        recalculateTaskStats: function (tasks, pomodoros) {
+            if (!Array.isArray(tasks) || !Array.isArray(pomodoros)) {
+                console.warn('[Session] Cannot recalculate task stats - invalid input');
+                return tasks;
+            }
+
+            console.log(`[Session] 🔄 Recalculating task stats from ${pomodoros.length} pomodoro logs...`);
+
+            return tasks.map(task => {
+                // Find all pomodoros for this task
+                const taskPomos = pomodoros.filter(p => p.taskId === task.id);
+
+                // Calculate actualPomoNum (count of completed pomodoros)
+                const actualCount = taskPomos.length;
+                task.actualPomoNum = actualCount;
+
+                // ═══════════════════════════════════════════════════════════════
+                // CRITICAL FIX: Calculate elapsed time with fallback logic
+                // ═══════════════════════════════════════════════════════════════
+                // Ensure pomodoroInterval exists FIRST (default 25 minutes = 1500 seconds)
+                if (!task.pomodoroInterval || task.pomodoroInterval === 0) {
+                    task.pomodoroInterval = 1500;
+                }
+
+                // Calculate total elapsed time from durations (in milliseconds)
+                let totalDuration = 0;
+                taskPomos.forEach((p, index) => {
+                    console.log(`[Session] 🔍 Pomodoro #${index + 1} for "${task.name}": duration=${p.duration}, start=${p.startTime}, end=${p.endTime}`);
+
+                    if (p.duration && p.duration > 0) {
+                        // Use actual duration if available
+                        console.log(`[Session]   ✅ Using actual duration: ${p.duration}ms`);
+                        totalDuration += p.duration;
+                    } else if (p.endTime && p.startTime && (p.endTime - p.startTime) > 0) {
+                        // Calculate from startTime/endTime if duration is missing
+                        const calculated = p.endTime - p.startTime;
+                        console.log(`[Session]   ✅ Calculated from times: ${calculated}ms`);
+                        totalDuration += calculated;
+                    } else {
+                        // Fallback: use task's pomodoroInterval (convert seconds to milliseconds)
+                        const fallback = task.pomodoroInterval * 1000;
+                        console.log(`[Session]   ⚠️ Using fallback (${task.pomodoroInterval}s): ${fallback}ms`);
+                        totalDuration += fallback;
+                    }
+                });
+
+                console.log(`[Session] 📊 Total duration for "${task.name}": ${totalDuration}ms = ${Math.floor(totalDuration / 1000 / 60)}m`);
+                task.elapsedTime = Math.floor(totalDuration / 1000 / 60); // Convert to minutes
+
+                // Ensure estimatePomoNum exists (preserve user's estimate, prevent NaN)
+                if (task.estimatePomoNum === undefined || task.estimatePomoNum === null || isNaN(task.estimatePomoNum)) {
+                    task.estimatePomoNum = 0;
+                }
+
+                if (actualCount > 0 || task.estimatePomoNum > 0) {
+                    console.log(`[Session] Task "${task.name}": actualPomoNum=${task.actualPomoNum}, estimatePomoNum=${task.estimatePomoNum}, elapsedTime=${task.elapsedTime}m`);
+                }
+
+                return task;
+            });
+        },
+
         // Helper to save data to localStorage
         saveToLocalStorage: function (data) {
             try {
@@ -1176,20 +1186,17 @@
                         document.cookie = `PID=${validPid}; path=/; max-age=31536000`;
                     }
 
-                    // ✅ RESTORED: Needed for sidebar UI
                     localStorage.setItem('pomodoro-projects', JSON.stringify(data.projects));
-                    console.log(`[Session] ✅ Saved ${data.projects.length} projects to localStorage`);
+                    console.log(`[Session] ✅ Saved ${data.projects.length} projects`);
 
                     // ✅ CRITICAL: Create and save project order
                     // Without this, main.js might not know how to list the projects
                     const projectOrder = data.projects.map(p => p.id);
-                    // ✅ RESTORED: Needed for sidebar UI
                     localStorage.setItem('pomodoro-projectOrder', JSON.stringify(projectOrder));
                     console.log(`[Session] ✅ Saved projectOrder (${projectOrder.length} items)`);
 
                     // ✅ CRITICAL: Sidebar Project List
                     // main.js uses 'custom-project-list' to determine what shows in the sidebar
-                    // ✅ RESTORED: Needed for sidebar UI
                     localStorage.setItem('custom-project-list', JSON.stringify(projectOrder));
                     console.log(`[Session] ✅ Saved custom-project-list (${projectOrder.length} items)`);
 
@@ -1216,6 +1223,12 @@
                 // CRITICAL: Preserve dirty tasks (sync: 0) in localStorage
                 // ═══════════════════════════════════════════════════════════════
                 if (data.tasks && data.tasks.length > 0) {
+                    // ✅ CRITICAL FIX: Recalculate task stats from pomodoro logs FIRST
+                    if (data.pomodoros && data.pomodoros.length > 0) {
+                        console.log('[Session] 🔧 Recalculating task stats before merging...');
+                        data.tasks = this.recalculateTaskStats(data.tasks, data.pomodoros);
+                    }
+
                     // Read existing tasks and find dirty ones
                     const existingTasksStr = localStorage.getItem('pomodoro-tasks');
                     let existingTasks = [];
@@ -1274,11 +1287,7 @@
                     }
 
                     // Merge server tasks, respecting local dirty state
-                    // Merge server tasks, respecting local dirty state
-                    // ✅ FIX: Recalculate stats before merging/saving
-                    const processedServerTasks = this.recalculateTaskStats(data.tasks, data.pomodoros);
-
-                    const mergedTasks = processedServerTasks.map(serverTask => {
+                    const mergedTasks = data.tasks.map(serverTask => {
                         if (dirtyTasks[serverTask.id]) {
                             console.log(`[Session] ⏭️ localStorage: Keeping local dirty task "${serverTask.name}"`);
                             return dirtyTasks[serverTask.id]; // Keep local version
@@ -1294,15 +1303,23 @@
                         }
                     });
 
-                    // ✅ RESTORED: localStorage persistence needed for main.js UI
                     localStorage.setItem('pomodoro-tasks', JSON.stringify(mergedTasks));
                     console.log(`[Session] ✅ Saved ${mergedTasks.length} tasks (${dirtyCount} preserved dirty)`);
                 }
 
                 if (data.pomodoros && data.pomodoros.length > 0) {
-                    // ✅ RESTORED: localStorage persistence needed for main.js UI
                     localStorage.setItem('pomodoro-pomodoros', JSON.stringify(data.pomodoros));
                     console.log(`[Session] ✅ Saved ${data.pomodoros.length} pomodoros`);
+
+                    // ✅ CRITICAL FIX: Dispatch storage event to trigger UI update
+                    // This ensures React/main.js re-reads the updated task statistics
+                    window.dispatchEvent(new StorageEvent('storage', {
+                        key: 'pomodoro-tasks',
+                        newValue: localStorage.getItem('pomodoro-tasks'),
+                        url: window.location.href,
+                        storageArea: localStorage
+                    }));
+                    console.log('[Session] ✅ Dispatched storage event to trigger UI update');
                 }
 
                 // ✅ CRITICAL: Set legacy migration flags UNCONDITIONALLY
@@ -1317,15 +1334,9 @@
                 console.log('[Session] ✅ Legacy migration flags set');
                 console.log('[Session] ✅ localStorage updated');
 
-                // ✅ CRITICAL: Dispatch events for ALL data types to trigger React update
-                console.log('[Session] Dispatching storage events to trigger UI update...');
-                const storageKeys = [
-                    'pomodoro-projects',
-                    'pomodoro-projectOrder',
-                    'custom-project-list',
-                    'pomodoro-tasks',
-                    'pomodoro-pomodoros'
-                ];
+                // ✅ CRITICAL: Dispatch events for BOTH projects and order
+                console.log('[Session] Dispatching storage event to trigger UI update...');
+                const storageKeys = ['pomodoro-projects', 'pomodoro-projectOrder', 'custom-project-list'];
                 storageKeys.forEach(key => {
                     window.dispatchEvent(new StorageEvent('storage', {
                         key: key,

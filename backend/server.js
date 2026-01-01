@@ -52,7 +52,7 @@ app.use(session({
 // CORS - MUST be before body parsers
 const allowedOrigins = process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000', 'http://localhost:8000', 'https://second-brain-hub.vercel.app', 'https://itslokeshx.github.io', 'https://itslokeshx.github.io/Second-Brain/'];
+    : ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000', 'http://localhost:8000', 'https://second-brain-hub.vercel.app'];
 
 app.use(cors({
     origin: function (origin, callback) {
@@ -291,12 +291,24 @@ const verifySession = async (req, res, next) => {
     if (req.session?.user?.id) {
         req.userId = req.session.user.id;
         req.userEmail = req.session.user.email;
+        console.log('[Auth] ✅ Authenticated via session cookie:', req.userEmail);
         return next();
     }
 
     // Fallback to token
-    const token = req.headers['x-session-token'] || req.headers['authorization']?.replace('Bearer ', '');
+    let token = req.headers['x-session-token'] || req.headers['authorization']?.replace('Bearer ', '');
     if (token) {
+        // ✅ FIX: Remove signature prefix from signed cookies (handle double-signing)
+        // Express-session signs cookies with 's:' prefix
+        // Sometimes tokens are double-signed: "s:s:sessionId.sig.sig"
+        // We need to extract until we get the raw session ID
+        while (token.startsWith('s:')) {
+            token = token.substring(2).split('.')[0]; // Remove 's:' and signature
+            console.log('[Auth] Extracted layer, token now:', token.substring(0, 20) + '...');
+        }
+
+        console.log('[Auth] Final session ID:', token.substring(0, 20) + '...');
+
         // Look up session by ID
         const SessionModel = mongoose.connection.collection('sessions');
         const sessionDoc = await SessionModel.findOne({ _id: token });
@@ -306,8 +318,11 @@ const verifySession = async (req, res, next) => {
             if (sessionData.user?.id) {
                 req.userId = sessionData.user.id;
                 req.userEmail = sessionData.user.email;
+                console.log('[Auth] ✅ Authenticated via token:', req.userEmail);
                 return next();
             }
+        } else {
+            console.log('[Auth] ⚠️ Session not found in database for token:', token.substring(0, 10) + '...');
         }
     }
 
@@ -340,15 +355,6 @@ app.get('/v60/property', (req, res) => {
     res.json({ status: 0, success: true });
 });
 
-// ✅ Additional legacy user endpoints (POST)
-app.post('/v61/user', (req, res) => {
-    res.json({ status: 0, success: true });
-});
-
-app.post('/v63/user', (req, res) => {
-    res.json({ status: 0, success: true });
-});
-
 app.get('/undefined', (req, res) => {
     res.status(200).send(''); // Prevent 404 for undefined
 });
@@ -371,8 +377,13 @@ app.get('/v64/user/config', async (req, res) => {
     }
 
     // Try token fallback
-    const token = req.headers['x-session-token'] || req.headers['authorization']?.replace('Bearer ', '');
+    let token = req.headers['x-session-token'] || req.headers['authorization']?.replace('Bearer ', '');
     if (token) {
+        // ✅ FIX: Remove signature prefix from signed cookies (handle double-signing)
+        while (token.startsWith('s:')) {
+            token = token.substring(2).split('.')[0];
+        }
+
         const SessionModel = mongoose.connection.collection('sessions');
         const sessionDoc = await SessionModel.findOne({ _id: token });
 
@@ -487,55 +498,8 @@ app.post(['/v64/sync', '/api/sync-data'], verifySession, async (req, res) => {
                 priority: t.priority !== undefined ? t.priority : 0,
                 completed: t.completed || false,
                 deleted: t.deleted || false,
-                sortOrder: t.sortOrder !== undefined ? t.sortOrder : 0,
-                // ✅ CRITICAL FIX: Explicitly preserve duration fields with defaults
-                estimatePomoNum: t.estimatePomoNum !== undefined ? Number(t.estimatePomoNum) : 0,
-                actualPomoNum: t.actualPomoNum !== undefined ? Number(t.actualPomoNum) : 0,
-                estimatedPomodoros: t.estimatedPomodoros !== undefined ? Number(t.estimatedPomodoros) : (t.estimatePomoNum || 0),
-                actPomodoros: t.actPomodoros !== undefined ? Number(t.actPomodoros) : (t.actualPomoNum || 0),
-                pomodoroInterval: t.pomodoroInterval !== undefined && t.pomodoroInterval > 0 ? Number(t.pomodoroInterval) : 1500,
-                // Ensure state and sync fields
-                state: t.state !== undefined ? Number(t.state) : 0,
-                sync: t.sync !== undefined ? Number(t.sync) : 1
+                sortOrder: t.sortOrder !== undefined ? t.sortOrder : 0
             };
-        });
-
-        // 3. Normalize Pomodoro Logs (ensure duration fields)
-        const normalizedPomodoros = pomodoros.map(p => {
-            // Calculate duration if missing but times exist
-            let duration = p.duration;
-            if ((!duration || duration === 0) && p.startTime && p.endTime && p.endTime > p.startTime) {
-                duration = p.endTime - p.startTime;
-            }
-
-            return {
-                ...p,
-                // ✅ CRITICAL FIX: Explicitly preserve duration fields with defaults
-                duration: duration !== undefined ? Number(duration) : 0,
-                startTime: p.startTime !== undefined ? Number(p.startTime) : 0,
-                endTime: p.endTime !== undefined ? Number(p.endTime) : 0,
-                // Ensure other fields
-                sync: p.sync !== undefined ? Number(p.sync) : 1
-            };
-        });
-
-        // ✅ CRITICAL FIX: Count pomodoros per task and update actualPomoNum
-        // This ensures the UI shows correct elapsed time when loading data
-        const pomodorosByTask = {};
-        for (const pomo of normalizedPomodoros) {
-            if (pomo.taskId && pomo.status === 'completed') {
-                pomodorosByTask[pomo.taskId] = (pomodorosByTask[pomo.taskId] || 0) + 1;
-            }
-        }
-
-        // Update actualPomoNum in normalized tasks
-        normalizedTasks.forEach(task => {
-            const count = pomodorosByTask[task.id] || 0;
-            if (count > 0) {
-                task.actualPomoNum = count;
-                task.actPomodoros = count;
-                console.log(`[v64/sync] Task ${task.id.substring(0, 8)} has ${count} completed pomodoros`);
-            }
         });
 
         // Get user info for response
@@ -554,7 +518,7 @@ app.post(['/v64/sync', '/api/sync-data'], verifySession, async (req, res) => {
             update_time: Date.now(),
             projects: normalizedProjects,
             tasks: normalizedTasks,
-            pomodoros: normalizedPomodoros, // ✅ Use normalized pomodoros
+            pomodoros: pomodoros || [],
             subtasks: [],
             schedules: [],
             project_member: [],
@@ -600,28 +564,12 @@ app.post('/api/sync/all', verifySession, async (req, res) => {
             console.log(`[Sync All] Projects synced: ${projectsSynced}`);
         }
 
-        // Sync Tasks (with normalization)
+        // Sync Tasks
         if (tasks.length > 0) {
-            // ✅ CRITICAL: Normalize tasks before saving to prevent data corruption
-            const normalizedTasks = tasks.map(t => ({
-                ...t,
-                userId: userId,
-                // Ensure duration fields are numeric
-                estimatePomoNum: t.estimatePomoNum !== undefined ? Number(t.estimatePomoNum) : 0,
-                actualPomoNum: t.actualPomoNum !== undefined ? Number(t.actualPomoNum) : 0,
-                estimatedPomodoros: t.estimatedPomodoros !== undefined ? Number(t.estimatedPomodoros) : (t.estimatePomoNum || 0),
-                actPomodoros: t.actPomodoros !== undefined ? Number(t.actPomodoros) : (t.actualPomoNum || 0),
-                pomodoroInterval: t.pomodoroInterval !== undefined && t.pomodoroInterval > 0 ? Number(t.pomodoroInterval) : 1500,
-                // Ensure other numeric fields
-                state: t.state !== undefined ? Number(t.state) : 0,
-                priority: t.priority !== undefined ? Number(t.priority) : 0,
-                sortOrder: t.sortOrder !== undefined ? Number(t.sortOrder) : 0
-            }));
-
-            const ops = normalizedTasks.map(t => ({
+            const ops = tasks.map(t => ({
                 updateOne: {
                     filter: { id: t.id, userId: userId },
-                    update: { $set: t },
+                    update: { $set: { ...t, userId: userId } },
                     upsert: true
                 }
             }));
@@ -630,71 +578,18 @@ app.post('/api/sync/all', verifySession, async (req, res) => {
             console.log(`[Sync All] Tasks synced: ${tasksSynced}`);
         }
 
-        // Sync Pomodoro Logs (with normalization)
+        // Sync Pomodoro Logs
         if (pomodoroLogs.length > 0) {
-            // ✅ CRITICAL: Normalize pomodoros before saving to prevent data corruption
-            const normalizedPomodoros = pomodoroLogs.map(p => {
-                // Calculate duration if missing or zero but times exist
-                let duration = p.duration;
-                if ((!duration || duration === 0) && p.startTime && p.endTime && p.endTime > p.startTime) {
-                    duration = p.endTime - p.startTime;
-                    console.log(`[Sync All] Calculated pomodoro duration: ${duration}ms from times`);
-                }
-
-                // ✅ CRITICAL FIX: Only save valid Pomodoro schema fields
-                // DO NOT spread ...p as it includes invalid fields like pomodoroInterval
-                return {
-                    id: p.id,
-                    taskId: p.taskId || '',
-                    subtaskId: p.subtaskId || '',
-                    userId: userId,
-                    objType: 'POMODORO',
-                    state: p.state !== undefined ? Number(p.state) : 0,
-                    sync: p.sync !== undefined ? Number(p.sync) : 0,
-                    status: p.status || 'completed',
-                    isManual: p.isManual || false,
-                    // Time tracking fields
-                    duration: duration && duration > 0 ? Number(duration) : 0,
-                    startTime: p.startTime !== undefined ? Number(p.startTime) : 0,
-                    endTime: p.endTime !== undefined ? Number(p.endTime) : 0,
-                    createdAt: p.createdAt || new Date()
-                    // ❌ Explicitly NOT including: pomodoroInterval, interval, or any task fields
-                };
-            });
-
-            const ops = normalizedPomodoros.map(l => ({
+            const ops = pomodoroLogs.map(l => ({
                 updateOne: {
                     filter: { id: l.id, userId: userId },
-                    update: { $set: l },
+                    update: { $set: { ...l, userId: userId } },
                     upsert: true
                 }
             }));
             const result = await Pomodoro.bulkWrite(ops);
             logsSynced = result.upsertedCount + result.modifiedCount;
             console.log(`[Sync All] Logs synced: ${logsSynced}`);
-
-            // ✅ CRITICAL FIX: Update task actualPomoNum based on actual pomodoro count
-            // Group pomodoros by taskId
-            const pomodorosByTask = {};
-            for (const pomo of normalizedPomodoros) {
-                if (pomo.taskId) {
-                    pomodorosByTask[pomo.taskId] = (pomodorosByTask[pomo.taskId] || 0) + 1;
-                }
-            }
-
-            // Update each task's actualPomoNum
-            for (const [taskId, count] of Object.entries(pomodorosByTask)) {
-                await Task.updateOne(
-                    { id: taskId, userId: userId },
-                    {
-                        $set: {
-                            actualPomoNum: count,
-                            actPomodoros: count
-                        }
-                    }
-                );
-                console.log(`[Sync All] Updated task ${taskId.substring(0, 8)} actualPomoNum: ${count}`);
-            }
         }
 
         console.log(`[Sync All] ✅ Complete - P:${projectsSynced} T:${tasksSynced} L:${logsSynced}`);
@@ -712,108 +607,6 @@ app.post('/api/sync/all', verifySession, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Sync failed: ' + error.message
-        });
-    }
-});
-
-// ✅ LOAD ALL DATA FROM SERVER (GET endpoint for data retrieval)
-app.get('/api/sync/load', verifySession, async (req, res) => {
-    console.log('[Sync Load] Loading data for user:', req.userId);
-
-    try {
-        const userId = req.userId;
-
-        // Get data from MongoDB collections
-        const [projects, tasks, logs, user] = await Promise.all([
-            Project.find({ userId }).select('-_id -__v').lean(),
-            Task.find({ userId }).select('-_id -__v').lean(),
-            Pomodoro.find({ userId }).select('-_id -__v').lean(),
-            User.findById(userId).select('email name lastSyncTime')
-        ]);
-
-        // Projects - ensure ownership fields
-        const normalizedProjects = projects.map(p => ({
-            ...p,
-            userId: p.userId.toString(),
-            uid: p.userId.toString(),
-            sync: 1
-        }));
-
-        // ✅ CRITICAL FIX: Normalize numeric fields to prevent NaN/undefined issues
-        // Tasks - ensure all time-related fields are Numbers
-        const normalizedTasks = tasks.map(t => ({
-            ...t,
-            userId: t.userId.toString(), // Ensure string for strict equality checks
-            uid: t.userId.toString(),    // Legacy frontend often expects 'uid'
-            estimatePomoNum: Number(t.estimatePomoNum) || 0,
-            actualPomoNum: Number(t.actualPomoNum) || 0,
-            estimatedPomodoros: Number(t.estimatedPomodoros) || Number(t.estimatePomoNum) || 0,
-            actPomodoros: Number(t.actPomodoros) || Number(t.actualPomoNum) || 0,
-            pomodoroInterval: Number(t.pomodoroInterval) || 1500,
-            estimatedTime: Number(t.estimatedTime) || 0,
-            state: Number(t.state) || 0,
-            priority: Number(t.priority) || 0,
-            order: Number(t.order) || 0,
-            sortOrder: Number(t.sortOrder) || 0,
-            sync: 1  // Mark as synced when loading from server
-        }));
-
-        // Pomodoro Logs - ensure all duration fields are Numbers
-        const normalizedLogs = logs.map(l => ({
-            ...l,
-            userId: l.userId.toString(),
-            uid: l.userId.toString(),
-            duration: Number(l.duration) || 0,
-            startTime: Number(l.startTime) || 0,
-            endTime: Number(l.endTime) || 0,
-            sync: 1
-        }));
-
-        // ✅ CRITICAL FIX: Count pomodoros per task and update actualPomoNum
-        // This ensures the UI shows correct elapsed time when loading data
-        const pomodorosByTask = {};
-        for (const pomo of normalizedLogs) {
-            if (pomo.taskId && (pomo.status === 'completed' || !pomo.status)) { // Default to completed if status missing
-                pomodorosByTask[pomo.taskId] = (pomodorosByTask[pomo.taskId] || 0) + 1;
-            }
-        }
-
-        // Update actualPomoNum in normalized tasks
-        normalizedTasks.forEach(task => {
-            const count = pomodorosByTask[task.id] || 0;
-            if (count > 0) {
-                console.log(`[Sync Load] Task ${task.id.substring(0, 8)}: updating actualPomoNum ${task.actualPomoNum} -> ${count}`);
-                task.actualPomoNum = count;
-                task.actPomodoros = count;
-            }
-        });
-
-        console.log('[Sync Load] Data loaded:', {
-            projects: normalizedProjects.length,
-            tasks: normalizedTasks.length,
-            logs: normalizedLogs.length
-        });
-
-        res.json({
-            success: true,
-            data: {
-                projects: normalizedProjects,
-                tasks: normalizedTasks,
-                pomodoroLogs: normalizedLogs,
-                settings: {},
-                user: {
-                    email: user?.email,
-                    name: user?.name,
-                    lastSyncTime: user?.lastSyncTime
-                }
-            }
-        });
-
-    } catch (error) {
-        console.error('[Sync Load] Error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to load data: ' + error.message
         });
     }
 });

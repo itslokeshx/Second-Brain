@@ -77,17 +77,6 @@ router.post('/all', authMiddleware, async (req, res) => {
             console.log(`[Sync All] Syncing ${tasks.length} tasks...`);
 
             for (const task of tasks) {
-                // ✅ Log duration fields for debugging
-                if (task.estimatePomoNum !== undefined || task.actualPomoNum !== undefined) {
-                    console.log(`[Sync All] Task "${task.name}" duration fields:`, {
-                        estimatePomoNum: task.estimatePomoNum,
-                        actualPomoNum: task.actualPomoNum,
-                        estimatedPomodoros: task.estimatedPomodoros,
-                        actPomodoros: task.actPomodoros,
-                        pomodoroInterval: task.pomodoroInterval
-                    });
-                }
-
                 await Task.findOneAndUpdate(
                     { userId, id: task.id },
                     {
@@ -107,17 +96,6 @@ router.post('/all', authMiddleware, async (req, res) => {
             console.log(`[Sync All] Syncing ${pomodoroLogs.length} logs...`);
 
             for (const log of pomodoroLogs) {
-                // ✅ Log duration fields for debugging
-                if (log.duration !== undefined || log.startTime !== undefined || log.endTime !== undefined) {
-                    console.log(`[Sync All] Pomodoro log duration fields:`, {
-                        id: log.id,
-                        duration: log.duration,
-                        startTime: log.startTime,
-                        endTime: log.endTime,
-                        taskId: log.taskId
-                    });
-                }
-
                 await Pomodoro.findOneAndUpdate(
                     { userId, id: log.id },
                     {
@@ -310,62 +288,17 @@ router.get('/load', authMiddleware, async (req, res) => {
 
         // ✅ Get from SEPARATE collections
         const [projects, tasks, logs, settings, user] = await Promise.all([
-            Project.find({ userId }).select('-_id -__v').lean(),
-            Task.find({ userId }).select('-_id -__v').lean(),
-            Pomodoro.find({ userId }).select('-_id -__v').lean(),
+            Project.find({ userId }).select('-_id -__v -userId').lean(),
+            Task.find({ userId }).select('-_id -__v -userId').lean(),
+            Pomodoro.find({ userId }).select('-_id -__v -userId').lean(),
             Settings.findOne({ userId }).select('-_id -__v -userId').lean(),
             User.findById(userId).select('email name lastSyncTime')
         ]);
 
-        // ✅ CRITICAL FIX: Properly calculate derived fields from actual data
-        const normalizedTasks = await Promise.all(tasks.map(async (t) => {
-            // ✅ Count actual pomodoros for this task from logs
-            const actualPomoCount = await Pomodoro.countDocuments({
-                userId,
-                taskId: t.id
-            });
-
-            const pomoInterval = Number(t.pomodoroInterval) || 1500;
-            const estimateCount = Number(t.estimatePomoNum) || 0;
-
-            return {
-                ...t,
-                userId: t.userId.toString(),
-                uid: t.userId.toString(),
-
-                // ✅ Recalculate from actual logs (not stale MongoDB value)
-                actualPomoNum: actualPomoCount,
-                actPomodoros: actualPomoCount,
-
-                // ✅ Keep estimate values
-                estimatePomoNum: estimateCount,
-                estimatedPomodoros: estimateCount,
-
-                // ✅ FIXED: Calculate estimatedTime properly (was hardcoded to 0!)
-                estimatedTime: estimateCount * pomoInterval,
-
-                pomodoroInterval: pomoInterval,
-                state: Number(t.state) || 0,
-                priority: Number(t.priority) || 0,
-                order: Number(t.order) || 0,
-                sortOrder: Number(t.sortOrder) || 0,
-                sync: 1  // Mark as synced when loading from server
-            };
-        }));
-
-        // Pomodoro Logs - ensure all duration fields are Numbers
-        const normalizedLogs = logs.map(l => ({
-            ...l,
-            duration: Number(l.duration) || 0,
-            startTime: Number(l.startTime) || 0,
-            endTime: Number(l.endTime) || 0,
-            sync: 1
-        }));
-
         console.log('[Sync Load] Data loaded:', {
             projects: projects.length,
-            tasks: normalizedTasks.length,
-            logs: normalizedLogs.length,
+            tasks: tasks.length,
+            logs: logs.length,
             hasSettings: !!settings
         });
 
@@ -373,8 +306,8 @@ router.get('/load', authMiddleware, async (req, res) => {
             success: true,
             data: {
                 projects: projects || [],
-                tasks: normalizedTasks,
-                pomodoroLogs: normalizedLogs,
+                tasks: tasks || [],
+                pomodoroLogs: logs || [],
                 settings: settings || {},
                 user: {
                     email: user.email,

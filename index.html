@@ -6,11 +6,18 @@
     <title>Second Brain</title>
     <link href="main.css" rel="stylesheet">
     <link href="css/neural-loader.css" rel="stylesheet">
+    <link href="css/icon-font-fix.css" rel="stylesheet">
+
+    <!-- ✅ CRITICAL: Loading orchestrator MUST load FIRST -->
     <script src="js/loading-orchestrator.js"></script>
 </head>
 
 <body>
     <script src="js/url-interceptor.js"></script>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- NEURAL LOADER - Premium Loading Animation -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
     <div id="sb-loader" class="sb-loader">
         <div class="sb-loader-backdrop"></div>
         <div class="sb-loader-content">
@@ -492,13 +499,9 @@
     <script src="js/blank-page-preventer.js"></script>
     <script src="js/force-reset.js"></script>
     <script src="js/data-sanitizer.js"></script>
-    <script src="js/asset-path-patcher.js"></script>
-    <script src="js/duration-debug.js"></script>
-    <script src="js/emergency-fix.js"></script>
-    <script src="js/elapsed-time-debug.js"></script>
-    <script src="js/system-reset.js"></script>
     <script src="js/crypto-stub.js"></script>
     <script src="js/suppress-errors.js?v=1000"></script>
+    <script src="js/nan-preventer.js"></script>
     <script src="js/websocket-mock.js?v=1000"></script>
     <script src="js/notifications.js"></script>
     <script src="js/login-interceptor.js"></script>
@@ -518,12 +521,12 @@
     <script src="js/indexeddb-open-interceptor.js?v=1002"></script>
     <script src="js/indexeddb-guardian.js?v=1002"></script>
     <script src="js/guardian-loader.js?v=1000"></script>
-    <script src="js/pomodoro-duration-interceptor.js"></script>
+
     <script src="js/indexeddb-write-protector.js?v=1000"></script>
 
     <script src="js/hydration-mutex.js?v=1007"></script>
     <script src="js/hydration-gate.js?v=1002"></script>
-    <script src="js/stats-refresh.js"></script>
+
 
     <script src="js/session-manager.js?v=1011"></script>
     <script src="js/logout-interceptor.js"></script>
@@ -534,63 +537,23 @@
     <script src="js/ui-cleanup.js?v=1000"></script>
 
     <script src="js/profile-image-fix.js?v=1000"></script>
-    <script src="js/rate-us-redirect.js?v=1000"></script>
+
 
     <script>
         (async () => {
             console.log('[Loader] Waiting for hydration...');
             const result = await window.__HYDRATION_COMPLETE__;
+
             console.log('[Loader] Hydration result:', result);
-            if (window.__SB_LOADER) {
-                window.__SB_LOADER.setPhase('hydrate', true);
-                console.log('[Loader] ✅ Hydration phase started (before main.js)');
-            }
+
             console.log('[Loader] Loading main.js...');
 
-            // ✅ SETTINGS INIT: Initialize pomodoro settings FIRST
-            const settingsInitScript = document.createElement('script');
-            settingsInitScript.src = 'js/settings-initializer.js';
-            document.body.appendChild(settingsInitScript);
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            // ✅ EMERGENCY FIXES: Load BEFORE main.js to intercept all operations
-            console.log('[Loader] Loading emergency fixes...');
-
-            // Fix 1: NaN Emergency Fix (intercepts all Math operations)
-            const nanFixScript = document.createElement('script');
-            nanFixScript.src = 'js/nan-emergency-fix.js';
-            document.body.appendChild(nanFixScript);
-
-            // Fix 2: Checkbox Fix (manual event handler attachment)
-            const checkboxFixScript = document.createElement('script');
-            checkboxFixScript.src = 'js/checkbox-fix.js';
-            document.body.appendChild(checkboxFixScript);
-
-            // Fix 3: Data Layer Fix (default values for estimatePomoNum)
-            const dataFixScript = document.createElement('script');
-            dataFixScript.src = 'js/data-layer-fix.js';
-            document.body.appendChild(dataFixScript);
-
-            // Wait for emergency fixes to install
-            await new Promise(resolve => setTimeout(resolve, 200));
-            console.log('[Loader] ✅ Emergency fixes loaded');
-
-            // ✅ COMPREHENSIVE FIX: Final runtime patches for calculation and checkboxes
-            const comprehensiveFixScript = document.createElement('script');
-            comprehensiveFixScript.src = 'js/comprehensive-runtime-fix.js';
-            document.body.appendChild(comprehensiveFixScript);
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            // ✅ CRITICAL: Load time calculation patch BEFORE main.js
-            const timePatchScript = document.createElement('script');
-            timePatchScript.src = 'js/main-time-patch.js';
-            document.body.appendChild(timePatchScript);
-
-            // Wait a tiny bit for the patch to install
-            await new Promise(resolve => setTimeout(resolve, 100));
+            // Load hydration patch BEFORE main.js
             const patchScript = document.createElement('script');
             patchScript.src = 'js/main-hydration-patch.js';
             document.body.appendChild(patchScript);
+
+            // Then load main.js
             const script = document.createElement('script');
             script.type = 'text/javascript';
             script.src = 'js/main.js';
@@ -600,12 +563,6 @@
                 const fixerScript = document.createElement('script');
                 fixerScript.src = 'js/username-display-fixer.js?v=1000';
                 document.body.appendChild(fixerScript);
-
-                // ✅ REACT FORCE PATCH: Aggressively fix time display after React loads
-                const reactForceScript = document.createElement('script');
-                reactForceScript.src = 'js/react-force-patch.js';
-                document.body.appendChild(reactForceScript);
-                console.log('[Loader] ✅ React force patch loaded');
             };
             document.body.appendChild(script);
         })();
@@ -613,6 +570,7 @@
 
     <script src="js/redux-diagnostic.js"></script>
 
+    <script src="js/fix-pomodoro-intervals.js"></script>
     <script type="text/javascript" src="js/sync-button-handler.js"></script>
 
 </body>

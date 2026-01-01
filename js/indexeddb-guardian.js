@@ -428,18 +428,9 @@
         const originalPut = IDBObjectStore.prototype.put;
 
         IDBObjectStore.prototype.put = function (value, key) {
-            const storeName = this.name;
-
-            // ✅ TASK SPY: Detect task writes
-            if (storeName === 'Task') {
+            if (this.name === 'Task') {
                 console.log(`[Guardian] 🕵️ Task PUT Detected: id=${value.id} state=${value.state} sync=${value.sync}`);
             }
-
-            // ✅ POMODORO SPY: Log pomodoro writes for debugging
-            if (storeName === 'Pomodoro') {
-                console.log(`[Guardian] 🕵️ Pomodoro PUT Detected: id=${value.id}`);
-            }
-
             return originalPut.call(this, value, key);
         };
 

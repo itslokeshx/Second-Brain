@@ -81,7 +81,7 @@
                             }
                         }, 500); // Small delay to let cookies settle
 
-                        // ✅ Let main.js render the UI naturally
+                        // ✅ NO RELOAD - Let main.js render the UI naturally
                         console.log('[Login Interceptor] Allowing main.js to render UI...');
                     }
                 } catch (e) {

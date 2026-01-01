@@ -43,15 +43,7 @@
             getReq.onsuccess = () => {
                 const existingItem = getReq.result;
 
-                // ✅ CRITICAL FIX: Allow server data to overwrite dirty tasks
-                // Only block if:
-                // 1. Existing item is dirty (sync: 0)
-                // 2. New value is clean (sync: 1)  
-                // 3. New value doesn't have duration fields (indicates it's from main.js, not server)
-                const isServerData = value.estimatePomoNum !== undefined || value.duration !== undefined;
-                const shouldProtect = existingItem && existingItem.sync === 0 && value.sync !== 0 && !isServerData;
-
-                if (shouldProtect) {
+                if (existingItem && existingItem.sync === 0 && value.sync !== 0) {
                     // PRESERVE: Keep the dirty version, but pretend write succeeded
                     const itemType = this.name === 'Task' ? 'task' : 'project';
                     console.log(`[Write Protector] 🛡️ Preserving dirty ${itemType} "${existingItem.name}" (sync:0), blocking clean overwrite`);
@@ -65,9 +57,6 @@
                     }
                 } else {
                     // Safe to write - do the actual put
-                    if (isServerData && existingItem && existingItem.sync === 0) {
-                        console.log(`[Write Protector] ✅ Allowing server data to overwrite dirty ${this.name} "${value.name}"`);
-                    }
                     const realReq = originalPut.call(store, value, key);
 
                     // Forward callbacks to real request

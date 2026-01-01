@@ -116,9 +116,9 @@
             const state = window.HydrationMutex.getState();
             console.warn('[Sync Button] ⚠️ Hydration not ready:', state.state);
             if (window.showNotification) {
-                window.showNotification('Reload the page and wait (' + state.state + ')', 'warning', 3000);
+                window.showNotification('Please wait for data to load... (' + state.state + ')', 'warning', 3000);
             } else {
-                alert('Reload the page and wait...');
+                alert('Please wait for data to load...');
             }
             return;
         }
@@ -311,7 +311,7 @@
 
                         // Update storage with cleaned data to prevent recurrence
                         try {
-                            // localStorage.setItem('tasks', JSON.stringify(data.tasks));
+                            localStorage.setItem('tasks', JSON.stringify(data.tasks));
                         } catch (e) {
                             console.warn('[Sync Button] Cleanup storage update failed:', e);
                         }
@@ -350,7 +350,7 @@
                         }
                     });
                     if (tasksUpdated > 0) {
-                        // localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
+                        localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
                         console.log(`[Sync Button] ✅ Marked ${tasksUpdated} tasks as synced (backend ACKed)`);
                     }
 
@@ -366,7 +366,7 @@
                         }
                     });
                     if (projectsUpdated > 0) {
-                        // localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
+                        localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
                         console.log(`[Sync Button] ✅ Marked ${projectsUpdated} projects as synced (backend ACKed)`);
                     }
 
@@ -382,7 +382,7 @@
                         }
                     });
                     if (logsUpdated > 0) {
-                        // localStorage.setItem('pomodoro-pomodoros', JSON.stringify(logs));
+                        localStorage.setItem('pomodoro-pomodoros', JSON.stringify(logs));
                         console.log(`[Sync Button] ✅ Marked ${logsUpdated} logs as synced (backend ACKed)`);
                     }
 
@@ -438,11 +438,6 @@
                 }
 
                 alert(`✅ Synced: ${result.projectsSynced || 0} projects, ${result.tasksSynced || 0} tasks, ${result.logsSynced || 0} logs`);
-
-                // ✅ UI REFRESH: Let React update via storage events (no reload needed)
-                // Storage events are dispatched by session-manager.js (line 1330-1339)
-                // React listens to these events and updates UI automatically
-                console.log('[Sync Button] ✅ Sync complete - React will update via storage events');
             } catch (error) {
                 console.error('[Sync Button] ❌ Sync failed:', error);
                 // Even on error, ensure system projects exist

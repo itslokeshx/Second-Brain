@@ -13,335 +13,163 @@
         'custom-project-list'
     ];
 
-    function runSanitizer() {
-        console.log('[Data Sanitizer] Running sanitization...');
+    let fixedCount = 0;
 
-        let fixedCount = 0;
-
-        // 1. Basic Cleaning (Type Checks)
-        KEYS_TO_SANITIZE.forEach(key => {
-            try {
-                const raw = localStorage.getItem(key);
-                if (!raw) return;
-
-                let data = JSON.parse(raw);
-                if (!Array.isArray(data)) return;
-
-                const originalLength = data.length;
-
-                data = data.filter(item => {
-                    if (!item) return false;
-                    if (typeof item !== 'object' && typeof item !== 'string' && typeof item !== 'number') return false;
-                    return true;
-                });
-
-                if (data.length !== originalLength) {
-                    console.warn(`[Data Sanitizer] Found ${originalLength - data.length} corrupt items in ${key}. Cleaning...`);
-                    localStorage.setItem(key, JSON.stringify(data));
-                    fixedCount += (originalLength - data.length);
-                }
-            } catch (e) {
-                console.error(`[Data Sanitizer] Error cleaning ${key}:`, e);
-            }
-        });
-
-        // 2. SEEDING & INTEGRITY (Robust)
+    // 1. Basic Cleaning (Type Checks)
+    KEYS_TO_SANITIZE.forEach(key => {
         try {
-            const projectsRaw = localStorage.getItem('pomodoro-projects') || '[]';
-            const tasksRaw = localStorage.getItem('pomodoro-tasks') || '[]';
+            const raw = localStorage.getItem(key);
+            if (!raw) return;
 
-            let projects = JSON.parse(projectsRaw);
-            let tasks = JSON.parse(tasksRaw);
+            let data = JSON.parse(raw);
+            if (!Array.isArray(data)) return;
 
-            if (Array.isArray(projects) && Array.isArray(tasks)) {
+            const originalLength = data.length;
 
-                // A. Ensure Default Project ("Tasks") Exists
-                // Main.js likely expects Type 0 (Project) and specific ID '0'.
-                let defaultProject = projects.find(p => String(p.id) === '0');
+            data = data.filter(item => {
+                if (!item) return false;
+                if (typeof item !== 'object' && typeof item !== 'string' && typeof item !== 'number') return false;
+                return true;
+            });
 
-                if (!defaultProject) {
-                    console.warn('[Data Sanitizer] ⚠️ No default project found! Injecting robust default.');
-                    defaultProject = {
-                        id: '0',        // String '0' is standard for legacy
-                        name: 'Tasks',
-                        type: 0,        // NUMBER 0 often used for Project in legacy
-                        color: '#FF6B6B',
-                        order: 0,
-                        completed: false,
-                        deleted: false,
-                        sync: 1         // Mark as dirty so it syncs
-                    };
-                    projects.unshift(defaultProject);
-                    // localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
-                    fixedCount++;
+            if (data.length !== originalLength) {
+                console.warn(`[Data Sanitizer] Found ${originalLength - data.length} corrupt items in ${key}. Cleaning...`);
+                localStorage.setItem(key, JSON.stringify(data));
+                fixedCount += (originalLength - data.length);
+            }
+        } catch (e) {
+            console.error(`[Data Sanitizer] Error cleaning ${key}:`, e);
+        }
+    });
+
+    // 2. SEEDING & INTEGRITY (Robust)
+    try {
+        const projectsRaw = localStorage.getItem('pomodoro-projects') || '[]';
+        const tasksRaw = localStorage.getItem('pomodoro-tasks') || '[]';
+
+        let projects = JSON.parse(projectsRaw);
+        let tasks = JSON.parse(tasksRaw);
+
+        if (Array.isArray(projects) && Array.isArray(tasks)) {
+
+            // A. Ensure Default Project ("Tasks") Exists
+            // Main.js likely expects Type 0 (Project) and specific ID '0'.
+            let defaultProject = projects.find(p => String(p.id) === '0');
+
+            if (!defaultProject) {
+                console.warn('[Data Sanitizer] ⚠️ No default project found! Injecting robust default.');
+                defaultProject = {
+                    id: '0',        // String '0' is standard for legacy
+                    name: 'Tasks',
+                    type: 0,        // NUMBER 0 often used for Project in legacy
+                    color: '#FF6B6B',
+                    order: 0,
+                    completed: false,
+                    deleted: false,
+                    sync: 1         // Mark as dirty so it syncs
+                };
+                projects.unshift(defaultProject);
+                localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
+                fixedCount++;
+            }
+
+            // B. Reassign Orphaned Tasks
+            const projectIds = new Set(projects.map(p => String(p.id)));
+            let orphanedCount = 0;
+
+            tasks = tasks.map(task => {
+                const pid = String(task.projectId || task.parentId || '');
+                if (!projectIds.has(pid)) {
+                    orphanedCount++;
+                    task.projectId = '0'; // Assign to Default
+                    task.parentId = '0';
+                    task.sync = 1;
                 }
+                return task;
+            });
 
-                // B. Reassign Orphaned Tasks
-                const projectIds = new Set(projects.map(p => String(p.id)));
-                let orphanedCount = 0;
+            if (orphanedCount > 0) {
+                console.warn(`[Data Sanitizer] ⚠️ Reassigned ${orphanedCount} orphaned tasks.`);
+                localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
+            }
 
-                tasks = tasks.map(task => {
-                    const pid = String(task.projectId || task.parentId || '');
-                    if (!projectIds.has(pid)) {
-                        orphanedCount++;
-                        task.projectId = '0'; // Assign to Default
-                        task.parentId = '0';
-                        task.sync = 1;
-                    }
-                    return task;
-                });
-
-                if (orphanedCount > 0) {
-                    console.warn(`[Data Sanitizer] ⚠️ Reassigned ${orphanedCount} orphaned tasks.`);
-                    // localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
+            // C. Fix Project Nesting (Orphaned Folders)
+            let projectsChanged = false;
+            projects = projects.map(p => {
+                if (p.parentId && p.parentId !== '' && !projectIds.has(String(p.parentId))) {
+                    console.warn(`[Data Sanitizer] ⚠️ Orphaned folder structure for "${p.name}". Moving to root.`);
+                    p.parentId = '';
+                    p.sync = 1;
+                    projectsChanged = true;
                 }
+                // Ensure TYPE matches what we think main.js wants
+                if (p.type === 'project') p.type = 0;
+                if (p.type === 'folder') p.type = 1;
 
-                // A. Load Pomodoros for accurate stats recalculation
-                const pomodorosRaw = localStorage.getItem('pomodoro-pomodoros') || '[]';
-                let pomodoros = [];
+                return p;
+            });
+
+            if (projectsChanged) {
+                localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
+            }
+
+            // D. Ensure custom-project-list integrity (Safety Check)
+            // CRITICAL: Do NOT filter the list if projects are missing!
+            if (projects.length >= 5) { // Only filter if we have a healthy project list (system projects = ~20)
+                let customListRaw = localStorage.getItem('custom-project-list');
+                let customList = [];
                 try {
-                    pomodoros = JSON.parse(pomodorosRaw);
-                } catch (e) { pomodoros = []; }
+                    customList = customListRaw ? JSON.parse(customListRaw) : [];
+                } catch (e) { customList = []; }
 
-                const pomodorosByTask = {};
-                if (Array.isArray(pomodoros)) {
-                    pomodoros.forEach(p => {
-                        if (p.taskId && p.status === 'completed') {
-                            pomodorosByTask[p.taskId] = (pomodorosByTask[p.taskId] || 0) + 1;
-                        }
-                    });
+                if (!Array.isArray(customList)) customList = [];
+
+                // Filter out garbage (only if we trust 'projects' list)
+                const originalLength = customList.length;
+                customList = customList.filter(id => projectIds.has(String(id)));
+
+                if (customList.length !== originalLength) {
+                    console.log(`[Data Sanitizer] Removed ${originalLength - customList.length} invalid items from sidebar list.`);
                 }
 
-                // B. Fix Tasks
-                let durationFixCount = 0;
-                tasks = tasks.map(task => {
-                    let fixed = false;
-
-                    // 1. Recalculate actualPomoNum from logs (Source of Truth)
-                    const realCount = pomodorosByTask[task.id] || 0;
-
-                    // Update if missing or incorrect
-                    if (task.actualPomoNum !== realCount) {
-                        // console.log(`[Data Sanitizer] 🔧 Fixing actualPomoNum for "${task.name}": ${task.actualPomoNum} -> ${realCount}`);
-                        task.actualPomoNum = realCount;
-                        fixed = true;
-                    }
-
-                    // 2. Sanitize estimatePomoNum (default 0)
-                    if (typeof task.estimatePomoNum !== 'number' || isNaN(task.estimatePomoNum)) {
-                        task.estimatePomoNum = 0;
-                        fixed = true;
-                    }
-
-                    // 3. Sanitize estimatedTime (prevent NaN)
-                    if (typeof task.estimatedTime !== 'number' || isNaN(task.estimatedTime)) {
-                        task.estimatedTime = 0;
-                        fixed = true;
-                    }
-
-                    // 4. Ensure alias fields are in sync
-                    if (task.estimatedPomodoros !== task.estimatePomoNum) {
-                        task.estimatedPomodoros = task.estimatePomoNum;
-                        fixed = true;
-                    }
-
-                    if (task.actPomodoros !== task.actualPomoNum) {
-                        task.actPomodoros = task.actualPomoNum;
-                        fixed = true;
-                    }
-
-                    // 5. Ensure pomodoroInterval exists (default 1500 = 25 minutes)
-                    if (typeof task.pomodoroInterval !== 'number' || isNaN(task.pomodoroInterval) || task.pomodoroInterval <= 0) {
-                        task.pomodoroInterval = 1500;
-                        fixed = true;
-                    }
-
-                    if (fixed) {
-                        durationFixCount++;
-                        task.sync = 0; // Mark as dirty to sync the fix
-                    }
-
-                    return task;
-                });
-
-                if (durationFixCount > 0) {
-                    console.warn(`[Data Sanitizer] ✅ Fixed duration/stats on ${durationFixCount} tasks.`);
-                    localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
-                    // Force sidebar/task list update
-                    window.dispatchEvent(new StorageEvent('storage', {
-                        key: 'pomodoro-tasks',
-                        newValue: localStorage.getItem('pomodoro-tasks'),
-                        storageArea: localStorage
-                    }));
+                // Ensure '0' is present if not already
+                if (!customList.includes('0')) {
+                    customList.unshift('0');
+                    console.log('[Data Sanitizer] Added Default Project to Sidebar List.');
                 }
 
-                // C. Ensure Duration Fields on Pomodoro Logs
-                // pomodoros is already loaded above
-                let pomodoroFixCount = 0;
+                localStorage.setItem('custom-project-list', JSON.stringify(customList));
+            } else {
+                console.warn(`[Data Sanitizer] ⚠️ Project list suspicious (len=${projects.length}). Skipping sidebar filtering to prevent collapse.`);
+            }
+            // Save cleaned list if it changed (already done by setItem above)
 
-                if (Array.isArray(pomodoros)) {
-                    pomodoros = pomodoros.map(pomo => {
-                        let fixed = false;
-
-                        // Ensure duration is numeric (default 0)
-                        if (typeof pomo.duration !== 'number' || isNaN(pomo.duration)) {
-                            // ✅ CRITICAL FIX: Try to parse string duration first
-                            // Trust duration > 0 even if startTime is missing/0 (Sync payload default)
-                            const parsedDuration = Number(pomo.duration);
-                            if (!isNaN(parsedDuration) && parsedDuration > 0) {
-                                pomo.duration = parsedDuration;
-                                fixed = true;
-                            } else {
-                                // Try to calculate from startTime and endTime if available
-                                if (pomo.startTime && pomo.endTime && typeof pomo.startTime === 'number' && typeof pomo.endTime === 'number') {
-                                    pomo.duration = pomo.endTime - pomo.startTime;
-                                } else {
-                                    pomo.duration = 0;
-                                }
-                                fixed = true;
-                            }
-                        }
-
-                        // Ensure startTime is numeric (default 0)
-                        // ✅ ENHANCED: Force numeric conversion for any type
-                        const startTimeNum = Number(pomo.startTime);
-                        if (typeof pomo.startTime !== 'number' || isNaN(pomo.startTime)) {
-                            pomo.startTime = !isNaN(startTimeNum) ? startTimeNum : 0;
-                            fixed = true;
-                        }
-
-                        // Ensure endTime is numeric (default 0)
-                        const endTimeNum = Number(pomo.endTime);
-                        if (typeof pomo.endTime !== 'number' || isNaN(pomo.endTime)) {
-                            pomo.endTime = !isNaN(endTimeNum) ? endTimeNum : 0;
-                            fixed = true;
-                        }
-
-                        if (fixed) {
-                            pomodoroFixCount++;
-                            pomo.sync = 0; // Mark as dirty to sync the fix
-                        }
-
-                        return pomo;
-                    });
-
-                    if (pomodoroFixCount > 0) {
-                        console.warn(`[Data Sanitizer] ✅ Fixed duration fields on ${pomodoroFixCount} pomodoro logs.`);
-                        // localStorage.setItem('pomodoro-pomodoros', JSON.stringify(pomodoros));
-                    }
-                }
-
-
-                // C. Fix Project Nesting (Orphaned Folders)
-                let projectsChanged = false;
-                projects = projects.map(p => {
-                    if (p.parentId && p.parentId !== '' && !projectIds.has(String(p.parentId))) {
-                        console.warn(`[Data Sanitizer] ⚠️ Orphaned folder structure for "${p.name}". Moving to root.`);
-                        p.parentId = '';
-                        p.sync = 1;
-                        projectsChanged = true;
-                    }
-                    // Ensure TYPE matches what we think main.js wants
-                    if (p.type === 'project') p.type = 0;
-                    if (p.type === 'folder') p.type = 1;
-
-                    return p;
-                });
-
-                if (projectsChanged) {
-                    // localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
-                }
-
-                // D. Ensure custom-project-list integrity (Safety Check)
-                // CRITICAL: Do NOT filter the list if projects are missing!
-                if (projects.length >= 5) { // Only filter if we have a healthy project list (system projects = ~20)
-                    let customListRaw = localStorage.getItem('custom-project-list');
-                    let customList = [];
-                    try {
-                        customList = customListRaw ? JSON.parse(customListRaw) : [];
-                    } catch (e) { customList = []; }
-
-                    if (!Array.isArray(customList)) customList = [];
-
-                    // Filter out garbage (only if we trust 'projects' list)
-                    const originalLength = customList.length;
-                    customList = customList.filter(id => projectIds.has(String(id)));
-
-                    if (customList.length !== originalLength) {
-                        console.log(`[Data Sanitizer] Removed ${originalLength - customList.length} invalid items from sidebar list.`);
-                    }
-
-                    // Ensure '0' is present if not already
-                    if (!customList.includes('0')) {
-                        customList.unshift('0');
-                        console.log('[Data Sanitizer] Added Default Project to Sidebar List.');
-                    }
-
-                    // localStorage.setItem('custom-project-list', JSON.stringify(customList));
-                } else {
-                    console.warn(`[Data Sanitizer] ⚠️ Project list suspicious (len=${projects.length}). Skipping sidebar filtering to prevent collapse.`);
-                }
-                // Save cleaned list if it changed (already done by setItem above)
-
-                // E. Clean Pomodoro Focus Task
-                const focusTaskRaw = localStorage.getItem('pomodoro-focus-task');
-                if (focusTaskRaw) {
-                    try {
-                        let focusTask = JSON.parse(focusTaskRaw);
-                        if (focusTask && focusTask.projectId) {
-                            if (!projectIds.has(String(focusTask.projectId))) {
-                                console.warn(`[Data Sanitizer] ⚠️ Focus task points to missing project. Clearing.`);
-                                localStorage.removeItem('pomodoro-focus-task');
-                            }
-                        } else if (focusTask && !focusTask.id) {
-                            // Empty object or malformed
+            // E. Clean Pomodoro Focus Task
+            const focusTaskRaw = localStorage.getItem('pomodoro-focus-task');
+            if (focusTaskRaw) {
+                try {
+                    let focusTask = JSON.parse(focusTaskRaw);
+                    if (focusTask && focusTask.projectId) {
+                        if (!projectIds.has(String(focusTask.projectId))) {
+                            console.warn(`[Data Sanitizer] ⚠️ Focus task points to missing project. Clearing.`);
                             localStorage.removeItem('pomodoro-focus-task');
                         }
-                    } catch (e) {
+                    } else if (focusTask && !focusTask.id) {
+                        // Empty object or malformed
                         localStorage.removeItem('pomodoro-focus-task');
                     }
-                } else {
-                    // Should we inject null? localStorage.removeItem does checking implicitly.
+                } catch (e) {
+                    localStorage.removeItem('pomodoro-focus-task');
                 }
+            } else {
+                // Should we inject null? localStorage.removeItem does checking implicitly.
             }
-
-        } catch (e) {
-            console.error('[Data Sanitizer] Error during seeding/checking:', e);
         }
 
-        console.log('[Data Sanitizer] ✅ Integrity check complete.');
+    } catch (e) {
+        console.error('[Data Sanitizer] Error during seeding/checking:', e);
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // CRITICAL FIX: Run AFTER hydration completes
-    // ═══════════════════════════════════════════════════════════════════════
-
-    // Expose globally for manual triggering
-    window.runDataSanitizer = runSanitizer;
-
-    // Listen for hydration complete event
-    document.addEventListener('hydration-complete', () => {
-        console.log('[Data Sanitizer] Hydration complete detected, running sanitizer...');
-        runSanitizer();
-    });
-
-    // Also listen for storage events (when data is loaded)
-    window.addEventListener('storage', (e) => {
-        if (e.key === 'pomodoro-tasks' || e.key === 'pomodoro-projects') {
-            console.log('[Data Sanitizer] Data loaded detected, running sanitizer...');
-            // Use setTimeout to ensure data is fully written
-            setTimeout(runSanitizer, 100);
-        }
-    });
-
-    // Fallback: Run after a delay if hydration event doesn't fire
-    setTimeout(() => {
-        const tasks = localStorage.getItem('pomodoro-tasks');
-        if (tasks && tasks !== '[]') {
-            console.log('[Data Sanitizer] Fallback: Running sanitizer after delay...');
-            runSanitizer();
-        }
-    }, 3000);
+    console.log('[Data Sanitizer] ✅ Integrity check complete.');
 
 })();
-

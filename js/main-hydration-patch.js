@@ -15,8 +15,14 @@
 
     console.log('[Main Patch] Installing hydration detection...');
 
-    // ✅ NOTE: Hydration phase is already started in index.html
-    // This patch only handles the END of hydration (SB_HYDRATION_DONE event)
+    // ═══════════════════════════════════════════════════════════════════════
+    // PHASE START: Set hydration phase when main.js loads
+    // ═══════════════════════════════════════════════════════════════════════
+
+    if (window.__SB_LOADER) {
+        window.__SB_LOADER.setPhase('hydrate', true);
+        console.log('[Main Patch] ✅ Hydration phase started');
+    }
 
     // ═══════════════════════════════════════════════════════════════════════
     // PHASE END: Detect when React finishes rendering

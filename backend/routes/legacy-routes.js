@@ -265,20 +265,11 @@ router.all('/v64/sync', async (req, res) => {
     const Task = require('../models/Task');
     const Pomodoro = require('../models/Pomodoro');
 
-    const [projects, tasks, pomodorosRaw] = await Promise.all([
+    const [projects, tasks, pomodoros] = await Promise.all([
         Project.find({ userId: user._id }).select('-_id -__v -userId').lean(),
         Task.find({ userId: user._id }).select('-_id -__v -userId').lean(),
         Pomodoro.find({ userId: user._id }).select('-_id -__v -userId').lean()
     ]);
-
-    // ✅ FIX: Transform pomodoro fields to match main.js expectations
-    // MongoDB uses: duration, endTime, startTime
-    // main.js expects: interval, endDate, (startTime is fine)
-    const pomodoros = pomodorosRaw.map(p => ({
-        ...p,
-        interval: p.duration || 0,     // Map duration → interval
-        endDate: p.endTime || 0        // Map endTime → endDate
-    }));
 
     console.log(`[Legacy Sync] ✅ Loaded: ${projects.length} projects, ${tasks.length} tasks, ${pomodoros.length} pomodoros`);
 

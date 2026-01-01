@@ -1,0 +1,70 @@
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* 🔧 ICON FONT FIX */
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* */
+/* This CSS ensures that icon fonts load correctly for pomodoro icons */
+/* ═══════════════════════════════════════════════════════════════════════ */
+
+/* Glyphicons font-face declarations */
+@font-face {
+    font-family: 'Glyphicons Halflings';
+    src: url('../assets/font/glyphicons-halflings-regular.eot');
+    src: url('../assets/font/glyphicons-halflings-regular.eot?#iefix') format('embedded-opentype'),
+        url('../assets/font/glyphicons-halflings-regular.woff2') format('woff2'),
+        url('../assets/font/glyphicons-halflings-regular.woff') format('woff'),
+        url('../assets/font/glyphicons-halflings-regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* Ensure glyphicon class uses the font */
+.glyphicon {
+    position: relative;
+    top: 1px;
+    display: inline-block;
+    font-family: 'Glyphicons Halflings' !important;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Common glyphicon icons */
+.glyphicon-time:before {
+    content: "\e023";
+}
+
+.glyphicon-ok:before {
+    content: "\e013";
+}
+
+.glyphicon-remove:before {
+    content: "\e014";
+}
+
+.glyphicon-play:before {
+    content: "\e072";
+}
+
+.glyphicon-pause:before {
+    content: "\e073";
+}
+
+.glyphicon-stop:before {
+    content: "\e074";
+}
+
+/* Fallback for any icon rendering issues */
+[class^="glyphicon-"],
+[class*=" glyphicon-"] {
+    font-family: 'Glyphicons Halflings' !important;
+    font-style: normal;
+    font-weight: normal;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}

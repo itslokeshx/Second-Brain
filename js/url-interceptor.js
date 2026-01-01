@@ -7,10 +7,11 @@
 (function () {
     'use strict';
 
-    const BACKEND_URL = 'http://localhost:3000';
+    // ✅ DISABLED: Using local backend instead of Render
+    const BACKEND_URL = null; // 'https://second-brain-backend-saxs.onrender.com';
 
-    console.log('[URL Interceptor] Installing localhost → Local Backend redirector...');
-    console.log('[URL Interceptor] Target:', BACKEND_URL);
+    console.log('[URL Interceptor] Installing localhost → Render redirector...');
+    console.log('[URL Interceptor] Target:', BACKEND_URL || 'localhost:3000 (local)');
 
     // Store original XMLHttpRequest
     const OriginalXHR = window.XMLHttpRequest;
@@ -19,6 +20,11 @@
 
     // Override XMLHttpRequest.open to redirect localhost calls
     OriginalXHR.prototype.open = function (method, url, ...args) {
+        // ✅ Skip redirection if BACKEND_URL is null (using local backend)
+        if (!BACKEND_URL) {
+            return originalOpen.call(this, method, url, ...args);
+        }
+
         // Check if URL contains localhost:3000
         if (typeof url === 'string' && (url.includes('localhost:3000') || url.startsWith('http://localhost:3000'))) {
             // Replace localhost:3000 with Render backend
@@ -77,6 +83,11 @@
     // Also patch fetch API
     const originalFetch = window.fetch;
     window.fetch = function (url, options) {
+        // ✅ Skip redirection if BACKEND_URL is null (using local backend)
+        if (!BACKEND_URL) {
+            return originalFetch.call(this, url, options);
+        }
+
         if (typeof url === 'string' && (url.includes('localhost:3000') || url.startsWith('http://localhost:3000'))) {
             const newUrl = url.replace(/https?:\/\/localhost:3000/, BACKEND_URL);
             console.log(`[URL Interceptor] Fetch redirected: ${url} → ${newUrl}`);
@@ -85,5 +96,5 @@
         return originalFetch.call(this, url, options);
     };
 
-    console.log('[URL Interceptor] ✅ Installed - all localhost:3000 calls will use LOCAL backend');
+    console.log('[URL Interceptor] ✅ Installed - all localhost:3000 calls will redirect to', BACKEND_URL || 'localhost:3000 (local)');
 })();
