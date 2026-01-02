@@ -143,6 +143,15 @@
 
                 console.log('[Mutex] ✅ Hydration complete');
 
+                // 🔄 Force runtime to rebind from IndexedDB once per session
+                if (window.SessionManager && window.SessionManager.triggerIndexedDBRebind) {
+                    try {
+                        window.SessionManager.triggerIndexedDBRebind(userId);
+                    } catch (rebindErr) {
+                        console.warn('[Mutex] Rebind trigger failed:', rebindErr);
+                    }
+                }
+
                 // If this was first hydration, just return success (don't reload)
                 if (!wasAlreadyHydrated && data) {
                     console.log('[Mutex] 🔄 First hydration complete');

@@ -812,10 +812,38 @@
             }
         },
 
+        // ✅ Force a one-time runtime rebind from IndexedDB by reloading after hydration
+        triggerIndexedDBRebind: function (userId) {
+            const key = `rebind-indexeddb-${userId || 'unknown'}`;
+            if (sessionStorage.getItem(key)) {
+                console.log('[Session] ⏭️ IndexedDB rebind already executed for this session');
+                return;
+            }
+
+            sessionStorage.setItem(key, 'done');
+            console.log('[Session] 🔄 Forcing runtime rebind from IndexedDB via controlled reload');
+
+            // Small delay lets outstanding transactions settle before reload
+            setTimeout(() => {
+                window.location.reload();
+            }, 50);
+        },
+
         // ✅ NEW: Save to IndexedDB (Required for main.js rendering)
         // Uses two-phase approach: read dirty tasks FIRST, then write while preserving them
         saveToIndexedDB: function (data) {
             return new Promise(async (resolve, reject) => {
+                // ═══════════════════════════════════════════════════════════
+                // STATE INVARIANT: Never persist tasks without recomputing stats
+                // ═══════════════════════════════════════════════════════════
+                if (data && Array.isArray(data.tasks) && Array.isArray(data.pomodoros)) {
+                    try {
+                        data.tasks = this.recalculateTaskStats(data.tasks, data.pomodoros);
+                    } catch (err) {
+                        console.warn('[Session] Failed to recalc task stats before IDB write:', err);
+                    }
+                }
+
                 const dbName = window.UserDB ? window.UserDB.getDBName() : 'PomodoroDB6';
 
                 // ═══════════════════════════════════════════════════════════════
