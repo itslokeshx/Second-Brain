@@ -43,7 +43,13 @@
             getReq.onsuccess = () => {
                 const existingItem = getReq.result;
 
-                if (existingItem && existingItem.sync === 0 && value.sync !== 0) {
+                // ═══════════════════════════════════════════════════════════════
+                // 🔧 BYPASS: Allow writes from trusted recalculation paths
+                // These are stat corrections that MUST be written even for dirty tasks
+                // ═══════════════════════════════════════════════════════════════
+                const isTrustedRecalculation = value._trustedRecalculation === true;
+
+                if (existingItem && existingItem.sync === 0 && value.sync !== 0 && !isTrustedRecalculation) {
                     // PRESERVE: Keep the dirty version, but pretend write succeeded
                     const itemType = this.name === 'Task' ? 'task' : 'project';
                     console.log(`[Write Protector] 🛡️ Preserving dirty ${itemType} "${existingItem.name}" (sync:0), blocking clean overwrite`);

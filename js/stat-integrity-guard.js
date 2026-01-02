@@ -143,7 +143,10 @@
                         const writeTx = db.transaction('Task', 'readwrite');
                         const store = writeTx.objectStore('Task');
                         for (const task of result.fixed) {
+                            // Mark as trusted recalculation to bypass write protector
+                            task._trustedRecalculation = true;
                             store.put(task);
+                            delete task._trustedRecalculation; // Clean up flag
                         }
                         await new Promise((resolve, reject) => {
                             writeTx.oncomplete = resolve;
