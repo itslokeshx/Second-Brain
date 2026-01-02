@@ -122,6 +122,13 @@
                     await this._persistData(data);
                 } else {
                     console.log('[Mutex] ⏭️ Skipping DATA_PERSISTING - using existing data');
+                    // ═══════════════════════════════════════════════════════════════
+                    // 🔧 CRITICAL FIX: Recalculate stats on existing data
+                    // Even when skipping fetch, we must ensure computed fields are valid
+                    // ═══════════════════════════════════════════════════════════════
+                    this.state = 'DATA_RECALCULATING';
+                    console.log('[Mutex] State:', this.state);
+                    await this._recalculateExistingData(userId);
                 }
 
                 // STATE 5: DATA_VERIFYING
@@ -251,7 +258,7 @@
             // ═══════════════════════════════════════════════════════════════════════
             if (data.tasks && Array.isArray(data.tasks)) {
                 const usernamePrefix = (window.SessionManager && window.SessionManager.getUsernamePrefix) ? window.SessionManager.getUsernamePrefix() : "";
-                
+
                 if (usernamePrefix) {
                     const originalCount = data.tasks.length;
                     data.tasks = data.tasks.filter(t => {
@@ -279,6 +286,97 @@
             if (window.SessionManager && window.SessionManager.saveToLocalStorage) {
                 window.SessionManager.saveToLocalStorage(data);
                 console.log('[Mutex] ✅ Saved to localStorage');
+            }
+        }
+
+        /**
+         * Recalculate task statistics for existing IndexedDB data
+         * Called when data exists but was loaded without recalculation
+         */
+        async _recalculateExistingData(userId) {
+            try {
+                if (!window.UserDB || !window.SessionManager?.recalculateTaskStats) {
+                    console.warn('[Mutex] Cannot recalculate - missing dependencies');
+                    return;
+                }
+
+                const db = await window.UserDB.openUserDB(userId);
+
+                // Read tasks
+                const taskTx = db.transaction('Task', 'readonly');
+                const tasks = await new Promise((resolve, reject) => {
+                    const req = taskTx.objectStore('Task').getAll();
+                    req.onsuccess = () => resolve(req.result || []);
+                    req.onerror = () => reject(req.error);
+                });
+
+                // Read pomodoro logs
+                const storeNames = Array.from(db.objectStoreNames);
+                const pomoStoreName = storeNames.find(s =>
+                    s.toLowerCase().includes('pomodoro') ||
+                    s.toLowerCase().includes('log')
+                ) || 'PomodoroLog';
+
+                let pomodoros = [];
+                if (storeNames.includes(pomoStoreName)) {
+                    const pomoTx = db.transaction(pomoStoreName, 'readonly');
+                    pomodoros = await new Promise((resolve, reject) => {
+                        const req = pomoTx.objectStore(pomoStoreName).getAll();
+                        req.onsuccess = () => resolve(req.result || []);
+                        req.onerror = () => reject(req.error);
+                    });
+                }
+
+                if (tasks.length === 0) {
+                    console.log('[Mutex] No tasks to recalculate');
+                    return;
+                }
+
+                console.log(`[Mutex] 🔄 Recalculating ${tasks.length} tasks from ${pomodoros.length} pomodoros...`);
+
+                // Recalculate stats
+                const fixedTasks = window.SessionManager.recalculateTaskStats(tasks, pomodoros);
+
+                // Check if any tasks actually changed
+                let changedCount = 0;
+                for (let i = 0; i < fixedTasks.length; i++) {
+                    if (fixedTasks[i].elapsedTime !== tasks[i].elapsedTime ||
+                        fixedTasks[i].actualPomoNum !== tasks[i].actualPomoNum) {
+                        changedCount++;
+                    }
+                }
+
+                if (changedCount === 0) {
+                    console.log('[Mutex] ✅ All task stats already correct');
+                    return;
+                }
+
+                // Write back to IndexedDB
+                const writeTx = db.transaction('Task', 'readwrite');
+                const store = writeTx.objectStore('Task');
+
+                for (const task of fixedTasks) {
+                    store.put(task);
+                }
+
+                await new Promise((resolve, reject) => {
+                    writeTx.oncomplete = () => resolve();
+                    writeTx.onerror = () => reject(writeTx.error);
+                });
+
+                console.log(`[Mutex] ✅ Recalculated ${changedCount} tasks in IndexedDB`);
+
+                // Also update localStorage for consistency
+                try {
+                    localStorage.setItem('pomodoro-tasks', JSON.stringify(fixedTasks));
+                    console.log('[Mutex] ✅ Updated localStorage with recalculated tasks');
+                } catch (e) {
+                    console.warn('[Mutex] Failed to update localStorage:', e);
+                }
+
+            } catch (error) {
+                console.error('[Mutex] ❌ Recalculation failed:', error);
+                // Don't throw - this is a recovery operation
             }
         }
 
