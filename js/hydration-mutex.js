@@ -359,7 +359,7 @@
                     // Mark as trusted recalculation to bypass write protector
                     task._trustedRecalculation = true;
                     store.put(task);
-                    delete task._trustedRecalculation; // Clean up flag
+                    // Note: Flag will be cleaned up after transaction completes
                 }
 
                 await new Promise((resolve, reject) => {
@@ -368,6 +368,11 @@
                 });
 
                 console.log(`[Mutex] ✅ Recalculated ${changedCount} tasks in IndexedDB`);
+
+                // Clean up trusted flags after transaction completes
+                for (const task of fixedTasks) {
+                    delete task._trustedRecalculation;
+                }
 
                 // Also update localStorage for consistency
                 try {

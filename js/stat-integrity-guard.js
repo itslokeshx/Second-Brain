@@ -146,12 +146,18 @@
                             // Mark as trusted recalculation to bypass write protector
                             task._trustedRecalculation = true;
                             store.put(task);
-                            delete task._trustedRecalculation; // Clean up flag
+                            // Note: Flag will be cleaned up after transaction completes
                         }
                         await new Promise((resolve, reject) => {
                             writeTx.oncomplete = resolve;
                             writeTx.onerror = () => reject(writeTx.error);
                         });
+
+                        // Clean up trusted flags after transaction completes
+                        for (const task of result.fixed) {
+                            delete task._trustedRecalculation;
+                        }
+
                         console.log(`[IntegrityGuard] ✅ Wrote ${result.fixed.length} fixed tasks to IndexedDB`);
                     }
                 }
