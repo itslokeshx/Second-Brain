@@ -1,19 +1,17 @@
 /**
  * IndexedDB Write Protector
  * ═══════════════════════════════════════════════════════════════════════════
- * DISABLED: This protection was causing conflicts with legitimate data updates
+ * SIMPLIFIED: Allow all writes to pass through
+ * Original protection logic removed due to conflicts with data updates
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
 (function () {
     'use strict';
 
-    console.log('[Write Protector] DISABLED - All writes allowed');
+    console.log('[Write Protector] Simplified - All writes allowed');
 
-    // Original protection logic disabled per user request
-    // The write protector was interfering with:
-    // - Sync updates (marking tasks as clean)
-    // - Stat recalculation writes
-    // - Normal data flow from localStorage to IndexedDB
+    // No interception - all writes pass through normally
+    // The original IDBObjectStore.prototype.put remains unchanged
 
 })();
