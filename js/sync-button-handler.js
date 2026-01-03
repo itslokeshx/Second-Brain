@@ -7,12 +7,8 @@
 (function () {
     console.log('[Sync Button Handler] Loading...');
 
-    // Premium sync notification (minimal, matches neural loader)
+    // Premium sync notification (toast style - top-right corner)
     function showSyncNotification(message) {
-        // Create backdrop
-        const backdrop = document.createElement('div');
-        backdrop.className = 'sync-notification-backdrop';
-
         // Create notification
         const notification = document.createElement('div');
         notification.className = 'sync-notification';
@@ -34,26 +30,22 @@
         content.appendChild(icon);
         content.appendChild(messageEl);
         notification.appendChild(content);
-        document.body.appendChild(backdrop);
         document.body.appendChild(notification);
 
         // Show with animation
         requestAnimationFrame(() => {
-            backdrop.classList.add('show');
             notification.classList.add('show');
         });
 
-        // Auto-hide after 2 seconds
+        // Auto-hide after 2.5 seconds
         setTimeout(() => {
-            backdrop.classList.remove('show');
             notification.classList.remove('show');
 
             // Remove from DOM after animation
             setTimeout(() => {
-                backdrop.remove();
                 notification.remove();
-            }, 300);
-        }, 2000);
+            }, 400);
+        }, 2500);
     }
 
     function initSyncButton() {

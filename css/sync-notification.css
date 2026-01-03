@@ -1,96 +1,66 @@
 /**
- * Premium Sync Notification - Minimal Design
+ * Premium Sync Notification - Toast Style
  * ═══════════════════════════════════════════════════════════════════════════
- * Matches neural loader aesthetic with site color palette
+ * Top-right corner toast notification with site theme colors
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
 .sync-notification {
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0.9);
+    top: 24px;
+    right: 24px;
     z-index: 999999;
+    transform: translateX(400px);
     opacity: 0;
-    visibility: hidden;
-    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
     pointer-events: none;
 }
 
 .sync-notification.show {
     opacity: 1;
-    visibility: visible;
-    transform: translate(-50%, -50%) scale(1);
-}
-
-/* Backdrop with blur */
-.sync-notification-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    z-index: 999998;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.sync-notification-backdrop.show {
-    opacity: 1;
-    visibility: visible;
-}
-
-/* Dark mode backdrop */
-@media (prefers-color-scheme: dark) {
-    .sync-notification-backdrop {
-        background-color: rgba(11, 15, 20, 0.95);
-    }
+    transform: translateX(0);
 }
 
 /* Content card */
 .sync-notification-content {
     background-color: #FFFFFF;
-    border-radius: 12px;
-    padding: 32px 48px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
-                0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border-radius: 8px;
+    padding: 16px 24px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+        0 4px 6px -2px rgba(0, 0, 0, 0.05);
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
     min-width: 280px;
+    border-left: 4px solid #D63A3A;
 }
 
 /* Dark mode card */
 @media (prefers-color-scheme: dark) {
     .sync-notification-content {
         background-color: #1F2937;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3),
-                    0 10px 10px -5px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3),
+            0 4px 6px -2px rgba(0, 0, 0, 0.2);
+        border-left-color: #FF4B4B;
     }
 }
 
 /* Success icon */
 .sync-notification-icon {
-    width: 48px;
-    height: 48px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     background-color: #D63A3A;
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: pulse-icon 0.6s ease-out;
+    flex-shrink: 0;
 }
 
-/* Dark mode icon with glow */
+/* Dark mode icon */
 @media (prefers-color-scheme: dark) {
     .sync-notification-icon {
         background-color: #FF4B4B;
-        box-shadow: 0 0 16px rgba(255, 75, 75, 0.3);
     }
 }
 
@@ -98,7 +68,7 @@
 .sync-notification-icon::after {
     content: '✓';
     color: #FFFFFF;
-    font-size: 28px;
+    font-size: 14px;
     font-weight: 600;
 }
 
@@ -106,7 +76,7 @@
 .sync-notification-message {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 500;
     color: #1F2937;
     letter-spacing: 0.01em;
@@ -116,21 +86,6 @@
 @media (prefers-color-scheme: dark) {
     .sync-notification-message {
         color: #F9FAFB;
-    }
-}
-
-/* Animations */
-@keyframes pulse-icon {
-    0% {
-        transform: scale(0.8);
-        opacity: 0;
-    }
-    50% {
-        transform: scale(1.1);
-    }
-    100% {
-        transform: scale(1);
-        opacity: 1;
     }
 }
 
