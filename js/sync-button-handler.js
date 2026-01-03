@@ -7,6 +7,55 @@
 (function () {
     console.log('[Sync Button Handler] Loading...');
 
+    // Premium sync notification (minimal, matches neural loader)
+    function showSyncNotification(message) {
+        // Create backdrop
+        const backdrop = document.createElement('div');
+        backdrop.className = 'sync-notification-backdrop';
+
+        // Create notification
+        const notification = document.createElement('div');
+        notification.className = 'sync-notification';
+
+        // Create content
+        const content = document.createElement('div');
+        content.className = 'sync-notification-content';
+
+        // Create icon
+        const icon = document.createElement('div');
+        icon.className = 'sync-notification-icon';
+
+        // Create message
+        const messageEl = document.createElement('p');
+        messageEl.className = 'sync-notification-message';
+        messageEl.textContent = message;
+
+        // Assemble
+        content.appendChild(icon);
+        content.appendChild(messageEl);
+        notification.appendChild(content);
+        document.body.appendChild(backdrop);
+        document.body.appendChild(notification);
+
+        // Show with animation
+        requestAnimationFrame(() => {
+            backdrop.classList.add('show');
+            notification.classList.add('show');
+        });
+
+        // Auto-hide after 2 seconds
+        setTimeout(() => {
+            backdrop.classList.remove('show');
+            notification.classList.remove('show');
+
+            // Remove from DOM after animation
+            setTimeout(() => {
+                backdrop.remove();
+                notification.remove();
+            }, 300);
+        }, 2000);
+    }
+
     function initSyncButton() {
         console.log('[Sync Button Handler] Initializing...');
 
@@ -460,19 +509,7 @@
                 }
 
                 // Enhanced sync success message
-                const syncSummary = [
-                    '🎉 Sync Successful!',
-                    '',
-                    `📊 Summary:`,
-                    `   • Projects: ${result.projectsSynced || 0} synced`,
-                    `   • Tasks: ${result.tasksSynced || 0} synced`,
-                    `   • Pomodoros: ${result.logsSynced || 0} synced`,
-                    '',
-                    `✅ All data saved to cloud!`,
-                    `🕐 ${new Date().toLocaleTimeString()}`
-                ].join('\n');
-
-                alert(syncSummary);
+                showSyncNotification('Synced successfully!');
             } catch (error) {
                 console.error('[Sync Button] ❌ Sync failed:', error);
                 // Even on error, ensure system projects exist
