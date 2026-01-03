@@ -44,7 +44,14 @@
         color: '#4A90D9',
         parentId: '',
         createdDate: now,
-        modifiedDate: now
+        modifiedDate: now,
+        // ═══════════════════════════════════════════════════════════════════
+        // 🛡️ NaN PREVENTION: Default stat fields for main.js calculations
+        // Without these, main.js will compute: estimatedTime = undefined * 25 = NaN
+        // ═══════════════════════════════════════════════════════════════════
+        estimatePomoNum: 0,
+        actualPomoNum: 0,
+        elapsedTime: 0
     };
 
     // System projects with CORRECT IDs and type values from main.js
