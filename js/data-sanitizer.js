@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    console.log('[Data Sanitizer] Initializing...');
+    // console.log('[Data Sanitizer] Initializing...');
 
     const KEYS_TO_SANITIZE = [
         'pomodoro-projects',
@@ -129,13 +129,13 @@
                 customList = customList.filter(id => projectIds.has(String(id)));
 
                 if (customList.length !== originalLength) {
-                    console.log(`[Data Sanitizer] Removed ${originalLength - customList.length} invalid items from sidebar list.`);
+                    // console.log(`[Data Sanitizer] Removed ${originalLength - customList.length} invalid items from sidebar list.`);
                 }
 
                 // Ensure '0' is present if not already
                 if (!customList.includes('0')) {
                     customList.unshift('0');
-                    console.log('[Data Sanitizer] Added Default Project to Sidebar List.');
+                    // console.log('[Data Sanitizer] Added Default Project to Sidebar List.');
                 }
 
                 localStorage.setItem('custom-project-list', JSON.stringify(customList));
@@ -170,6 +170,6 @@
         console.error('[Data Sanitizer] Error during seeding/checking:', e);
     }
 
-    console.log('[Data Sanitizer] ✅ Integrity check complete.');
+    // console.log('[Data Sanitizer] ✅ Integrity check complete.');
 
 })();

@@ -244,8 +244,8 @@
         return window.SYSTEM_PROJECTS.find(p => p.id === String(id));
     };
 
-    console.log('[System Projects] ✅ Defined', window.SYSTEM_PROJECTS.length, 'mandatory system projects');
-    console.log('[System Projects] IDs:', Array.from(window.SYSTEM_PROJECT_IDS).join(', '));
-    console.log('[System Projects] Type mapping: today=4000, tomorrow=4001, next7days=4004, all=7000');
+    // console.log('[System Projects] ✅ Defined', window.SYSTEM_PROJECTS.length, 'mandatory system projects');
+    // console.log('[System Projects] IDs:', Array.from(window.SYSTEM_PROJECT_IDS).join(', '));
+    // console.log('[System Projects] Type mapping: today=4000, tomorrow=4001, next7days=4004, all=7000');
 
 })();

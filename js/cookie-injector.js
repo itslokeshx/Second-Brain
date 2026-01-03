@@ -3,8 +3,8 @@
 (function () {
     'use strict';
 
-    console.log('[Cookie Injector] DISABLED - Security priority');
-    console.log('[Cookie Injector] Cookies will ONLY be set by backend on successful auth');
+    // console.log('[Cookie Injector] DISABLED - Security priority');
+    // console.log('[Cookie Injector] Cookies will ONLY be set by backend on successful auth');
 
     // Completely disabled - no more automatic cookie injection
     // The backend will set cookies on successful login

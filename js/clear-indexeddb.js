@@ -2,14 +2,14 @@
 (function () {
     'use strict';
 
-    console.log('[IndexedDB Cleaner] Deleting old database...');
+    // console.log('[IndexedDB Cleaner] Deleting old database...');
 
     const dbName = 'PomodoroDB6';
     const deleteRequest = indexedDB.deleteDatabase(dbName);
 
     deleteRequest.onsuccess = function () {
-        console.log('[IndexedDB Cleaner] ✅ Old database deleted successfully');
-        console.log('[IndexedDB Cleaner] main.js will now read from localStorage');
+        // console.log('[IndexedDB Cleaner] ✅ Old database deleted successfully');
+        // console.log('[IndexedDB Cleaner] main.js will now read from localStorage');
     };
 
     deleteRequest.onerror = function (event) {

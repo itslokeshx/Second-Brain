@@ -12,7 +12,7 @@
     try {
         // Clear localStorage
         localStorage.clear();
-        console.log('[Force Reset] localStorage cleared.');
+        // console.log('[Force Reset] localStorage cleared.');
 
         // Clear IndexedDB (used by legacy main.js)
         const dbs = ['focustodo', 'localforage'];
@@ -25,7 +25,7 @@
         // Set flag so we don't do this every time
         localStorage.setItem('force_reset_v1', 'true');
 
-        console.log('[Force Reset] ✅ Cleanup complete. Reloading...');
+        // console.log('[Force Reset] ✅ Cleanup complete. Reloading...');
 
         // Force reload to apply clean slate
         setTimeout(() => location.reload(), 1000);

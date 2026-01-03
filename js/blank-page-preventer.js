@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    console.log('[Blank Page Preventer] Initializing...');
+    // console.log('[Blank Page Preventer] Initializing...');
 
     // Catch all unhandled errors
     window.addEventListener('error', function (event) {
@@ -42,5 +42,5 @@
     // The blank page issue needs a different fix
     // ═══════════════════════════════════════════════════════════════════════
 
-    console.log('[Blank Page Preventer] ✅ Active - Monitoring for errors');
+    // console.log('[Blank Page Preventer] ✅ Active - Monitoring for errors');
 })();
