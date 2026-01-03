@@ -4,17 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <title>Second Brain</title>
-    <!-- CRITICAL: Load URL interceptor FIRST to redirect all API calls -->
-    <script src="js/url-interceptor.js?v=2000"></script>
-    <!-- CRITICAL: Patch main.js hardcoded URLs before it loads -->
-    <script src="js/main-url-patcher.js?v=1000"></script>
     <link href="main.css" rel="stylesheet">
     <link href="css/neural-loader.css" rel="stylesheet">
     <link href="css/icon-font-fix.css" rel="stylesheet">
+
+    <!-- ✅ CRITICAL: Loading orchestrator MUST load FIRST -->
     <script src="js/loading-orchestrator.js"></script>
 </head>
 
 <body>
+    <script src="js/url-interceptor.js"></script>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- NEURAL LOADER - Premium Loading Animation -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
     <div id="sb-loader" class="sb-loader">
         <div class="sb-loader-backdrop"></div>
         <div class="sb-loader-content">
@@ -568,7 +571,6 @@
     <script src="js/redux-diagnostic.js"></script>
 
     <script src="js/fix-pomodoro-intervals.js"></script>
-    <script type="text/javascript" src="js/sync-notification.js"></script>
     <script type="text/javascript" src="js/sync-button-handler.js"></script>
 
 </body>
