@@ -459,7 +459,20 @@
                     }
                 }
 
-                alert(`✅ Synced: ${result.projectsSynced || 0} projects, ${result.tasksSynced || 0} tasks, ${result.logsSynced || 0} logs`);
+                // Enhanced sync success message
+                const syncSummary = [
+                    '🎉 Sync Successful!',
+                    '',
+                    `📊 Summary:`,
+                    `   • Projects: ${result.projectsSynced || 0} synced`,
+                    `   • Tasks: ${result.tasksSynced || 0} synced`,
+                    `   • Pomodoros: ${result.logsSynced || 0} synced`,
+                    '',
+                    `✅ All data saved to cloud!`,
+                    `🕐 ${new Date().toLocaleTimeString()}`
+                ].join('\n');
+
+                alert(syncSummary);
             } catch (error) {
                 console.error('[Sync Button] ❌ Sync failed:', error);
                 // Even on error, ensure system projects exist
