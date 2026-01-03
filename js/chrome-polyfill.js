@@ -20,7 +20,6 @@ if (!chrome.runtime) {
         },
         getManifest: () => ({ version: "1.0.0" }),
         sendMessage: (message, callback) => {
-            console.log("Mock sendMessage:", message);
             if (callback) callback();
         },
         onMessage: {
@@ -150,7 +149,6 @@ if (!chrome.i18n) {
 if (!chrome.action) {
     chrome.action = {
         setBadgeText: (details) => {
-            console.log("Badge text set to:", details.text);
             // Could update document title or favicon overlay
         },
         setBadgeBackgroundColor: () => { },
@@ -159,7 +157,6 @@ if (!chrome.action) {
             addListener: (cb) => {
                 // In a web app, there is no extension icon to click. 
                 // This might need a UI button if it's critical.
-                console.log("chrome.action.onClicked listener added");
             }
         }
     };
@@ -188,7 +185,6 @@ if (!chrome.tabs) {
 if (!chrome.windows) {
     chrome.windows = {
         create: (createData, callback) => {
-            console.log("chrome.windows.create", createData);
             // Web app can't really create independent windows easily like extension popups
             // Just open a new window
             const win = window.open(createData.url, '_blank', `width=${createData.width},height=${createData.height},left=${createData.left},top=${createData.top}`);
@@ -205,7 +201,6 @@ if (!chrome.windows) {
 if (!chrome.notifications) {
     chrome.notifications = {
         create: (id, options, callback) => {
-            console.log("Notification:", options);
             if (Notification.permission === 'granted') {
                 new Notification(options.title, { body: options.message, icon: options.iconUrl });
             } else if (Notification.permission !== 'denied') {
@@ -222,4 +217,4 @@ if (!chrome.notifications) {
     }
 }
 
-console.log("Chrome Polyfill loaded");
+

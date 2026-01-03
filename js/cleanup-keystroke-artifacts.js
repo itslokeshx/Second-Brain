@@ -4,13 +4,11 @@
  */
 
 (function cleanupKeystrokeArtifacts() {
-    console.log('[Cleanup] Starting keystroke artifact removal...');
 
     try {
         // Get current tasks from localStorage
         const tasksStr = localStorage.getItem('tasks');
         if (!tasksStr) {
-            console.log('[Cleanup] No tasks found in localStorage');
             return;
         }
 

@@ -45,7 +45,4 @@
     // Export globally
     window.AppConfig = AppConfig;
 
-    console.log('[Config] Initialized');
-    console.log('[Config] Environment:', AppConfig.isDevelopment ? 'Development' : 'Production');
-    console.log('[Config] API Base URL:', AppConfig.getApiBaseUrl());
 })();

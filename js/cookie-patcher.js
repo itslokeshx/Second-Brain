@@ -3,7 +3,6 @@
 (function () {
     'use strict';
 
-    console.log('[Cookie Patcher] Initializing STRICT cookie validation...');
 
     // Get the original cookie descriptor
     const originalDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie') ||
@@ -55,6 +54,4 @@
     });
 
 
-    console.log('[Cookie Patcher] ✅ Active - Invalid cookies will be filtered from reads');
-    console.log('[Cookie Patcher] 🛡️ NAME cookie BLOCKED from React - prevents username injection');
 })();

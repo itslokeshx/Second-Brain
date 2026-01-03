@@ -2,8 +2,6 @@
 (function () {
     'use strict';
 
-    console.log('[Blank Page Preventer] Initializing...');
-
     // Catch all unhandled errors
     window.addEventListener('error', function (event) {
         console.error('[Blank Page Preventer] Caught error:', event.error);
@@ -41,6 +39,4 @@
     // DISABLED AUTO-RELOAD - was causing login issues
     // The blank page issue needs a different fix
     // ═══════════════════════════════════════════════════════════════════════
-
-    console.log('[Blank Page Preventer] ✅ Active - Monitoring for errors');
 })();
