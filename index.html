@@ -4,6 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Second Brain</title>
+    <!-- CRITICAL: Load URL interceptor FIRST to redirect all API calls -->
+    <script src="js/url-interceptor.js"></script>
     <link href="main.css" rel="stylesheet">
     <link href="css/neural-loader.css" rel="stylesheet">
     <link href="css/icon-font-fix.css" rel="stylesheet">
@@ -11,7 +13,6 @@
 </head>
 
 <body>
-    <script src="js/url-interceptor.js"></script>
     <div id="sb-loader" class="sb-loader">
         <div class="sb-loader-backdrop"></div>
         <div class="sb-loader-content">
