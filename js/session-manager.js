@@ -812,38 +812,10 @@
             }
         },
 
-        // ✅ Force a one-time runtime rebind from IndexedDB by reloading after hydration
-        triggerIndexedDBRebind: function (userId) {
-            const key = `rebind-indexeddb-${userId || 'unknown'}`;
-            if (sessionStorage.getItem(key)) {
-                console.log('[Session] ⏭️ IndexedDB rebind already executed for this session');
-                return;
-            }
-
-            sessionStorage.setItem(key, 'done');
-            console.log('[Session] 🔄 Forcing runtime rebind from IndexedDB via controlled reload');
-
-            // Small delay lets outstanding transactions settle before reload
-            setTimeout(() => {
-                window.location.reload();
-            }, 50);
-        },
-
         // ✅ NEW: Save to IndexedDB (Required for main.js rendering)
         // Uses two-phase approach: read dirty tasks FIRST, then write while preserving them
         saveToIndexedDB: function (data) {
             return new Promise(async (resolve, reject) => {
-                // ═══════════════════════════════════════════════════════════
-                // STATE INVARIANT: Never persist tasks without recomputing stats
-                // ═══════════════════════════════════════════════════════════
-                if (data && Array.isArray(data.tasks) && Array.isArray(data.pomodoros)) {
-                    try {
-                        data.tasks = this.recalculateTaskStats(data.tasks, data.pomodoros);
-                    } catch (err) {
-                        console.warn('[Session] Failed to recalc task stats before IDB write:', err);
-                    }
-                }
-
                 const dbName = window.UserDB ? window.UserDB.getDBName() : 'PomodoroDB6';
 
                 // ═══════════════════════════════════════════════════════════════
@@ -1022,8 +994,8 @@
                                             }
 
                                             // Check if this is a real task or keystroke artifact
-                                            // STRICT: Only preserve if name >= 3 chars AND has meaningful content
-                                            const hasValidName = existingTask.name && existingTask.name.length >= 3;
+                                            // STRICT: Only preserve if name >= 1 char AND has meaningful content
+                                            const hasValidName = existingTask.name && existingTask.name.length >= 1;
                                             const hasDeadline = existingTask.deadline && existingTask.deadline !== 0;
                                             const hasNonDefaultProject = existingTask.projectId && existingTask.projectId !== '0' && existingTask.projectId !== 0;
                                             const hasPriority = existingTask.priority && existingTask.priority > 0;
@@ -1181,18 +1153,149 @@
                     task.estimatePomoNum = 0;
                 }
 
+                // ═══════════════════════════════════════════════════════════════════════
+                // 🔥 FINAL MATHEMATICAL INVARIANT: Estimate can NEVER be below actual
+                // 
+                // WHY THIS IS CRITICAL:
+                // - If estimatePomoNum = 0, then estimatedTime = 0 * 25 = 0
+                // - UI calculations divide by estimatedTime → NaN storm
+                // - Conditional rendering hides rows with 0 estimates
+                // - Project aggregations produce NaN from reduce()
+                // 
+                // RULE: If 1 pomodoro exists, estimate MUST be ≥ 1
+                // - 0 is illegal (causes division by zero)
+                // - null is illegal (causes NaN multiplication)
+                // - estimate < actual is illogical (you can't estimate less than you've done)
+                // ═══════════════════════════════════════════════════════════════════════
+                if (!Number.isFinite(task.estimatePomoNum) || task.estimatePomoNum < actualCount) {
+                    task.estimatePomoNum = Math.max(actualCount, 1);
+                    console.log(`[Session] 🔥 INVARIANT ENFORCED: "${task.name}" estimate clamped to ${task.estimatePomoNum} (actual=${actualCount})`);
+                }
+
                 if (actualCount > 0 || task.estimatePomoNum > 0) {
                     console.log(`[Session] Task "${task.name}": actualPomoNum=${task.actualPomoNum}, estimatePomoNum=${task.estimatePomoNum}, elapsedTime=${task.elapsedTime}m`);
                 }
 
                 return task;
             });
+
+            // ═══════════════════════════════════════════════════════════════════════
+            // 🛡️ REGRESSION VALIDATION: Ensure no NaN values escaped
+            // ═══════════════════════════════════════════════════════════════════════
+            const hasNaN = tasks.some(t =>
+                isNaN(t.actualPomoNum) ||
+                isNaN(t.elapsedTime) ||
+                isNaN(t.estimatePomoNum)
+            );
+
+            if (hasNaN) {
+                console.error('[Session] 🚨 REGRESSION: recalculateTaskStats produced NaN values');
+                console.error('[Session] This indicates a bug in the calculation logic');
+            }
+
+            return tasks;
+        },
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // 🔥 PROJECT STAT AGGREGATION: Calculate project stats from tasks
+        // main.js displays PROJECT-level stats, not individual task stats
+        // ═══════════════════════════════════════════════════════════════════════
+        recalculateProjectStats: function (projects, tasks) {
+            if (!projects || !Array.isArray(projects)) return projects;
+            if (!tasks || !Array.isArray(tasks)) tasks = [];
+
+            console.log(`[Session] 🔄 Recalculating project stats from ${tasks.length} tasks...`);
+
+            return projects.map(project => {
+                // 🔥 CRITICAL FIX: "Tasks" (id=0) must aggregate from BOTH itself AND "PRJ_TASKS"
+                // WHY: main.js displays "Tasks" but UI creates tasks in "PRJ_TASKS" (id=id-task-tasks)
+                // This is a legacy compatibility issue
+                let projectTasks;
+                if (project.id === '0' || project.name === 'Tasks') {
+                    // Aggregate from BOTH "0" and "id-task-tasks"
+                    projectTasks = tasks.filter(t =>
+                        t.projectId === '0' ||
+                        t.projectId === 'id-task-tasks' ||
+                        t.projectId === project.id
+                    );
+                    if (projectTasks.length > 0) {
+                        console.log(`[Session] 🔧 LEGACY FIX: "Tasks" project aggregating from ${projectTasks.length} tasks (including PRJ_TASKS)`);
+                    }
+                } else {
+                    // Normal project - only aggregate its own tasks
+                    projectTasks = tasks.filter(t => t.projectId === project.id);
+                }
+
+                // Aggregate stats from tasks
+                let totalEstimate = 0;
+                let totalActual = 0;
+                let totalElapsed = 0;
+
+                projectTasks.forEach(task => {
+                    totalEstimate += (task.estimatePomoNum || 0);
+                    totalActual += (task.actualPomoNum || 0);
+                    totalElapsed += (task.elapsedTime || 0);
+                });
+
+                // Apply to project
+                project.estimatePomoNum = totalEstimate;
+                project.actualPomoNum = totalActual;
+                project.elapsedTime = totalElapsed;
+
+                // 🔥 ENFORCE INVARIANT: Project estimate must be ≥ actual
+                if (!Number.isFinite(project.estimatePomoNum) || project.estimatePomoNum < project.actualPomoNum) {
+                    project.estimatePomoNum = Math.max(project.actualPomoNum, 0);
+                }
+
+                if (projectTasks.length > 0) {
+                    console.log(`[Session] Project "${project.name}": ${projectTasks.length} tasks, estimate=${project.estimatePomoNum}, actual=${project.actualPomoNum}, elapsed=${project.elapsedTime}m`);
+                }
+
+                return project;
+            });
         },
 
         // Helper to save data to localStorage
         saveToLocalStorage: function (data) {
             try {
+                // ═══════════════════════════════════════════════════════════════════════
+                // 🛡️ GATE A - INVARIANT 1 VALIDATION: Validate stats before writing
+                // Emergency fallback if Gates B/C/D were bypassed
+                // ═══════════════════════════════════════════════════════════════════════
+                if (data.tasks && Array.isArray(data.tasks) && data.tasks.length > 0) {
+                    const hasInvalidStats = data.tasks.some(t => {
+                        return (
+                            t.actualPomoNum === undefined ||
+                            t.elapsedTime === undefined ||
+                            t.estimatePomoNum === undefined ||
+                            isNaN(t.actualPomoNum) ||
+                            isNaN(t.elapsedTime)
+                        );
+                    });
+
+                    if (hasInvalidStats) {
+                        console.error('[Session] 🚨 GATE A VIOLATION: Attempted to save tasks with invalid stats');
+                        console.error('[Session] 🚨 This should never happen - recalculateTaskStats() was not called');
+
+                        // EMERGENCY RECALCULATION
+                        if (data.pomodoros && this.recalculateTaskStats) {
+                            console.warn('[Session] 🔧 GATE A: Emergency recalculation triggered');
+                            data.tasks = this.recalculateTaskStats(data.tasks, data.pomodoros);
+                        } else {
+                            console.error('[Session] ❌ GATE A: Cannot recalculate - no pomodoro logs available');
+                        }
+                    }
+                }
+
                 console.log('[Session] Saving to localStorage...');
+
+                // 🔥 CRITICAL: Recalculate PROJECT stats before saving
+                // main.js reads projects from localStorage and displays their stats
+                // If we don't recalculate here, main.js will show stale 0/NaN values
+                if (data.projects && data.tasks && this.recalculateProjectStats) {
+                    console.log('[Session] 🔧 Recalculating project stats before saving to localStorage...');
+                    data.projects = this.recalculateProjectStats(data.projects, data.tasks);
+                }
 
                 // 1. Capture a valid Project ID for the PID cookie
                 // Try to find "Tasks" or "Inbox" project first
@@ -1296,7 +1399,7 @@
                                 // BLOCK: Artifacts that look like partial usernames "d", "do", "its"
                                 const hasValidProject = t.projectId && t.projectId !== '0';
                                 const isArtifact = t.name && (
-                                    t.name.length < 3 ||
+                                    t.name.length < 1 ||
                                     (t.name.length < 20 && !hasValidProject && !t.deadline)
                                 );
 

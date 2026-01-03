@@ -391,6 +391,28 @@
                     console.warn('[Sync Button] ⚠️ Failed to update sync flags:', e);
                 }
 
+                // ═══════════════════════════════════════════════════════════════════════
+                // 🛡️ GATE C - INVARIANT 1 ENFORCEMENT: Recalculate stats after sync
+                // This ensures sync doesn't leave stale 0/NaN values in localStorage
+                // ═══════════════════════════════════════════════════════════════════════
+                try {
+                    console.log('[Sync Button] 🔧 GATE C: Recalculating stats after sync...');
+
+                    // Reload fresh data from localStorage
+                    const tasks = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
+                    const pomodoros = JSON.parse(localStorage.getItem('pomodoro-pomodoros') || '[]');
+
+                    if (tasks.length > 0 && pomodoros.length > 0 && window.SessionManager?.recalculateTaskStats) {
+                        const recalculatedTasks = window.SessionManager.recalculateTaskStats(tasks, pomodoros);
+                        localStorage.setItem('pomodoro-tasks', JSON.stringify(recalculatedTasks));
+                        console.log('[Sync Button] ✅ GATE C: Stats recalculated and persisted');
+                    } else if (tasks.length > 0 && pomodoros.length === 0) {
+                        console.warn('[Sync Button] ⚠️ GATE C: No pomodoros to recalculate - stats may be 0');
+                    }
+                } catch (e) {
+                    console.error('[Sync Button] ❌ GATE C: Recalculation failed:', e);
+                }
+
                 // ✅ FIX: Update Sync Timestamp in UI
                 try {
                     // Try multiple selectors for the timestamp

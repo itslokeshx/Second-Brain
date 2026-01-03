@@ -14,6 +14,30 @@
 
     console.log('[NaN Preventer] Initializing...');
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // 🚨 REGRESSION DETECTOR: If this fires, stat gates are broken
+    // ═══════════════════════════════════════════════════════════════════════
+    window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            try {
+                const tasks = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
+                const hasNaN = tasks.some(t =>
+                    t.actualPomoNum === undefined ||
+                    t.elapsedTime === undefined ||
+                    isNaN(t.actualPomoNum) ||
+                    isNaN(t.elapsedTime)
+                );
+
+                if (hasNaN) {
+                    console.error('🚨 REGRESSION DETECTED: Tasks have NaN/undefined stats in localStorage');
+                    console.error('🚨 This means a gate was bypassed - check hydration-mutex.js and sync-button-handler.js');
+                }
+            } catch (e) {
+                console.warn('[NaN Preventer] Regression check failed:', e);
+            }
+        }, 2000);
+    });
+
     // ═══════════════════════════════════════════════════════════════════
     // CRITICAL FIX: Replace NaN in text content
     // ═══════════════════════════════════════════════════════════════════
