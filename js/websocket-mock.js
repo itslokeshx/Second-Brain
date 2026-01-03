@@ -1,4 +1,5 @@
 (function () {
+    console.log('[WebSocket Mock] Initializing...');
 
     const OriginalWebSocket = window.WebSocket;
 
@@ -6,11 +7,13 @@
     class MockWebSocket extends EventTarget {
         constructor(url, protocols) {
             super();
+            console.log(`[WebSocket Mock] Intercepted connection to: ${url}`);
             this.url = url;
             this.readyState = 0; // CONNECTING
 
             // Simulate connection success after a short delay
             setTimeout(() => {
+                console.log('[WebSocket Mock] Simulating "open" event');
                 this.readyState = 1; // OPEN
                 if (this.onopen) {
                     this.onopen(new Event('open'));
@@ -29,9 +32,11 @@
         }
 
         send(data) {
+            console.log('[WebSocket Mock] Sending data:', data);
 
             // ✅ CRITICAL: Auto-respond to STOMP CONNECT frame
             if (typeof data === 'string' && data.startsWith('CONNECT')) {
+                console.log('[WebSocket Mock] Responding to CONNECT frame...');
                 setTimeout(() => {
                     // Expects: CONNECTED, version, heart-beat, user-name
                     const connectedFrame = 'CONNECTED\nversion:1.1\nheart-beat:0,0\nuser-name:guest\n\n\0';
@@ -41,6 +46,7 @@
 
             // ✅ CRITICAL: Auto-respond to SUBSCRIBE frame
             if (typeof data === 'string' && data.startsWith('SUBSCRIBE')) {
+                console.log('[WebSocket Mock] Responding to SUBSCRIBE frame...');
                 setTimeout(() => {
                     const syncMsg = JSON.stringify({ type: 'SYNC' });
                     // Provide a minimal STOMP MESSAGE frame
@@ -56,6 +62,7 @@
         }
 
         close() {
+            console.log('[WebSocket Mock] Closing connection');
             this.readyState = 3; // CLOSED
             if (this.onclose) {
                 this.onclose(new Event('close'));
@@ -84,5 +91,6 @@
 
     // Replace the global WebSocket
     window.WebSocket = MockWebSocket;
+    console.log('[WebSocket Mock] Active - All WS connections will now succeed locally');
 
 })();

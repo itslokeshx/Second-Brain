@@ -42,6 +42,7 @@
             // Always start fresh - let hydration-gate properly initialize
             this.state = 'UNINITIALIZED';
             this.userId = null;
+            console.log('[Mutex] Starting fresh - will wait for hydration-gate');
         }
 
         /**
@@ -66,6 +67,7 @@
         async acquire(userId) {
             // If already hydrating for this user, wait for it
             if (this.promise && this.userId === userId) {
+                console.log('[Mutex] Waiting for existing hydration...');
                 return this.promise;
             }
 
@@ -85,41 +87,51 @@
          */
         async _hydrate(userId) {
             try {
+                console.log('[Mutex] 🚀 Starting hydration for user:', userId);
 
                 // STATE 1: AUTH_VALIDATING
                 this.state = 'AUTH_VALIDATING';
+                console.log('[Mutex] State:', this.state);
                 await this._validateAuth();
 
                 // STATE 2: GUARDIAN_INITIALIZING
                 this.state = 'GUARDIAN_INITIALIZING';
+                console.log('[Mutex] State:', this.state);
                 await this._initializeGuardian();
 
                 // STATE 3: DATA_FETCHING (skip if data already exists)
                 this.state = 'DATA_FETCHING';
+                console.log('[Mutex] State:', this.state);
 
                 // Check if data already exists (for reload scenario)
                 const hasExistingData = await this._checkDataExists(userId);
                 let data;
 
                 if (hasExistingData) {
+                    console.log('[Mutex] ✅ Data already exists - skipping fetch');
                     data = null; // Will skip persistence
                 } else {
+                    console.log('[Mutex] 📥 Fetching data from server...');
                     data = await this._fetchData();
                 }
 
                 // STATE 4: DATA_PERSISTING (skip if no new data)
                 if (data) {
                     this.state = 'DATA_PERSISTING';
+                    console.log('[Mutex] State:', this.state);
                     await this._persistData(data);
                 } else {
+                    console.log('[Mutex] ⏭️ Skipping DATA_PERSISTING - using existing data');
                 }
 
                 // STATE 5: DATA_VERIFYING
                 this.state = 'DATA_VERIFYING';
+                console.log('[Mutex] State:', this.state);
                 await this._verifyData(userId);
 
                 // STATE 6: READY
                 this.state = 'READY';
+                console.log('[Mutex] State:', this.state);
 
                 // ✅ CRITICAL: Persist READY state to sessionStorage
                 // This allows Mutex to survive main.js script re-execution
@@ -129,9 +141,11 @@
                 const wasAlreadyHydrated = sessionStorage.getItem('hydrated_' + userId);
                 sessionStorage.setItem('hydrated_' + userId, 'true');
 
+                console.log('[Mutex] ✅ Hydration complete');
 
                 // If this was first hydration, just return success (don't reload)
                 if (!wasAlreadyHydrated && data) {
+                    console.log('[Mutex] 🔄 First hydration complete');
                 }
 
                 return { success: true, state: 'READY', userId };
@@ -162,6 +176,7 @@
 
                     const response = await window.AuthFetch.get(apiUrl);
                     if (response.ok) {
+                        console.log('[Mutex] ✅ Auth validated');
                         return;
                     }
                 } catch (error) {
@@ -193,9 +208,11 @@
 
             if (!window.IndexedDBGuardian.isInitialized) {
                 // Force initialize
+                console.log('[Mutex] Force initializing Guardian...');
                 await window.IndexedDBGuardian.initialize();
             }
 
+            console.log('[Mutex] ✅ Guardian initialized');
         }
 
         /**
@@ -208,6 +225,7 @@
 
             const data = await window.SyncService.loadAll();
 
+            console.log('[Mutex] ✅ Data fetched:', {
                 projects: data.projects?.length || 0,
                 tasks: data.tasks?.length || 0
             });
@@ -231,11 +249,13 @@
                         const taskNameLower = (t.name || '').toLowerCase();
                         const isPoisoned = taskNameLower.startsWith(usernamePrefix);
                         if (isPoisoned) {
+                            console.log(`[Mutex] 💀 PURGING poisoned task: "${t.name}"`);
                         }
                         return !isPoisoned;
                     });
                     const purgedCount = originalCount - data.tasks.length;
                     if (purgedCount > 0) {
+                        console.log(`[Mutex] 🧹 Purged ${purgedCount} username-contaminated tasks`);
                     }
                 }
             }
@@ -245,6 +265,7 @@
             // This ensures MongoDB raw data never overwrites computed stats
             // ═══════════════════════════════════════════════════════════════════════
             if (data.tasks && data.pomodoros && window.SessionManager?.recalculateTaskStats) {
+                console.log('[Mutex] 🔧 GATE B: Enforcing stat recalculation before persist');
                 data.tasks = window.SessionManager.recalculateTaskStats(data.tasks, data.pomodoros);
 
                 // 🔥 CRITICAL: Also recalculate PROJECT stats from tasks
@@ -252,6 +273,7 @@
                     data.projects = window.SessionManager.recalculateProjectStats(data.projects, data.tasks);
                 }
 
+                console.log('[Mutex] ✅ GATE B: Stats recalculated');
             } else if (data.tasks && !data.pomodoros) {
                 console.warn('[Mutex] ⚠️ GATE B: No pomodoro logs available for recalculation');
             }
@@ -259,11 +281,13 @@
             // Write to IndexedDB (atomic transaction)
             if (window.SessionManager && window.SessionManager.saveToIndexedDB) {
                 await window.SessionManager.saveToIndexedDB(data);
+                console.log('[Mutex] ✅ Saved to IndexedDB');
             }
 
             // Write to localStorage (sync)
             if (window.SessionManager && window.SessionManager.saveToLocalStorage) {
                 window.SessionManager.saveToLocalStorage(data);
+                console.log('[Mutex] ✅ Saved to localStorage');
             }
         }
 
@@ -294,6 +318,7 @@
                     req.onerror = () => reject(req.error);
                 });
 
+                console.log('[Mutex] Data check: projects=' + projCount + ', tasks=' + taskCount);
 
                 // Data exists if we have projects AND tasks (or sessionStorage flag)
                 const hasData = projCount > 18;
@@ -316,6 +341,7 @@
          * STATE 5: Verify data integrity - BOTH IndexedDB AND localStorage
          */
         async _verifyData(userId) {
+            console.log('[Mutex] 🔍 Verifying data integrity...');
 
             // PART 1: Verify IndexedDB has data
             if (!window.UserDB) {
@@ -334,6 +360,7 @@
                 throw new Error('Data verification failed: no projects in database');
             }
 
+            console.log('[Mutex] ✅ IndexedDB verified:', count, 'projects');
 
             // PART 2: CRITICAL - Verify localStorage has data
             // main.js reads from localStorage, so we MUST wait until it's populated
@@ -346,6 +373,7 @@
                     try {
                         const projects = JSON.parse(projectsJson);
                         if (projects && projects.length > 0) {
+                            console.log('[Mutex] ✅ localStorage verified:', projects.length, 'projects');
                             return; // SUCCESS!
                         }
                     } catch (e) {
@@ -355,11 +383,13 @@
 
                 // Wait and retry
                 if (i < maxRetries - 1) {
+                    console.log('[Mutex] ⏳ Waiting for localStorage... (attempt', i + 1, ')');
                     await new Promise(r => setTimeout(r, retryDelay));
                 }
             }
 
             // localStorage not populated or missing keys - try to populate from IndexedDB
+            console.log('[Mutex] 🔍 Checking localStorage completeness...');
 
             if (!localStorage.getItem('pomodoro-projects') ||
                 !localStorage.getItem('custom-project-list')) { // Check specifically for the list key main.js needs
@@ -383,6 +413,7 @@
                     // 3. Custom Project List - CRITICAL for sidebar rendering in main.js
                     localStorage.setItem('custom-project-list', JSON.stringify(projectOrder));
 
+                    console.log('[Mutex] ✅ Populated localStorage from IndexedDB:', projects.length, 'projects');
                 } else {
                     throw new Error('Cannot verify data: both IndexedDB and localStorage are empty');
                 }
@@ -392,13 +423,16 @@
                     const projects = JSON.parse(localStorage.getItem('pomodoro-projects'));
                     const projectOrder = projects.map(p => p.id);
                     localStorage.setItem('custom-project-list', JSON.stringify(projectOrder));
+                    console.log('[Mutex] 🔧 Repaired missing custom-project-list');
                 }
+                console.log('[Mutex] ✅ localStorage fully verified');
             }
 
             // ═══════════════════════════════════════════════════════════════════════
             // 🛡️ GATE D - INVARIANT 3 ENFORCEMENT: Always recalculate on reload
             // This prevents stale 0/NaN values from persisting across page reloads
             // ═══════════════════════════════════════════════════════════════════════
+            console.log('[Mutex] 🔧 GATE D: Enforcing reload recalculation...');
 
             try {
                 const tasks = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
@@ -407,6 +441,7 @@
                 if (tasks.length > 0 && pomodoros.length > 0 && window.SessionManager?.recalculateTaskStats) {
                     const recalculatedTasks = window.SessionManager.recalculateTaskStats(tasks, pomodoros);
                     localStorage.setItem('pomodoro-tasks', JSON.stringify(recalculatedTasks));
+                    console.log('[Mutex] ✅ GATE D: Reload recalculation complete');
                 } else if (tasks.length > 0 && pomodoros.length === 0) {
                     console.warn('[Mutex] ⚠️ GATE D: Tasks exist but no pomodoro logs - stats may be 0');
                 }
@@ -474,10 +509,12 @@
             } catch (e) {
                 console.warn('[Mutex] Failed to clear persisted state:', e);
             }
+            console.log('[Mutex] Reset');
         }
     }
 
     // Export global singleton
     window.HydrationMutex = new HydrationMutex();
+    console.log('[Mutex] 📦 Hydration mutex loaded');
 
 })();

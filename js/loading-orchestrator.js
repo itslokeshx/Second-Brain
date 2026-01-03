@@ -48,6 +48,7 @@
         state.phases[phaseName] = Boolean(value);
 
         if (oldValue !== state.phases[phaseName]) {
+            console.log(`[Loader] Phase "${phaseName}": ${oldValue} → ${state.phases[phaseName]}`);
             update();
         }
     }
@@ -69,8 +70,10 @@
 
         if (shouldShow) {
             state.loaderElement.classList.add('visible');
+            console.log('[Loader] 🔄 Showing loader', state.phases);
         } else {
             state.loaderElement.classList.remove('visible');
+            console.log('[Loader] ✅ Hiding loader (all phases complete)');
         }
     }
 
@@ -134,6 +137,7 @@
     function setupHydrationDetector() {
         // Listen for hydration complete event from main.js
         window.addEventListener('SB_HYDRATION_DONE', () => {
+            console.log('[Loader] Hydration complete event received');
             setPhase('hydrate', false);
         });
     }
@@ -151,6 +155,7 @@
                     document.querySelector('input[type="password"]');
 
                 if (loginForm) {
+                    console.log('[Loader] Login form detected - logout complete');
                     setPhase('logout', false);
                 } else {
                     // Keep checking
@@ -177,6 +182,7 @@
     function init() {
         if (state.initialized) return;
 
+        console.log('[Loader] 🚀 Initializing loading orchestrator...');
 
         // Get loader element
         state.loaderElement = document.getElementById('sb-loader');
@@ -193,6 +199,7 @@
         setupLogoutDetector();
 
         state.initialized = true;
+        console.log('[Loader] ✅ Orchestrator ready');
 
         // Initial update
         update();
@@ -218,5 +225,6 @@
         update
     };
 
+    console.log('[Loader] 📦 Loading orchestrator loaded');
 
 })();

@@ -3,6 +3,7 @@
 (function () {
     'use strict';
 
+    console.log('[Cookie Protector] Initializing STRICT MODE...');
 
     let loginInProgress = false;
     let loginSuccessful = false;
@@ -25,6 +26,7 @@
             // ✅ BYPASS: Allow cookie clearing (logout)
             // If setting cookie with expired date, allow it through
             if (value.includes('expires=Thu, 01 Jan 1970')) {
+                console.log('[Cookie Protector] ✅ Allowing cookie clear:', value.split(';')[0]);
                 return originalDescriptor.set.call(this, value);
             }
 
@@ -47,6 +49,7 @@
                     return;
                 }
 
+                console.log(`[Cookie Protector] ✅ Allowing ${key}=${val}`);
             }
 
             // PID cookie is allowed (not sensitive, just project ID)
@@ -57,6 +60,7 @@
                     return;
                 }
                 // Allow valid PID values like "0"
+                console.log(`[Cookie Protector] ✅ Allowing PID=${val}`);
             }
 
             // Allow the cookie to be set
@@ -74,6 +78,7 @@
         if (typeof url === 'string' && (url.includes('/login') || url.includes('/register'))) {
             loginInProgress = true;
             loginSuccessful = false;
+            console.log('[Cookie Protector] 🔐 Login attempt detected, blocking cookies...');
         }
 
         const response = await originalFetch.apply(this, args);
@@ -86,8 +91,11 @@
                 // Check if login was successful
                 if (data.status === 0 && data.success !== false && data.acct && data.uid) {
                     loginSuccessful = true;
+                    console.log('[Cookie Protector] ✅ Login successful - cookies will be allowed');
                 } else {
                     loginSuccessful = false;
+                    console.log('[Cookie Protector] ❌ Login FAILED - cookies will be BLOCKED');
+                    console.log('[Cookie Protector] Response:', data);
                 }
 
                 // Reset after 10 seconds to give main.js time to initialize
@@ -103,4 +111,5 @@
         return response;
     };
 
+    console.log('[Cookie Protector] ✅ STRICT MODE Active - Auth cookies blocked unless login succeeds');
 })();

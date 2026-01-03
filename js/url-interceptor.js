@@ -7,9 +7,11 @@
 (function () {
     'use strict';
 
-    // ✅ ENABLED: Using Render backend for production
-    const BACKEND_URL = 'https://second-brain-backend-saxs.onrender.com';
+    // ✅ DISABLED: Using local backend instead of Render
+    const BACKEND_URL = null; // 'https://second-brain-backend-saxs.onrender.com';
 
+    console.log('[URL Interceptor] Installing localhost → Render redirector...');
+    console.log('[URL Interceptor] Target:', BACKEND_URL || 'localhost:3000 (local)');
 
     // Store original XMLHttpRequest
     const OriginalXHR = window.XMLHttpRequest;
@@ -27,6 +29,7 @@
         if (typeof url === 'string' && (url.includes('localhost:3000') || url.startsWith('http://localhost:3000'))) {
             // Replace localhost:3000 with Render backend
             const newUrl = url.replace(/https?:\/\/localhost:3000/, BACKEND_URL);
+            console.log(`[URL Interceptor] Redirected: ${url} → ${newUrl}`);
 
             // CRITICAL: Enable credentials for cross-domain auth
             this.withCredentials = true;
@@ -58,6 +61,7 @@
                             try {
                                 // XHR must use the ORIGINAL setRequestHeader to work
                                 originalSetRequestHeader.call(this, 'Authorization', 'Bearer ' + token);
+                                console.log('[URL Interceptor] 💉 Injected Bearer token');
                             } catch (e) {
                                 // If XHR state is wrong (shouldn't happen in send), warn but proceed
                                 console.warn('[URL Interceptor] Failed to inject token:', e);
@@ -86,9 +90,11 @@
 
         if (typeof url === 'string' && (url.includes('localhost:3000') || url.startsWith('http://localhost:3000'))) {
             const newUrl = url.replace(/https?:\/\/localhost:3000/, BACKEND_URL);
+            console.log(`[URL Interceptor] Fetch redirected: ${url} → ${newUrl}`);
             return originalFetch.call(this, newUrl, options);
         }
         return originalFetch.call(this, url, options);
     };
 
+    console.log('[URL Interceptor] ✅ Installed - all localhost:3000 calls will redirect to', BACKEND_URL || 'localhost:3000 (local)');
 })();

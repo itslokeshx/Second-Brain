@@ -3,6 +3,7 @@
  * Intercepts XHR requests for translation files and returns the embedded I18N_DATA.
  */
 (function () {
+    console.log("[Fix] Initializing i18n XHR Interceptor...");
 
     if (!window.I18N_DATA) {
         console.warn("[Fix] window.I18N_DATA is missing. Interceptor inactive.");
@@ -23,6 +24,7 @@
 
         // Check if this request is for an i18n text file
         if (url && url.match(/i18n\/strings.*\.(txt|properties)/) && window.I18N_DATA) {
+            console.log("[Fix] Intercepting XHR request for:", url);
 
             // Convert JSON object back to properties file format (key=value)
             var responseText = "";

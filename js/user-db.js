@@ -31,6 +31,7 @@
             }, {});
 
             if (cookies.UID && cookies.UID !== 'undefined') {
+                console.log('[UserDB] Got userId from cookie:', cookies.UID);
                 return cookies.UID;
             }
         } catch (error) {
@@ -40,6 +41,7 @@
         // Fallback to localStorage
         const userId = localStorage.getItem('userId');
         if (userId && userId !== 'undefined' && userId !== 'null') {
+            console.log('[UserDB] Got userId from localStorage:', userId);
             return userId;
         }
 
@@ -73,11 +75,13 @@
             };
 
             request.onsuccess = () => {
+                console.log('[UserDB] ✅ Opened database:', dbName);
                 resolve(request.result);
             };
 
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
+                console.log('[UserDB] Database upgrade needed for:', dbName);
 
                 // Create Project store with all indexes main.js expects
                 if (!db.objectStoreNames.contains('Project')) {
@@ -85,6 +89,7 @@
                     store.createIndex('state', 'state', { unique: false });
                     store.createIndex('sync', 'sync', { unique: false });
                     store.createIndex('parentId', 'parentId', { unique: false });
+                    console.log('[UserDB] ✅ Created Project store');
                 }
 
                 // Create Task store
@@ -95,6 +100,7 @@
                     store.createIndex('reminderDate', 'reminderDate', { unique: false });
                     store.createIndex('finishedDate', 'finishedDate', { unique: false });
                     store.createIndex('sync', 'sync', { unique: false });
+                    console.log('[UserDB] ✅ Created Task store');
                 }
 
                 // Create Subtask store
@@ -103,6 +109,7 @@
                     store.createIndex('taskId', 'taskId', { unique: false });
                     store.createIndex('sync', 'sync', { unique: false });
                     store.createIndex('finishedDate', 'finishedDate', { unique: false });
+                    console.log('[UserDB] ✅ Created Subtask store');
                 }
 
                 // Create Pomodoro store
@@ -112,6 +119,7 @@
                     store.createIndex('subtaskId', 'subtaskId', { unique: false });
                     store.createIndex('endDate', 'endDate', { unique: false });
                     store.createIndex('sync', 'sync', { unique: false });
+                    console.log('[UserDB] ✅ Created Pomodoro store');
                 }
 
                 // Create Schedule store
@@ -121,6 +129,7 @@
                     store.createIndex('subtaskId', 'subtaskId', { unique: false });
                     store.createIndex('endDate', 'endDate', { unique: false });
                     store.createIndex('sync', 'sync', { unique: false });
+                    console.log('[UserDB] ✅ Created Schedule store');
                 }
 
                 // Create Group store
@@ -176,9 +185,11 @@
         document.body.removeChild(iframe);
 
         return new Promise((resolve, reject) => {
+            console.log('[UserDB] 🗑️ Deleting database:', dbName);
             const request = cleanIndexedDB.deleteDatabase(dbName);
 
             request.onsuccess = () => {
+                console.log('[UserDB] ✅ Database deleted:', dbName);
                 resolve();
             };
 
@@ -217,5 +228,6 @@
         listUserDatabases
     };
 
+    console.log('[UserDB] 📦 User-scoped database helper loaded');
 
 })();

@@ -11,6 +11,7 @@
 (function () {
     'use strict';
 
+    console.log('[IDB Interceptor] Installing indexedDB.open() interceptor...');
 
     // Store original open function
     const originalOpen = indexedDB.open.bind(indexedDB);
@@ -34,11 +35,13 @@
             if (!userId) {
                 userId = localStorage.getItem('userId');
                 if (userId) {
+                    console.log('[IDB Interceptor] Got userId from localStorage fallback:', userId);
                 }
             }
 
             if (userId && userId !== 'undefined' && userId !== 'null') {
                 const userDBName = 'PomodoroDB6_' + userId;
+                console.log('[IDB Interceptor] ✅ Redirecting', name, '→', userDBName);
                 return originalOpen(userDBName, version);
             } else {
                 console.warn('[IDB Interceptor] ⚠️ NO USER ID AVAILABLE - using original DB!');
@@ -50,5 +53,6 @@
         return originalOpen(name, version);
     };
 
+    console.log('[IDB Interceptor] ✅ Installed - all PomodoroDB6 opens redirected to user-scoped DB');
 
 })();

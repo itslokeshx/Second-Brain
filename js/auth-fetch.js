@@ -45,6 +45,8 @@
                 headers
             };
 
+            console.log(`[AuthFetch] ${options.method || 'GET'} ${url}`);
+            console.log(`[AuthFetch] Token: ${token ? token.substring(0, 10) + '...' : 'NONE'}`);
 
             try {
                 const response = await fetch(url, fetchOptions);
@@ -52,7 +54,7 @@
                 // Handle 401 Unauthorized - session expired
                 if (response.status === 401) {
                     console.error('[AuthFetch] ❌ 401 Unauthorized - Session expired');
-
+                    
                     // DON'T trigger automatic logout - this causes infinite loops
                     // Just throw error and let the UI handle it
                     throw new Error('Session expired - please login again');
@@ -110,6 +112,7 @@
         }
     };
 
-
+    console.log('[AuthFetch] ✅ Centralized auth wrapper loaded');
+    console.log('[AuthFetch] Token available:', window.AuthFetch.isAuthenticated());
 
 })();

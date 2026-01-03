@@ -5,8 +5,10 @@
  */
 
 (function () {
+    console.log('[Sync Button Handler] Loading...');
 
     function initSyncButton() {
+        console.log('[Sync Button Handler] Initializing...');
 
         // Extended selectors for legacy Second Brain sync button
         const selectors = [
@@ -27,6 +29,7 @@
             for (const selector of selectors) {
                 syncBtn = document.querySelector(selector);
                 if (syncBtn) {
+                    console.log(`[Sync Button Handler] Found sync button using selector: ${selector}`);
                     break;
                 }
             }
@@ -40,6 +43,7 @@
                 // Attach new handler
                 syncBtn.addEventListener('click', handleSyncClick);
                 syncBtn.dataset.wired = "true"; // Mark as processed
+                console.log('[Sync Button Handler] ✅ Handler attached successfully');
                 return true;
             }
             return false;
@@ -69,6 +73,7 @@
             if (target.dataset && target.dataset.wired) return;
 
             if (text.includes('sync') || title.includes('sync') || className.includes('sync')) {
+                console.log('[Sync Button Handler] Global fallback caught sync click:', target);
                 handleSyncClick(e);
             }
         }, true);
@@ -102,6 +107,7 @@
         e.preventDefault();
         e.stopPropagation();
 
+        console.log('[Sync Button] 🔄 Clicked! Starting manual sync...');
 
         // ═══════════════════════════════════════════════════════════════════════
         // RULE 1: Block if hydration not complete
@@ -148,6 +154,7 @@
         // Try new sync service
         if (window.SyncService) {
             try {
+                console.log('[Sync Button] Using new SyncService...');
 
                 // Get data from user-scoped IndexedDB
                 const dbName = window.UserDB ? window.UserDB.getDBName() : 'PomodoroDB6';
@@ -163,6 +170,7 @@
 
                         // Check if object stores exist
                         const storeNames = Array.from(db.objectStoreNames);
+                        console.log('[Sync Button] IndexedDB stores:', storeNames);
 
                         if (storeNames.length === 0) {
                             console.warn('[Sync Button] No data stores found in IndexedDB');
@@ -180,6 +188,7 @@
 
                             getAllRequest.onsuccess = () => {
                                 const items = getAllRequest.result || [];
+                                console.log(`[Sync Button] ${storeName}:`, items.length, 'items');
 
                                 // Categorize data
                                 if (storeName.toLowerCase().includes('project')) {
@@ -206,11 +215,18 @@
                     };
                 });
 
+                console.log('[Sync Button] IndexedDB data:', {
+                    projects: data.projects.length,
+                    tasks: data.tasks.length,
+                    logs: data.pomodoroLogs.length
+                });
+
                 // ✅ FALLBACK: If IndexedDB is empty, try localStorage
                 if (data.projects.length === 0) {
                     try {
                         const lsProjects = JSON.parse(localStorage.getItem('pomodoro-projects') || '[]');
                         if (lsProjects.length > 0) {
+                            console.log('[Sync Button] Using localStorage projects:', lsProjects.length);
                             data.projects = lsProjects;
                         }
                     } catch (e) { console.warn('[Sync Button] localStorage projects parse error:', e); }
@@ -220,6 +236,7 @@
                     try {
                         const lsTasks = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
                         if (lsTasks.length > 0) {
+                            console.log('[Sync Button] Using localStorage tasks:', lsTasks.length);
                             data.tasks = lsTasks;
                         }
                     } catch (e) { console.warn('[Sync Button] localStorage tasks parse error:', e); }
@@ -229,14 +246,22 @@
                     try {
                         const lsLogs = JSON.parse(localStorage.getItem('pomodoro-pomodoros') || '[]');
                         if (lsLogs.length > 0) {
+                            console.log('[Sync Button] Using localStorage logs:', lsLogs.length);
                             data.pomodoroLogs = lsLogs;
                         }
                     } catch (e) { console.warn('[Sync Button] localStorage logs parse error:', e); }
                 }
 
+                console.log('[Sync Button] Final data to sync:', {
+                    projects: data.projects.length,
+                    tasks: data.tasks.length,
+                    logs: data.pomodoroLogs.length
+                });
+
                 // ✅ PROTECTION: Ensure system projects are included before sync
                 if (window.IndexedDBGuardian && window.SYSTEM_PROJECTS) {
                     data.projects = window.IndexedDBGuardian.mergeWithSystemProjects(data.projects);
+                    console.log('[Sync Button] 🛡️ Merged with system projects:', data.projects.length);
                 }
 
                 // ✅ CLEANUP: Remove keystroke artifacts before syncing
@@ -251,6 +276,7 @@
                         // This prevents data loss from overly aggressive filtering
                         // ═══════════════════════════════════════════════════════════════════════
                         if (t.sync === 0) {
+                            console.log(`[Sync Button] ✅ Including unsynced task: "${t.name}"`);
                             return true; // ALWAYS include unsynced tasks
                         }
 
@@ -273,6 +299,7 @@
                         const shouldKeep = (validName && hasOtherProps) || legitimateLongText;
 
                         if (!shouldKeep) {
+                            console.log(`[Sync Button] 🧹 Filtering synced artifact: "${t.name}"`);
                         }
 
                         return shouldKeep;
@@ -280,6 +307,7 @@
 
                     const removed = initialCount - data.tasks.length;
                     if (removed > 0) {
+                        console.log(`[Sync Button] 🧹 Sanitized ${removed} artifacts from memory before sync`);
 
                         // Update storage with cleaned data to prevent recurrence
                         try {
@@ -296,12 +324,14 @@
                     pomodoroLogs: data.pomodoroLogs
                 });
 
+                console.log('[Sync Button] ✅ Sync completed successfully:', result);
 
                 // ═══════════════════════════════════════════════════════════════════════
                 // 🔧 PHASE 3 FIX: Backend-Authoritative Dirty State
                 // Only mark items as synced if backend ACKed them
                 // ═══════════════════════════════════════════════════════════════════════
                 try {
+                    console.log('[Sync Button] 📝 Updating sync flags (backend-authoritative)...');
 
                     // Create sets of IDs that were SENT to backend
                     const sentTaskIds = new Set(data.tasks.map(t => t.id));
@@ -321,6 +351,7 @@
                     });
                     if (tasksUpdated > 0) {
                         localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
+                        console.log(`[Sync Button] ✅ Marked ${tasksUpdated} tasks as synced (backend ACKed)`);
                     }
 
                     // Update projects
@@ -336,6 +367,7 @@
                     });
                     if (projectsUpdated > 0) {
                         localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
+                        console.log(`[Sync Button] ✅ Marked ${projectsUpdated} projects as synced (backend ACKed)`);
                     }
 
                     // Update logs
@@ -351,8 +383,10 @@
                     });
                     if (logsUpdated > 0) {
                         localStorage.setItem('pomodoro-pomodoros', JSON.stringify(logs));
+                        console.log(`[Sync Button] ✅ Marked ${logsUpdated} logs as synced (backend ACKed)`);
                     }
 
+                    console.log('[Sync Button] ✅ Sync flags updated (backend-authoritative)');
                 } catch (e) {
                     console.warn('[Sync Button] ⚠️ Failed to update sync flags:', e);
                 }
@@ -362,6 +396,7 @@
                 // This ensures sync doesn't leave stale 0/NaN values in localStorage
                 // ═══════════════════════════════════════════════════════════════════════
                 try {
+                    console.log('[Sync Button] 🔧 GATE C: Recalculating stats after sync...');
 
                     // Reload fresh data from localStorage
                     const tasks = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
@@ -370,6 +405,7 @@
                     if (tasks.length > 0 && pomodoros.length > 0 && window.SessionManager?.recalculateTaskStats) {
                         const recalculatedTasks = window.SessionManager.recalculateTaskStats(tasks, pomodoros);
                         localStorage.setItem('pomodoro-tasks', JSON.stringify(recalculatedTasks));
+                        console.log('[Sync Button] ✅ GATE C: Stats recalculated and persisted');
                     } else if (tasks.length > 0 && pomodoros.length === 0) {
                         console.warn('[Sync Button] ⚠️ GATE C: No pomodoros to recalculate - stats may be 0');
                     }
@@ -415,6 +451,7 @@
 
                 // ✅ POST-SYNC INTEGRITY CHECK
                 if (window.IndexedDBGuardian) {
+                    console.log('[Sync Button] 🔍 Validating post-sync integrity...');
                     const integrity = await window.IndexedDBGuardian.validate();
                     if (!integrity.valid) {
                         console.warn('[Sync Button] ⚠️ Missing system projects after sync, reseeding...');
@@ -422,16 +459,7 @@
                     }
                 }
 
-                // ✅ Show premium notification
-                if (window.showSyncNotification) {
-                    window.showSyncNotification(
-                        `Synced ${result.projectsSynced || 0} projects, ${result.tasksSynced || 0} tasks, ${result.logsSynced || 0} logs`,
-                        'success',
-                        4000
-                    );
-                } else {
-                    alert(`✅ Synced: ${result.projectsSynced || 0} projects, ${result.tasksSynced || 0} tasks, ${result.logsSynced || 0} logs`);
-                }
+                alert(`✅ Synced: ${result.projectsSynced || 0} projects, ${result.tasksSynced || 0} tasks, ${result.logsSynced || 0} logs`);
             } catch (error) {
                 console.error('[Sync Button] ❌ Sync failed:', error);
                 // Even on error, ensure system projects exist
@@ -444,20 +472,24 @@
             } finally {
                 // Always release sync lock
                 window._syncInProgress = false;
+                console.log('[Sync Button] 🔓 Sync lock released');
             }
             return;
         }
 
         // Fallback to legacy sync (main.js handles it)
+        console.log('[Sync Button] Using legacy sync system...');
     }
 
     // Keyboard shortcut: Ctrl+Shift+S (or Cmd+Shift+S on Mac)
     document.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'S') {
             e.preventDefault();
+            console.log('[Sync Button] ⌨️ Keyboard shortcut triggered (Ctrl+Shift+S)');
 
             if (window.syncService && window.syncService.isAuthenticated()) {
                 window.syncService.syncAll().then(() => {
+                    console.log('[Sync Button] ✅ Keyboard sync completed');
                 }).catch((err) => {
                     console.error('[Sync Button] ❌ Keyboard sync failed:', err);
                 });
@@ -476,4 +508,5 @@
     setTimeout(initSyncButton, 1000);
     setTimeout(initSyncButton, 3000);
 
+    console.log('[Sync Button Handler] ✅ Loaded (awaiting DOM ready)');
 })();

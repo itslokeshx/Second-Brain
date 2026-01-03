@@ -4,11 +4,13 @@
  */
 
 (function cleanupKeystrokeArtifacts() {
+    console.log('[Cleanup] Starting keystroke artifact removal...');
 
     try {
         // Get current tasks from localStorage
         const tasksStr = localStorage.getItem('tasks');
         if (!tasksStr) {
+            console.log('[Cleanup] No tasks found in localStorage');
             return;
         }
 
@@ -29,6 +31,7 @@
             );
 
             if (!isRealTask) {
+                console.log(`[Cleanup] 🗑️ Removing artifact: "${task.name}"`);
             }
 
             return isRealTask;
@@ -38,8 +41,11 @@
         localStorage.setItem('tasks', JSON.stringify(cleanedTasks));
 
         const removedCount = originalCount - cleanedTasks.length;
+        console.log(`[Cleanup] ✅ Complete! Removed ${removedCount} keystroke artifacts`);
+        console.log(`[Cleanup] Tasks before: ${originalCount}, after: ${cleanedTasks.length}`);
 
         // Reload page to apply changes
+        console.log('[Cleanup] Reloading page in 2 seconds...');
         setTimeout(() => {
             window.location.reload();
         }, 2000);

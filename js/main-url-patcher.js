@@ -72,5 +72,4 @@
         return element;
     };
 
-    console.log('[Main Patcher] ✅ Ready to patch main.js');
 })();

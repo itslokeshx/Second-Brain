@@ -3,6 +3,7 @@
 (function () {
     'use strict';
 
+    console.log('[Username Fixer] Installing direct DOM fix...');
 
     // Function to get cookie value
     function getCookie(name) {
@@ -39,6 +40,7 @@
                 // Extract username from email (before @)
                 const username = acct.split('@')[0];
                 usernameSpan.textContent = username;
+                console.log('[Username Fixer] ✅ Fixed garbled username:', username);
                 return true; // Fixed successfully
             }
         }
@@ -48,6 +50,7 @@
 
     // Try to fix immediately
     if (fixUsername()) {
+        console.log('[Username Fixer] ✅ Username fixed on first try');
     } else {
         // Set up interval to keep checking and fixing
         let attempts = 0;
@@ -57,6 +60,7 @@
             attempts++;
 
             if (fixUsername()) {
+                console.log('[Username Fixer] ✅ Username fixed after', attempts, 'attempts');
                 clearInterval(fixInterval);
             } else if (attempts >= maxAttempts) {
                 console.warn('[Username Fixer] ⚠️ Could not find username element after 5s');
@@ -77,6 +81,7 @@
             subtree: true,
             characterData: true
         });
+        console.log('[Username Fixer] ✅ MutationObserver active');
     }
 
 })();

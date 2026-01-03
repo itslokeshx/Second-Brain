@@ -2,6 +2,7 @@
 (function () {
     'use strict';
 
+    console.log('[Notifications] Initializing...');
 
     // Create notification container
     const container = document.createElement('div');
@@ -115,4 +116,5 @@
         return true; // Return immediately to prevent blocking
     };
 
+    console.log('[Notifications] ✅ Ready - Replaced blocking alert() with notifications');
 })();
