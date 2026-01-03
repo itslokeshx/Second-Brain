@@ -4,7 +4,7 @@
 (function () {
     'use strict';
 
-    // console.log('[Error Suppressor] Initializing...');
+    console.log('[Error Suppressor] Initializing...');
 
     // Store original console.error
     const originalError = console.error;
@@ -47,6 +47,6 @@
         originalWarn.apply(console, args);
     };
 
-    // console.log('[Error Suppressor] ✅ Active - Suppressing known legacy errors');
-    // console.log('[Error Suppressor] View suppressed errors: window._suppressedErrors');
+    console.log('[Error Suppressor] ✅ Active - Suppressing known legacy errors');
+    console.log('[Error Suppressor] View suppressed errors: window._suppressedErrors');
 })();

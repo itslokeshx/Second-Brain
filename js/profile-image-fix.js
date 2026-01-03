@@ -11,7 +11,7 @@
 (function () {
     'use strict';
 
-    // console.log('[Profile Fix] Installing avatar fix...');
+    console.log('[Profile Fix] Installing avatar fix...');
 
     // Default avatar image
     const DEFAULT_AVATAR = 'assets/img/header-portrait.png';
@@ -21,7 +21,7 @@
         document.querySelectorAll('img.HomeHeader-portrait-xqqY2').forEach(img => {
             if (!img.src || img.src.includes('undefined') || img.src === window.location.href) {
                 img.src = DEFAULT_AVATAR;
-                // console.log('[Profile Fix] ✅ Fixed broken profile image');
+                console.log('[Profile Fix] ✅ Fixed broken profile image');
             }
         });
 
@@ -33,7 +33,7 @@
                     if (img.classList.contains('HomeHeader-portrait-xqqY2')) {
                         if (!img.src || img.src.includes('undefined') || img.src === window.location.href) {
                             img.src = DEFAULT_AVATAR;
-                            // console.log('[Profile Fix] ✅ Intercepted and fixed broken profile image');
+                            console.log('[Profile Fix] ✅ Intercepted and fixed broken profile image');
                         }
                     }
                 }
@@ -67,7 +67,7 @@
             subtree: true
         });
 
-        // console.log('[Profile Fix] ✅ Avatar observer installed');
+        console.log('[Profile Fix] ✅ Avatar observer installed');
     }
 
     // Run immediately and on DOM ready
@@ -80,6 +80,6 @@
     // Also run after a short delay to catch late-loading images
     setTimeout(fixProfileImages, 1000);
 
-    // console.log('[Profile Fix] 📦 Loaded');
+    console.log('[Profile Fix] 📦 Loaded');
 
 })();

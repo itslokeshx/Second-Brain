@@ -17,7 +17,7 @@
 (function () {
     'use strict';
 
-    // console.log('[Write Protector] Installing dirty task protection...');
+    console.log('[Write Protector] Installing dirty task protection...');
 
     const originalPut = IDBObjectStore.prototype.put;
 
@@ -46,7 +46,7 @@
                 if (existingItem && existingItem.sync === 0 && value.sync !== 0) {
                     // PRESERVE: Keep the dirty version, but pretend write succeeded
                     const itemType = this.name === 'Task' ? 'task' : 'project';
-                    // console.log(`[Write Protector] 🛡️ Preserving dirty ${itemType} "${existingItem.name}" (sync:0), blocking clean overwrite`);
+                    console.log(`[Write Protector] 🛡️ Preserving dirty ${itemType} "${existingItem.name}" (sync:0), blocking clean overwrite`);
 
                     // Trigger success callback so UI updates
                     fakeRequest.readyState = 'done';
@@ -106,6 +106,6 @@
         return originalPut.call(this, value, key);
     };
 
-    // console.log('[Write Protector] ✅ Dirty task protection installed');
+    console.log('[Write Protector] ✅ Dirty task protection installed');
 
 })();

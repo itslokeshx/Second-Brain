@@ -9,7 +9,7 @@
         cookieMonitorInterval: null,
 
         init: function () {
-            // console.log('[Session] Initializing dual-mode auth...');
+            console.log('[Session] Initializing dual-mode auth...');
 
             // ═══════════════════════════════════════════════════════════════════════
             // CRITICAL FIX: Detect recent logout and force clear cookies
@@ -21,7 +21,7 @@
                 const timeSinceLogout = Date.now() - parseInt(logoutTimestamp);
                 // If logged out within last 5 seconds
                 if (timeSinceLogout < 5000) {
-                    // console.log('[Session] 🚪 Recent logout detected (', timeSinceLogout, 'ms ago)');
+                    console.log('[Session] 🚪 Recent logout detected (', timeSinceLogout, 'ms ago)');
 
                     // Force clear ALL cookies
                     const allCookies = document.cookie.split(';');
@@ -33,7 +33,7 @@
                         }
                     });
 
-                    // console.log('[Session] ✅ Forced cookie clear after logout');
+                    console.log('[Session] ✅ Forced cookie clear after logout');
 
                     // Skip the rest of init - go straight to logged out state
                     this.handleLoggedOut();
@@ -46,7 +46,7 @@
             // to let main.js run its preset-project upgrade (required for sidebar defaults).
             const storedVersion = Number(localStorage.getItem('Version') || '0');
             if (storedVersion > 10) {
-                // console.log('[Session] Fixing Version flag (was ' + storedVersion + ') -> 0 to allow upgrade');
+                console.log('[Session] Fixing Version flag (was ' + storedVersion + ') -> 0 to allow upgrade');
                 localStorage.setItem('Version', '0');
             }
 
@@ -55,7 +55,7 @@
             if (sessionStorage.getItem('reloaded-after-sync')) {
                 const projectsRaw = localStorage.getItem('pomodoro-projects') || '[]';
                 if (projectsRaw === '[]') {
-                    // console.log('[Session] Clearing stale reloaded-after-sync flag (no local projects present)');
+                    console.log('[Session] Clearing stale reloaded-after-sync flag (no local projects present)');
                     sessionStorage.removeItem('reloaded-after-sync');
                 }
             }
@@ -67,7 +67,7 @@
                 const rawCookies = document.cookie;
                 if (!rawCookies.includes('PID=0') && !rawCookies.match(/PID=([^;]+)/)?.[1] === '0') {
                     document.cookie = `PID=0; path=/; max-age=31536000`;
-                    // console.log('[Session] ✅ Early PID=0 cookie set (before main.js)');
+                    console.log('[Session] ✅ Early PID=0 cookie set (before main.js)');
                 }
             }
 
@@ -84,7 +84,7 @@
         checkLoginStatus: async function () {
             // ✅ CRITICAL: If mutex is already READY, data is already loaded - skip this entirely
             if (window.HydrationMutex && window.HydrationMutex.isReady()) {
-                // console.log('[Session] ⏭️ Mutex already READY - data already loaded, skipping checkLoginStatus');
+                console.log('[Session] ⏭️ Mutex already READY - data already loaded, skipping checkLoginStatus');
                 return;
             }
 
@@ -126,26 +126,26 @@
                     // ✅ CRITICAL: Store userId in localStorage for hydration gate
                     if (data.user.id) {
                         localStorage.setItem('userId', data.user.id);
-                        // console.log('[Session] ✅ Stored userId:', data.user.id);
+                        console.log('[Session] ✅ Stored userId:', data.user.id);
                     }
 
                     // ✅ CRITICAL: Initialize Guardian after login
                     // Guardian skips initialization if no user is logged in yet
                     // So we must trigger it manually after successful login
                     if (window.IndexedDBGuardian && !window.IndexedDBGuardian.isInitialized) {
-                        // console.log('[Session] 🛡️ Initializing Guardian after login...');
+                        console.log('[Session] 🛡️ Initializing Guardian after login...');
                         window.IndexedDBGuardian.initialize().then(() => {
-                            // console.log('[Session] ✅ Guardian initialized');
+                            console.log('[Session] ✅ Guardian initialized');
 
                             // ✅ CRITICAL P0 FIX: Start HydrationMutex after Guardian
                             // hydration-gate only runs on page load, not after UI login
                             // So Mutex stays in 'UNINITIALIZED' state, blocking sync
                             // We must manually trigger Mutex.acquire() here
                             if (window.HydrationMutex && window.HydrationMutex.getState().state === 'UNINITIALIZED') {
-                                // console.log('[Session] 🔒 Starting HydrationMutex after login...');
+                                console.log('[Session] 🔒 Starting HydrationMutex after login...');
                                 window.HydrationMutex.acquire(data.user.id).then(result => {
                                     if (result.success && result.state === 'READY') {
-                                        // console.log('[Session] ✅ Mutex ready - sync enabled');
+                                        console.log('[Session] ✅ Mutex ready - sync enabled');
                                     } else {
                                         console.error('[Session] ❌ Mutex failed:', result);
                                     }
@@ -160,12 +160,12 @@
 
                     this.updateUI(true, data.user.email || data.acct);
                     this.startPeriodicCheck();
-                    // console.log('[Session] ✅ Authenticated:', data.user.email);
+                    console.log('[Session] ✅ Authenticated:', data.user.email);
 
                     // ✅ IMMEDIATE RELOAD: Reload right after login to ensure UI renders properly
                     const hasReloadedAfterLogin = sessionStorage.getItem('reloaded-after-login');
                     if (!hasReloadedAfterLogin) {
-                        // console.log('[Session] 🔄 First login - reloading immediately for UI render...');
+                        console.log('[Session] 🔄 First login - reloading immediately for UI render...');
                         sessionStorage.setItem('reloaded-after-login', 'true');
 
                         // ✅ Set loader phase before reload
@@ -180,16 +180,16 @@
 
                     // ✅ AUTO-LOAD DATA: Only if mutex hasn't already handled it
                     if (window.HydrationMutex && window.HydrationMutex.isHandling()) {
-                        // console.log('[Session] ⏭️ Skipping data load - mutex is handling it');
+                        console.log('[Session] ⏭️ Skipping data load - mutex is handling it');
                     } else {
-                        // console.log('[Session] 📥 Loading data from server...');
+                        console.log('[Session] 📥 Loading data from server...');
                         this.loadDataAfterLogin().catch(err => {
                             console.warn('[Session] Data load failed, using local data:', err);
                         });
                     }
                 } else if (cookieUser) {
                     // ✅ FALLBACK: Use cookie data if API doesn't return user
-                    // console.log('[Session] Using cookie-based auth:', cookieUser.email);
+                    console.log('[Session] Using cookie-based auth:', cookieUser.email);
                     this.currentUser = cookieUser;
                     this.token = cookieUser.sessionId;
                     if (this.token) {
@@ -199,9 +199,9 @@
 
                     // ✅ AUTO-LOAD DATA: Only if mutex hasn't already handled it
                     if (window.HydrationMutex && window.HydrationMutex.isHandling()) {
-                        // console.log('[Session] ⏭️ Skipping data load - mutex is handling it (cookie path)');
+                        console.log('[Session] ⏭️ Skipping data load - mutex is handling it (cookie path)');
                     } else {
-                        // console.log('[Session] 📥 Loading data from server (cookie auth)...');
+                        console.log('[Session] 📥 Loading data from server (cookie auth)...');
                         this.loadDataAfterLogin().catch(err => {
                             console.warn('[Session] Data load failed, using local data:', err);
                         });
@@ -214,16 +214,16 @@
                 // ✅ FALLBACK: Try cookies even if fetch fails
                 const cookieUser = this.getUserFromCookies();
                 if (cookieUser) {
-                    // console.log('[Session] Fallback to cookies:', cookieUser.email);
+                    console.log('[Session] Fallback to cookies:', cookieUser.email);
                     this.currentUser = cookieUser;
                     this.token = cookieUser.sessionId;
                     this.updateUI(true, cookieUser.email);
 
                     // ✅ AUTO-LOAD DATA: Only if mutex hasn't already handled it
                     if (window.HydrationMutex && window.HydrationMutex.isHandling()) {
-                        // console.log('[Session] ⏭️ Skipping data load - mutex is handling it (fallback path)');
+                        console.log('[Session] ⏭️ Skipping data load - mutex is handling it (fallback path)');
                     } else {
-                        // console.log('[Session] 📥 Loading data from server (fallback)...');
+                        console.log('[Session] 📥 Loading data from server (fallback)...');
                         this.loadDataAfterLogin().catch(err => {
                             console.warn('[Session] Data load failed, using local data:', err);
                         });
@@ -283,7 +283,7 @@
             localStorage.removeItem('authToken');
             this.stopPeriodicCheck();
             this.updateUI(false);
-            // console.log('[Session] Not authenticated');
+            console.log('[Session] Not authenticated');
         },
 
         updateUI: function (isLoggedIn, username = '') {
@@ -303,7 +303,7 @@
                 // ✅ CRITICAL: ALWAYS set PID=0 (don't check, just set it - cookie-patcher will filter invalid values)
                 // The legacy app crashes/renders blank if PID is missing or "undefined"
                 document.cookie = `PID=0; path=/; max-age=31536000`;
-                // console.log('[Session] ✅ Set PID=0 cookie (critical for main.js)');
+                console.log('[Session] ✅ Set PID=0 cookie (critical for main.js)');
             }
 
             // Update specific UI elements if they exist
@@ -322,7 +322,7 @@
                 if (loginBtn) loginBtn.style.display = 'none';
                 if (logoutBtn) logoutBtn.style.display = 'block';
 
-                // console.log('[Session] ✅ UI updated for:', username);
+                console.log('[Session] ✅ UI updated for:', username);
 
             } else {
                 if (userDisplay) {
@@ -343,7 +343,7 @@
                 const isInDropdown = e.target.closest('[class*="UserDropdownMenu"], [class*="UserMenu"]');
 
                 if (isSignOut && isInDropdown) {
-                    // console.log('[Session] Sign Out clicked - triggering logout');
+                    console.log('[Session] Sign Out clicked - triggering logout');
                     e.preventDefault();
                     e.stopPropagation();
                     e.stopImmediatePropagation();
@@ -351,12 +351,12 @@
                 }
             }, true);
 
-            // console.log('[Session] ✅ Logout handler installed');
+            console.log('[Session] ✅ Logout handler installed');
         },
 
 
         logout: async function () {
-            // console.log('[Session] 🚪 Logout initiated');
+            console.log('[Session] 🚪 Logout initiated');
 
             // ✅ Set loader phase for logout
             if (window.__SB_LOADER) {
@@ -370,7 +370,7 @@
             // 1. Check for active sync
             if (window._syncInProgress) {
                 // ✅ REMOVED: Browser confirm() - React shows the dialog
-                // console.log('[Session] ⚠️ Sync in progress, but proceeding with logout');
+                console.log('[Session] ⚠️ Sync in progress, but proceeding with logout');
             }
 
             // 2. HARD RESET: Purge all poisoned tasks BEFORE checking dirty state
@@ -384,7 +384,7 @@
 
             if (dirtyCount > 0) {
                 // ✅ REMOVED: Browser confirm() - React shows the dialog
-                // console.log(`[Session] ⚠️ ${dirtyCount} unsynced items, but proceeding with logout`);
+                console.log(`[Session] ⚠️ ${dirtyCount} unsynced items, but proceeding with logout`);
             }
 
             try {
@@ -405,7 +405,7 @@
                         credentials: 'include'
                     });
                     const data = await response.json();
-                    // console.log('[Session] Logout response:', data);
+                    console.log('[Session] Logout response:', data);
                 } catch (e) {
                     console.warn('[Session] Backend logout failed (continuing anyway):', e);
                 }
@@ -419,7 +419,7 @@
                 if (userId && window.UserDB) {
                     try {
                         await window.UserDB.deleteUserDB(userId);
-                        // console.log('[Session] ✅ User database deleted');
+                        console.log('[Session] ✅ User database deleted');
                     } catch (e) {
                         console.error('[Session] ❌ Failed to delete user database:', e);
                     }
@@ -427,11 +427,11 @@
 
                 // Clear ALL localStorage
                 localStorage.clear();
-                // console.log('[Session] ✅ localStorage cleared');
+                console.log('[Session] ✅ localStorage cleared');
 
                 // Clear ALL sessionStorage
                 sessionStorage.clear();
-                // console.log('[Session] ✅ sessionStorage cleared');
+                console.log('[Session] ✅ sessionStorage cleared');
 
                 // ═══════════════════════════════════════════════════════════════════════
                 // CRITICAL FIX: Clear ALL cookies SYNCHRONOUSLY before redirect
@@ -458,29 +458,29 @@
                     }
                 });
 
-                // console.log('[Session] ✅ All cookies cleared (aggressive)');
+                console.log('[Session] ✅ All cookies cleared (aggressive)');
 
                 // Verify cookies are actually cleared
                 const remainingCookies = document.cookie;
                 if (remainingCookies) {
                     console.warn('[Session] ⚠️ Some cookies remain:', remainingCookies);
                 } else {
-                    // console.log('[Session] ✅ Cookie verification: ALL cleared');
+                    console.log('[Session] ✅ Cookie verification: ALL cleared');
                 }
 
                 // Reset hydration mutex
                 if (window.HydrationMutex) {
                     window.HydrationMutex.reset();
-                    // console.log('[Session] ✅ Hydration mutex reset');
+                    console.log('[Session] ✅ Hydration mutex reset');
                 }
 
-                // console.log('[Session] ✅ Logout complete, waiting for cookies to clear...');
+                console.log('[Session] ✅ Logout complete, waiting for cookies to clear...');
 
                 // CRITICAL: Wait for browser to process cookie deletion
                 // Without this delay, cookies may still exist when page reloads
                 await new Promise(resolve => setTimeout(resolve, 500));
 
-                // console.log('[Session] ✅ Cookie clear delay complete, redirecting...');
+                console.log('[Session] ✅ Cookie clear delay complete, redirecting...');
 
                 // Redirect to root with timestamp
                 window.location.replace(window.location.origin + "/?t=" + Date.now());
@@ -518,7 +518,7 @@
 
         startPeriodicCheck: function () {
             // DISABLED: No automatic checks - sync only on manual button click
-            // console.log('[Session] ℹ️ Automatic sync disabled - use sync button to sync data');
+            console.log('[Session] ℹ️ Automatic sync disabled - use sync button to sync data');
 
             // Clear any existing intervals
             if (this.checkInterval) clearInterval(this.checkInterval);
@@ -548,7 +548,7 @@
                 const usernamePrefix = this.getUsernamePrefix();
 
                 if (!usernamePrefix) {
-                    // console.log('[Session] No username found - skipping poison purge');
+                    console.log('[Session] No username found - skipping poison purge');
                     return;
                 }
 
@@ -559,14 +559,14 @@
                     const taskNameLower = (t.name || '').toLowerCase();
                     const isPoisoned = taskNameLower.startsWith(usernamePrefix);
                     if (isPoisoned) {
-                        // console.log(`[Session] 💀 PURGE: Removing poisoned task "${t.name}" from localStorage`);
+                        console.log(`[Session] 💀 PURGE: Removing poisoned task "${t.name}" from localStorage`);
                     }
                     return !isPoisoned;
                 });
 
                 if (cleanTasks.length < originalCount) {
                     localStorage.setItem('pomodoro-tasks', JSON.stringify(cleanTasks));
-                    // console.log(`[Session] ✅ Purged ${originalCount - cleanTasks.length} poisoned tasks from localStorage`);
+                    console.log(`[Session] ✅ Purged ${originalCount - cleanTasks.length} poisoned tasks from localStorage`);
                 }
 
                 // Purge from IndexedDB
@@ -585,13 +585,13 @@
                                     const task = cursor.value;
                                     const taskNameLower = (task.name || '').toLowerCase();
                                     if (taskNameLower.startsWith(usernamePrefix)) {
-                                        // console.log(`[Session] 💀 PURGE: Removing poisoned task "${task.name}" from IndexedDB`);
+                                        console.log(`[Session] 💀 PURGE: Removing poisoned task "${task.name}" from IndexedDB`);
                                         cursor.delete();
                                         purgedCount++;
                                     }
                                     cursor.continue();
                                 } else if (purgedCount > 0) {
-                                    // console.log(`[Session] ✅ Purged ${purgedCount} poisoned tasks from IndexedDB`);
+                                    console.log(`[Session] ✅ Purged ${purgedCount} poisoned tasks from IndexedDB`);
                                 }
                             };
                         }).catch(err => {
@@ -626,7 +626,7 @@
                     localStorage.getItem('userName') ||
                     '';
                 const usernamePrefix = storedUsername.split('@')[0].toLowerCase();
-                // console.log(`[Session] 🔍 Poison detection using username: "${usernamePrefix}"`);
+                console.log(`[Session] 🔍 Poison detection using username: "${usernamePrefix}"`);
 
                 // Count unsynced tasks (sync: 0), excluding poisoned ones
                 // Artifact filtering is handled by sync handler, not here
@@ -636,19 +636,19 @@
                     // POISON CHECK: Ignore username-contaminated tasks
                     const taskNameLower = (t.name || '').toLowerCase();
                     if (usernamePrefix && taskNameLower.startsWith(usernamePrefix)) {
-                        // console.log(`[Session] 🚫 Logout: Ignoring poisoned task "${t.name}"`);
+                        console.log(`[Session] 🚫 Logout: Ignoring poisoned task "${t.name}"`);
                         return false;
                     }
 
                     // Count all other unsynced tasks
-                    // console.log(`[Session] ⚠️ Unsynced task: "${t.name}"`);
+                    console.log(`[Session] ⚠️ Unsynced task: "${t.name}"`);
                     return true;
                 }).length;
 
                 dirtyCount += logs.filter(l => l.sync === 0).length;
                 dirtyCount += projects.filter(p => p.sync === 0).length;
 
-                // console.log(`[Session] 🔍 Dirty state check: ${dirtyCount} legitimate unsynced items`);
+                console.log(`[Session] 🔍 Dirty state check: ${dirtyCount} legitimate unsynced items`);
                 return dirtyCount;
             } catch (e) {
                 console.warn('[Session] Failed to check dirty state:', e);
@@ -670,14 +670,14 @@
         loadDataAfterLogin: async function () {
             // ✅ GATEKEEPER 1: Prevent concurrent data loading with Hydration Mutex
             if (window.HydrationMutex && window.HydrationMutex.isHandling()) {
-                // console.log('[Session] 🛑 Blocking loadDataAfterLogin - mutex is handling hydration');
+                console.log('[Session] 🛑 Blocking loadDataAfterLogin - mutex is handling hydration');
                 return;
             }
 
             // ✅ GATEKEEPER 2: Debounce protection - prevent rapid-fire loads
             const now = Date.now();
             if (this._lastDataLoad && (now - this._lastDataLoad) < 2000) {
-                // console.log('[Session] 🛑 Blocking loadDataAfterLogin - debounce (2s cooldown)');
+                console.log('[Session] 🛑 Blocking loadDataAfterLogin - debounce (2s cooldown)');
                 return;
             }
             this._lastDataLoad = now;
@@ -686,36 +686,36 @@
             const hasReloadedAfterSync = sessionStorage.getItem('reloaded-after-sync');
 
             if (!window.SyncService) {
-                // console.log('[Session] SyncService not available, skipping data load');
+                console.log('[Session] SyncService not available, skipping data load');
                 return;
             }
 
             try {
                 // ALWAYS load from server to ensure we have latest data
-                // console.log('[Session] Loading data from server...');
+                console.log('[Session] Loading data from server...');
                 const data = await window.SyncService.loadAll();
 
                 if (!data || (!data.projects?.length && !data.tasks?.length)) {
-                    // console.log('[Session] No data from server');
+                    console.log('[Session] No data from server');
                     return;
                 }
 
-                // console.log('[Session] Loaded from server:', {
+                console.log('[Session] Loaded from server:', {
                     projects: data.projects?.length || 0,
                     tasks: data.tasks?.length || 0
                 });
 
                 // ALWAYS save to BOTH IndexedDB and localStorage
-                // console.log('[Session] Saving to IndexedDB...');
+                console.log('[Session] Saving to IndexedDB...');
                 await this.saveToIndexedDB(data);
 
                 // ✅ CRITICAL FIX: Recalculate task stats from pomodoro logs before saving
                 if (data.tasks && data.pomodoros) {
-                    // console.log('[Session] 🔧 Recalculating task stats before saving to localStorage...');
+                    console.log('[Session] 🔧 Recalculating task stats before saving to localStorage...');
                     data.tasks = this.recalculateTaskStats(data.tasks, data.pomodoros);
                 }
 
-                // console.log('[Session] Saving to localStorage...');
+                console.log('[Session] Saving to localStorage...');
                 this.saveToLocalStorage(data);
 
                 // Ensure sidebar data
@@ -724,7 +724,7 @@
                 // ✅ RELOAD AFTER DATA LOAD: Only reload ONCE (first time after sync)
                 const hasReloadedAfterSync = sessionStorage.getItem('reloaded-after-sync');
                 if (!hasReloadedAfterSync && (data.projects?.length > 0 || data.tasks?.length > 0)) {
-                    // console.log('[Session] 🔄 First data load - reloading page to render UI...');
+                    console.log('[Session] 🔄 First data load - reloading page to render UI...');
                     sessionStorage.setItem('reloaded-after-sync', 'true');
                     setTimeout(() => {
                         window.location.reload();
@@ -732,7 +732,7 @@
                     return;
                 }
 
-                // console.log('[Session] ✅ Data load complete (no reload needed)');
+                console.log('[Session] ✅ Data load complete (no reload needed)');
 
             } catch (error) {
                 console.error('[Session] Data load failed:', error);
@@ -746,11 +746,11 @@
                 const localTasks = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
 
                 if (localProjects.length === 0 && localTasks.length === 0) {
-                    // console.log('[Session] No local data to copy to IndexedDB');
+                    console.log('[Session] No local data to copy to IndexedDB');
                     return;
                 }
 
-                // console.log('[Session] Ensuring local data is in IndexedDB...', {
+                console.log('[Session] Ensuring local data is in IndexedDB...', {
                     projects: localProjects.length,
                     tasks: localTasks.length
                 });
@@ -763,7 +763,7 @@
                 };
 
                 await this.saveToIndexedDB(data);
-                // console.log('[Session] ✅ IndexedDB data ensured');
+                console.log('[Session] ✅ IndexedDB data ensured');
             } catch (error) {
                 console.error('[Session] Failed to ensure IndexedDB data:', error);
             }
@@ -778,7 +778,7 @@
                 const projectOrder = projects.map(p => p.id);
                 if (!localStorage.getItem('pomodoro-projectOrder')) {
                     localStorage.setItem('pomodoro-projectOrder', JSON.stringify(projectOrder));
-                    // console.log(`[Session] ✅ Rebuilt pomodoro-projectOrder (${projectOrder.length} items)`);
+                    console.log(`[Session] ✅ Rebuilt pomodoro-projectOrder (${projectOrder.length} items)`);
                 }
 
                 let customList = [];
@@ -796,7 +796,7 @@
                 });
 
                 localStorage.setItem('custom-project-list', JSON.stringify(customList));
-                // console.log(`[Session] ✅ Ensured custom-project-list (${customList.length} items)`);
+                console.log(`[Session] ✅ Ensured custom-project-list (${customList.length} items)`);
 
                 // Dispatch storage events to trigger React/legacy listeners
                 ['pomodoro-projects', 'pomodoro-projectOrder', 'custom-project-list'].forEach(key => {
@@ -831,7 +831,7 @@
                 request.onsuccess = (event) => {
                     const db = event.target.result;
                     const availableStores = Array.from(db.objectStoreNames);
-                    // console.log('[Session] IDB Available stores:', availableStores);
+                    console.log('[Session] IDB Available stores:', availableStores);
 
                     // Map stores
                     const projectStoreName = availableStores.find(s => s.toLowerCase().includes('project'));
@@ -841,13 +841,13 @@
                     const subtaskStoreName = availableStores.find(s => s === 'Subtask');
                     const groupUserStoreName = availableStores.find(s => s === 'GroupUser');
 
-                    // console.log('[Session] IDB Mapped stores:', { projectStoreName, taskStoreName, pomodoroStoreName, subtaskStoreName, groupUserStoreName });
+                    console.log('[Session] IDB Mapped stores:', { projectStoreName, taskStoreName, pomodoroStoreName, subtaskStoreName, groupUserStoreName });
 
                     try {
                         const tx = db.transaction(availableStores, 'readwrite');
 
                         tx.oncomplete = () => {
-                            // console.log('[Session] ✅ IndexedDB transaction complete');
+                            console.log('[Session] ✅ IndexedDB transaction complete');
                             resolve();
                         };
 
@@ -904,7 +904,7 @@
 
                                         // CRITICAL: Preserve dirty projects (deleted/modified locally)
                                         if (existingProject.sync === 0) {
-                                            // console.log(`[Session] ⏭️ Preserving dirty project "${existingProject.name}" (sync:0)`);
+                                            console.log(`[Session] ⏭️ Preserving dirty project "${existingProject.name}" (sync:0)`);
                                             skipped++;
                                         } else {
                                             // Clean project - safe to update from server
@@ -915,7 +915,7 @@
                                         // Project exists locally but not on server
                                         // If clean (sync=1) and not system, it was deleted on server
                                         if (existingProject.sync === 1 && !window.isSystemProject(existingProject.id)) {
-                                            // console.log(`[Session] 🗑️ Deleting project "${existingProject.name}" - removed on server`);
+                                            console.log(`[Session] 🗑️ Deleting project "${existingProject.name}" - removed on server`);
                                             cursor.delete();
                                         }
                                     }
@@ -930,7 +930,7 @@
                                         }
                                     });
 
-                                    // console.log(`[Session] IDB: Updated ${count} projects, preserved ${skipped} dirty projects`);
+                                    console.log(`[Session] IDB: Updated ${count} projects, preserved ${skipped} dirty projects`);
                                 }
                             };
 
@@ -986,7 +986,7 @@
                                             const isPoisoned = usernamePrefix && taskNameLower.startsWith(usernamePrefix);
 
                                             if (isPoisoned) {
-                                                // console.log(`[Session] 💀 POISONED: Purging username-contaminated task "${existingTask.name}"`);
+                                                console.log(`[Session] 💀 POISONED: Purging username-contaminated task "${existingTask.name}"`);
                                                 cursor.update(serverTask);
                                                 count++;
                                                 cursor.continue();
@@ -1008,11 +1008,11 @@
 
                                             if (isRealTask) {
                                                 // Local task is dirty and real - PRESERVE IT
-                                                // console.log(`[Session] ⏭️ Preserving dirty task "${existingTask.name}" (sync:0)`);
+                                                console.log(`[Session] ⏭️ Preserving dirty task "${existingTask.name}" (sync:0)`);
                                                 skipped++;
                                             } else {
                                                 // Keystroke artifact - overwrite with server version
-                                                // console.log(`[Session] 🗑️ Removing keystroke artifact "${existingTask.name}"`);
+                                                console.log(`[Session] 🗑️ Removing keystroke artifact "${existingTask.name}"`);
                                                 cursor.update(serverTask);
                                                 count++;
                                             }
@@ -1033,7 +1033,7 @@
                                         }
                                     });
 
-                                    // console.log(`[Session] IDB: Updated ${count} tasks, preserved ${skipped} dirty tasks`);
+                                    console.log(`[Session] IDB: Updated ${count} tasks, preserved ${skipped} dirty tasks`);
                                 }
                             };
 
@@ -1051,7 +1051,7 @@
                                 store.put(item);
                                 count++;
                             });
-                            // console.log(`[Session] IDB: Put ${count} subtasks to '${subtaskStoreName}'`);
+                            console.log(`[Session] IDB: Put ${count} subtasks to '${subtaskStoreName}'`);
                         }
 
                         // 4. GroupUser (Profile)
@@ -1071,7 +1071,7 @@
                                 vip: 1
                             };
                             store.put(userProfile);
-                            // console.log(`[Session] IDB: Put user profile to '${groupUserStoreName}' (UUID: ${uId})`);
+                            console.log(`[Session] IDB: Put user profile to '${groupUserStoreName}' (UUID: ${uId})`);
                         }
 
                         // 5. Pomodoros
@@ -1083,7 +1083,7 @@
                                 store.put(item);
                                 count++;
                             });
-                            // console.log(`[Session] IDB: Put ${count} pomodoros to '${pomodoroStoreName}'`);
+                            console.log(`[Session] IDB: Put ${count} pomodoros to '${pomodoroStoreName}'`);
                         }
 
                     } catch (error) {
@@ -1105,7 +1105,7 @@
                 return tasks;
             }
 
-            // console.log(`[Session] 🔄 Recalculating task stats from ${pomodoros.length} pomodoro logs...`);
+            console.log(`[Session] 🔄 Recalculating task stats from ${pomodoros.length} pomodoro logs...`);
 
             return tasks.map(task => {
                 // Find all pomodoros for this task
@@ -1126,26 +1126,26 @@
                 // Calculate total elapsed time from durations (in milliseconds)
                 let totalDuration = 0;
                 taskPomos.forEach((p, index) => {
-                    // console.log(`[Session] 🔍 Pomodoro #${index + 1} for "${task.name}": duration=${p.duration}, start=${p.startTime}, end=${p.endTime}`);
+                    console.log(`[Session] 🔍 Pomodoro #${index + 1} for "${task.name}": duration=${p.duration}, start=${p.startTime}, end=${p.endTime}`);
 
                     if (p.duration && p.duration > 0) {
                         // Use actual duration if available
-                        // console.log(`[Session]   ✅ Using actual duration: ${p.duration}ms`);
+                        console.log(`[Session]   ✅ Using actual duration: ${p.duration}ms`);
                         totalDuration += p.duration;
                     } else if (p.endTime && p.startTime && (p.endTime - p.startTime) > 0) {
                         // Calculate from startTime/endTime if duration is missing
                         const calculated = p.endTime - p.startTime;
-                        // console.log(`[Session]   ✅ Calculated from times: ${calculated}ms`);
+                        console.log(`[Session]   ✅ Calculated from times: ${calculated}ms`);
                         totalDuration += calculated;
                     } else {
                         // Fallback: use task's pomodoroInterval (convert seconds to milliseconds)
                         const fallback = task.pomodoroInterval * 1000;
-                        // console.log(`[Session]   ⚠️ Using fallback (${task.pomodoroInterval}s): ${fallback}ms`);
+                        console.log(`[Session]   ⚠️ Using fallback (${task.pomodoroInterval}s): ${fallback}ms`);
                         totalDuration += fallback;
                     }
                 });
 
-                // console.log(`[Session] 📊 Total duration for "${task.name}": ${totalDuration}ms = ${Math.floor(totalDuration / 1000 / 60)}m`);
+                console.log(`[Session] 📊 Total duration for "${task.name}": ${totalDuration}ms = ${Math.floor(totalDuration / 1000 / 60)}m`);
                 task.elapsedTime = Math.floor(totalDuration / 1000 / 60); // Convert to minutes
 
                 // Ensure estimatePomoNum exists (preserve user's estimate, prevent NaN)
@@ -1169,11 +1169,11 @@
                 // ═══════════════════════════════════════════════════════════════════════
                 if (!Number.isFinite(task.estimatePomoNum) || task.estimatePomoNum < actualCount) {
                     task.estimatePomoNum = Math.max(actualCount, 1);
-                    // console.log(`[Session] 🔥 INVARIANT ENFORCED: "${task.name}" estimate clamped to ${task.estimatePomoNum} (actual=${actualCount})`);
+                    console.log(`[Session] 🔥 INVARIANT ENFORCED: "${task.name}" estimate clamped to ${task.estimatePomoNum} (actual=${actualCount})`);
                 }
 
                 if (actualCount > 0 || task.estimatePomoNum > 0) {
-                    // console.log(`[Session] Task "${task.name}": actualPomoNum=${task.actualPomoNum}, estimatePomoNum=${task.estimatePomoNum}, elapsedTime=${task.elapsedTime}m`);
+                    console.log(`[Session] Task "${task.name}": actualPomoNum=${task.actualPomoNum}, estimatePomoNum=${task.estimatePomoNum}, elapsedTime=${task.elapsedTime}m`);
                 }
 
                 return task;
@@ -1204,7 +1204,7 @@
             if (!projects || !Array.isArray(projects)) return projects;
             if (!tasks || !Array.isArray(tasks)) tasks = [];
 
-            // console.log(`[Session] 🔄 Recalculating project stats from ${tasks.length} tasks...`);
+            console.log(`[Session] 🔄 Recalculating project stats from ${tasks.length} tasks...`);
 
             return projects.map(project => {
                 // 🔥 CRITICAL FIX: "Tasks" (id=0) must aggregate from BOTH itself AND "PRJ_TASKS"
@@ -1219,7 +1219,7 @@
                         t.projectId === project.id
                     );
                     if (projectTasks.length > 0) {
-                        // console.log(`[Session] 🔧 LEGACY FIX: "Tasks" project aggregating from ${projectTasks.length} tasks (including PRJ_TASKS)`);
+                        console.log(`[Session] 🔧 LEGACY FIX: "Tasks" project aggregating from ${projectTasks.length} tasks (including PRJ_TASKS)`);
                     }
                 } else {
                     // Normal project - only aggregate its own tasks
@@ -1248,7 +1248,7 @@
                 }
 
                 if (projectTasks.length > 0) {
-                    // console.log(`[Session] Project "${project.name}": ${projectTasks.length} tasks, estimate=${project.estimatePomoNum}, actual=${project.actualPomoNum}, elapsed=${project.elapsedTime}m`);
+                    console.log(`[Session] Project "${project.name}": ${projectTasks.length} tasks, estimate=${project.estimatePomoNum}, actual=${project.actualPomoNum}, elapsed=${project.elapsedTime}m`);
                 }
 
                 return project;
@@ -1287,13 +1287,13 @@
                     }
                 }
 
-                // console.log('[Session] Saving to localStorage...');
+                console.log('[Session] Saving to localStorage...');
 
                 // 🔥 CRITICAL: Recalculate PROJECT stats before saving
                 // main.js reads projects from localStorage and displays their stats
                 // If we don't recalculate here, main.js will show stale 0/NaN values
                 if (data.projects && data.tasks && this.recalculateProjectStats) {
-                    // console.log('[Session] 🔧 Recalculating project stats before saving to localStorage...');
+                    console.log('[Session] 🔧 Recalculating project stats before saving to localStorage...');
                     data.projects = this.recalculateProjectStats(data.projects, data.tasks);
                 }
 
@@ -1302,7 +1302,7 @@
                 let validPid = '0';
                 if (data.projects && data.projects.length > 0) {
                     // Log all project IDs to help debugging
-                    // console.log('[Session] Available Projects:', data.projects.map(p => ({ id: p.id, name: p.name })));
+                    console.log('[Session] Available Projects:', data.projects.map(p => ({ id: p.id, name: p.name })));
 
                     const defaultProject = data.projects.find(p => p.name === 'Inbox' || p.name === 'Tasks' || p.name === 'My Tasks');
                     if (defaultProject) {
@@ -1313,23 +1313,23 @@
 
                     // Store/Set PID Cookie immediately
                     if (validPid) {
-                        // console.log(`[Session] Setting PID cookie to valid project ID: ${validPid}`);
+                        console.log(`[Session] Setting PID cookie to valid project ID: ${validPid}`);
                         document.cookie = `PID=${validPid}; path=/; max-age=31536000`;
                     }
 
                     localStorage.setItem('pomodoro-projects', JSON.stringify(data.projects));
-                    // console.log(`[Session] ✅ Saved ${data.projects.length} projects`);
+                    console.log(`[Session] ✅ Saved ${data.projects.length} projects`);
 
                     // ✅ CRITICAL: Create and save project order
                     // Without this, main.js might not know how to list the projects
                     const projectOrder = data.projects.map(p => p.id);
                     localStorage.setItem('pomodoro-projectOrder', JSON.stringify(projectOrder));
-                    // console.log(`[Session] ✅ Saved projectOrder (${projectOrder.length} items)`);
+                    console.log(`[Session] ✅ Saved projectOrder (${projectOrder.length} items)`);
 
                     // ✅ CRITICAL: Sidebar Project List
                     // main.js uses 'custom-project-list' to determine what shows in the sidebar
                     localStorage.setItem('custom-project-list', JSON.stringify(projectOrder));
-                    // console.log(`[Session] ✅ Saved custom-project-list (${projectOrder.length} items)`);
+                    console.log(`[Session] ✅ Saved custom-project-list (${projectOrder.length} items)`);
 
                     // ═══════════════════════════════════════════════════════════════
                     // 🕒 TIME AUTHORITY FIX: Persist Server Timestamp
@@ -1338,7 +1338,7 @@
                         try {
                             // main.js reads "SyncTimestamp" (capitalized)
                             localStorage.setItem('SyncTimestamp', data.timestamp);
-                            // console.log(`[Session] 🕒 Time Authority Replicant: Saved SyncTimestamp=${data.timestamp}`);
+                            console.log(`[Session] 🕒 Time Authority Replicant: Saved SyncTimestamp=${data.timestamp}`);
 
                             // Attempt explicit memory injection if possible
                             if (window.f && window.f.default && window.f.default.shared) {
@@ -1356,7 +1356,7 @@
                 if (data.tasks && data.tasks.length > 0) {
                     // ✅ CRITICAL FIX: Recalculate task stats from pomodoro logs FIRST
                     if (data.pomodoros && data.pomodoros.length > 0) {
-                        // console.log('[Session] 🔧 Recalculating task stats before merging...');
+                        console.log('[Session] 🔧 Recalculating task stats before merging...');
                         data.tasks = this.recalculateTaskStats(data.tasks, data.pomodoros);
                     }
 
@@ -1393,7 +1393,7 @@
                             const isPoisoned = usernamePrefix && taskNameLower.startsWith(usernamePrefix);
 
                             if (isPoisoned) {
-                                // console.log(`[Session] 💀 POISONED: Blocking username-contaminated task "${t.name}"`);
+                                console.log(`[Session] 💀 POISONED: Blocking username-contaminated task "${t.name}"`);
                                 // Skip this poisoned task - don't preserve it
                             } else {
                                 // BLOCK: Artifacts that look like partial usernames "d", "do", "its"
@@ -1407,20 +1407,20 @@
                                     dirtyTasks[t.id] = t;
                                     dirtyCount++;
                                 } else {
-                                    // console.log(`[Session] 🛑 Blocking keystroke artifact: "${t.name}"`);
+                                    console.log(`[Session] 🛑 Blocking keystroke artifact: "${t.name}"`);
                                 }
                             }
                         }
                     });
 
                     if (dirtyCount > 0) {
-                        // console.log(`[Session] ⚠️ localStorage: Found ${dirtyCount} dirty tasks - preserving them`);
+                        console.log(`[Session] ⚠️ localStorage: Found ${dirtyCount} dirty tasks - preserving them`);
                     }
 
                     // Merge server tasks, respecting local dirty state
                     const mergedTasks = data.tasks.map(serverTask => {
                         if (dirtyTasks[serverTask.id]) {
-                            // console.log(`[Session] ⏭️ localStorage: Keeping local dirty task "${serverTask.name}"`);
+                            console.log(`[Session] ⏭️ localStorage: Keeping local dirty task "${serverTask.name}"`);
                             return dirtyTasks[serverTask.id]; // Keep local version
                         }
                         return serverTask;
@@ -1435,12 +1435,12 @@
                     });
 
                     localStorage.setItem('pomodoro-tasks', JSON.stringify(mergedTasks));
-                    // console.log(`[Session] ✅ Saved ${mergedTasks.length} tasks (${dirtyCount} preserved dirty)`);
+                    console.log(`[Session] ✅ Saved ${mergedTasks.length} tasks (${dirtyCount} preserved dirty)`);
                 }
 
                 if (data.pomodoros && data.pomodoros.length > 0) {
                     localStorage.setItem('pomodoro-pomodoros', JSON.stringify(data.pomodoros));
-                    // console.log(`[Session] ✅ Saved ${data.pomodoros.length} pomodoros`);
+                    console.log(`[Session] ✅ Saved ${data.pomodoros.length} pomodoros`);
 
                     // ✅ CRITICAL FIX: Dispatch storage event to trigger UI update
                     // This ensures React/main.js re-reads the updated task statistics
@@ -1450,7 +1450,7 @@
                         url: window.location.href,
                         storageArea: localStorage
                     }));
-                    // console.log('[Session] ✅ Dispatched storage event to trigger UI update');
+                    console.log('[Session] ✅ Dispatched storage event to trigger UI update');
                 }
 
                 // ✅ CRITICAL: Set legacy migration flags UNCONDITIONALLY
@@ -1462,11 +1462,11 @@
                 }
                 localStorage.setItem('RegionCode', 'US');
 
-                // console.log('[Session] ✅ Legacy migration flags set');
-                // console.log('[Session] ✅ localStorage updated');
+                console.log('[Session] ✅ Legacy migration flags set');
+                console.log('[Session] ✅ localStorage updated');
 
                 // ✅ CRITICAL: Dispatch events for BOTH projects and order
-                // console.log('[Session] Dispatching storage event to trigger UI update...');
+                console.log('[Session] Dispatching storage event to trigger UI update...');
                 const storageKeys = ['pomodoro-projects', 'pomodoro-projectOrder', 'custom-project-list'];
                 storageKeys.forEach(key => {
                     window.dispatchEvent(new StorageEvent('storage', {
@@ -1495,5 +1495,5 @@
     // Export globally
     window.SessionManager = SessionManager;
 
-    // console.log('[Session] Manager loaded - Dual-mode auth ready');
+    console.log('[Session] Manager loaded - Dual-mode auth ready');
 })();

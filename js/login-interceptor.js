@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    // console.log('[Login Interceptor] Initializing...');
+    console.log('[Login Interceptor] Initializing...');
 
     // Intercept XMLHttpRequest to catch login responses
     const originalOpen = XMLHttpRequest.prototype.open;
@@ -49,7 +49,7 @@
                             const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
                             document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
                         }
-                        // console.log('[Login Interceptor] 🧹 Cookies cleared to prevent bypass');
+                        console.log('[Login Interceptor] 🧹 Cookies cleared to prevent bypass');
 
                         // Show error notification
                         if (window.showNotification) {
@@ -66,7 +66,7 @@
                         // DO NOT CALL originalOnLoad - this prevents main.js from proceeding
                         return;
                     } else {
-                        // console.log('[Login Interceptor] ✅ Login successful');
+                        console.log('[Login Interceptor] ✅ Login successful');
                         if (window.showNotification) {
                             window.showNotification('Login successful!', 'success', 2000);
                         }
@@ -76,13 +76,13 @@
                         // causing sync to fail with "Hydration not ready" error
                         setTimeout(() => {
                             if (window.SessionManager && window.SessionManager.checkLoginStatus) {
-                                // console.log('[Login Interceptor] 🔄 Triggering SessionManager.checkLoginStatus()...');
+                                console.log('[Login Interceptor] 🔄 Triggering SessionManager.checkLoginStatus()...');
                                 window.SessionManager.checkLoginStatus();
                             }
                         }, 500); // Small delay to let cookies settle
 
                         // ✅ NO RELOAD - Let main.js render the UI naturally
-                        // console.log('[Login Interceptor] Allowing main.js to render UI...');
+                        console.log('[Login Interceptor] Allowing main.js to render UI...');
                     }
                 } catch (e) {
                     console.error('[Login Interceptor] Error parsing response:', e);
@@ -119,5 +119,5 @@
         return originalSend.apply(this, args);
     };
 
-    // console.log('[Login Interceptor] ✅ Active - Showing notifications for login attempts');
+    console.log('[Login Interceptor] ✅ Active - Showing notifications for login attempts');
 })();

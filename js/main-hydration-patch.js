@@ -13,7 +13,7 @@
 (function () {
     'use strict';
 
-    // console.log('[Main Patch] Installing hydration detection...');
+    console.log('[Main Patch] Installing hydration detection...');
 
     // ═══════════════════════════════════════════════════════════════════════
     // PHASE START: Set hydration phase when main.js loads
@@ -21,7 +21,7 @@
 
     if (window.__SB_LOADER) {
         window.__SB_LOADER.setPhase('hydrate', true);
-        // console.log('[Main Patch] ✅ Hydration phase started');
+        console.log('[Main Patch] ✅ Hydration phase started');
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -62,7 +62,7 @@
      */
     function pollHydration() {
         if (checkHydrationComplete()) {
-            // console.log('[Main Patch] ✅ Hydration complete - dispatching event');
+            console.log('[Main Patch] ✅ Hydration complete - dispatching event');
             window.dispatchEvent(new Event('SB_HYDRATION_DONE'));
         } else {
             // Keep checking (max 10 seconds)
@@ -81,6 +81,6 @@
     // This ensures hydration phase overlaps with nav phase
     requestAnimationFrame(pollHydration);
 
-    // console.log('[Main Patch] ✅ Hydration detection installed');
+    console.log('[Main Patch] ✅ Hydration detection installed');
 
 })();

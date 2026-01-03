@@ -45,8 +45,8 @@
                 headers
             };
 
-            // console.log(`[AuthFetch] ${options.method || 'GET'} ${url}`);
-            // console.log(`[AuthFetch] Token: ${token ? token.substring(0, 10) + '...' : 'NONE'}`);
+            console.log(`[AuthFetch] ${options.method || 'GET'} ${url}`);
+            console.log(`[AuthFetch] Token: ${token ? token.substring(0, 10) + '...' : 'NONE'}`);
 
             try {
                 const response = await fetch(url, fetchOptions);
@@ -112,7 +112,7 @@
         }
     };
 
-    // console.log('[AuthFetch] ✅ Centralized auth wrapper loaded');
-    // console.log('[AuthFetch] Token available:', window.AuthFetch.isAuthenticated());
+    console.log('[AuthFetch] ✅ Centralized auth wrapper loaded');
+    console.log('[AuthFetch] Token available:', window.AuthFetch.isAuthenticated());
 
 })();
