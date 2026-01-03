@@ -60,13 +60,11 @@
 
             request.onsuccess = () => {
                 Guardian.db = request.result;
-                console.log('[Guardian] ✅ IndexedDB opened');
                 resolve(Guardian.db);
             };
 
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
-                console.log('[Guardian] Database upgrade needed');
 
                 // Create Project store with all indexes main.js expects
                 if (!db.objectStoreNames.contains(PROJECT_STORE)) {
@@ -74,7 +72,6 @@
                     store.createIndex('state', 'state', { unique: false });
                     store.createIndex('sync', 'sync', { unique: false });
                     store.createIndex('parentId', 'parentId', { unique: false });
-                    console.log('[Guardian] ✅ Created Project store with indexes');
                 }
 
                 // Create Task store with all indexes main.js expects
@@ -85,7 +82,6 @@
                     store.createIndex('reminderDate', 'reminderDate', { unique: false });
                     store.createIndex('finishedDate', 'finishedDate', { unique: false });
                     store.createIndex('sync', 'sync', { unique: false });
-                    console.log('[Guardian] ✅ Created Task store with indexes');
                 }
 
                 // Create Subtask store with all indexes main.js expects
@@ -94,7 +90,6 @@
                     store.createIndex('taskId', 'taskId', { unique: false });
                     store.createIndex('sync', 'sync', { unique: false });
                     store.createIndex('finishedDate', 'finishedDate', { unique: false });
-                    console.log('[Guardian] ✅ Created Subtask store with indexes');
                 }
 
                 // Create Pomodoro store with all indexes main.js expects
@@ -104,7 +99,6 @@
                     store.createIndex('subtaskId', 'subtaskId', { unique: false });
                     store.createIndex('endDate', 'endDate', { unique: false });
                     store.createIndex('sync', 'sync', { unique: false });
-                    console.log('[Guardian] ✅ Created Pomodoro store with indexes');
                 }
 
                 // Create Schedule store with all indexes main.js expects
@@ -114,7 +108,6 @@
                     store.createIndex('subtaskId', 'subtaskId', { unique: false });
                     store.createIndex('endDate', 'endDate', { unique: false });
                     store.createIndex('sync', 'sync', { unique: false });
-                    console.log('[Guardian] ✅ Created Schedule store with indexes');
                 }
 
                 // Create Group store (main.js:26936-26943)
@@ -189,7 +182,6 @@
 
         Guardian.isSeeding = true;
         Guardian.seedPromise = (async () => {
-            console.log('[Guardian] 🌱 Starting system project seeding...');
 
             // Ensure SYSTEM_PROJECTS is defined
             if (!window.SYSTEM_PROJECTS || !Array.isArray(window.SYSTEM_PROJECTS)) {
@@ -215,7 +207,6 @@
                         toInsert.push(sysProj);
                     } else if (Number(existingProj.type) !== Number(sysProj.type)) {
                         // Project exists but has WRONG type - update it
-                        console.log('[Guardian] ⚠️ Fixing type for', sysProj.id, ':', existingProj.type, '→', sysProj.type);
                         toUpdate.push({
                             ...existingProj,
                             type: sysProj.type,
@@ -226,12 +217,10 @@
                 }
 
                 if (toInsert.length === 0 && toUpdate.length === 0) {
-                    console.log('[Guardian] ✅ All', window.SYSTEM_PROJECTS.length, 'system projects have correct types');
                     Guardian.isSeeding = false;
                     return true;
                 }
 
-                console.log('[Guardian] 📝 Inserting', toInsert.length, 'new, updating', toUpdate.length, 'with wrong types');
 
                 // Insert/update projects
                 const tx = db.transaction(PROJECT_STORE, 'readwrite');
@@ -261,7 +250,6 @@
                     tx.onerror = () => reject(tx.error);
                 });
 
-                console.log('[Guardian] ✅ Seeded', toInsert.length, 'new +', toUpdate.length, 'fixed types');
                 Guardian.isSeeding = false;
                 return true;
 
@@ -298,7 +286,6 @@
         if (!result.valid) {
             console.warn('[Guardian] ⚠️ Missing system projects:', result.missing.join(', '));
         } else {
-            console.log('[Guardian] ✅ Integrity check passed -', result.total, 'system projects present');
         }
 
         return result;
@@ -308,7 +295,6 @@
      * Force reseed - useful for recovery
      */
     async function forceReseed() {
-        console.log('[Guardian] 🔄 Force reseeding all system projects...');
         Guardian.isSeeding = false; // Reset flag
 
         if (!window.SYSTEM_PROJECTS) {
@@ -335,7 +321,6 @@
                 tx.onerror = () => reject(tx.error);
             });
 
-            console.log('[Guardian] ✅ Force reseeded', window.SYSTEM_PROJECTS.length, 'system projects');
             return true;
         } catch (error) {
             console.error('[Guardian] ❌ Force reseed failed:', error);
@@ -386,7 +371,6 @@
             return originalDelete.call(this, key);
         };
 
-        console.log('[Guardian] 🛡️ Delete protection installed');
     }
 
     /**
@@ -401,7 +385,6 @@
             const result = originalClear.call(this);
 
             if (storeName === PROJECT_STORE) {
-                console.log('[Guardian] ⚠️ Project store cleared - will reseed');
                 // Schedule reseed after transaction completes
                 result.onsuccess = (function (originalOnsuccess) {
                     return function (event) {
@@ -417,7 +400,6 @@
             return result;
         };
 
-        console.log('[Guardian] 🛡️ Clear protection installed');
     }
 
     /**
@@ -429,12 +411,10 @@
 
         IDBObjectStore.prototype.put = function (value, key) {
             if (this.name === 'Task') {
-                console.log(`[Guardian] 🕵️ Task PUT Detected: id=${value.id} state=${value.state} sync=${value.sync}`);
             }
             return originalPut.call(this, value, key);
         };
 
-        console.log('[Guardian] 🕵️ Put Spy installed');
     }
 
     /**
@@ -475,7 +455,6 @@
             return originalDeleteDatabase(name);
         };
 
-        console.log('[Guardian] 🛡️ DeleteDatabase protection installed');
     }
 
     /**
@@ -508,7 +487,6 @@
             }
         }
 
-        console.log('[Guardian] 📦 Merged:', merged.length, 'projects (',
             window.SYSTEM_PROJECTS.length, 'system +',
             cloudProjects.filter(p => !systemIds.has(String(p.id))).length, 'user)');
 
@@ -520,7 +498,6 @@
      */
     async function initialize() {
         if (Guardian.initialized) {
-            console.log('[Guardian] Already initialized');
             return;
         }
 
@@ -528,12 +505,9 @@
         // The hydration gate will handle seeding after login
         const dbName = getDBName();
         if (!dbName) {
-            console.log('[Guardian] ⏸️ No user logged in - skipping initialization');
-            console.log('[Guardian] Will initialize after user logs in');
             return;
         }
 
-        console.log('[Guardian] 🚀 Initializing IndexedDB Guardian...');
 
         // Install other protections (deleteDatabase protection already installed synchronously)
         installDeleteProtection();
@@ -547,7 +521,6 @@
         await validateIntegrity();
 
         Guardian.initialized = true;
-        console.log('[Guardian] ✅ Initialization complete');
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -571,7 +544,6 @@
     // Install deleteDatabase protection IMMEDIATELY (synchronous)
     // This MUST happen before main.js has any chance to run
     installDeleteDatabaseProtection();
-    console.log('[Guardian] 📦 IndexedDB Guardian loaded - DB deletion BLOCKED');
 
     // ═══════════════════════════════════════════════════════════════════════
     // ASYNC INITIALIZATION - Seeds data after protection is in place

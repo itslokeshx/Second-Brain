@@ -10,7 +10,6 @@
 (function () {
     'use strict';
 
-    console.log('[Hydration Gate] 🚦 Initializing...');
 
     /**
      * Main hydration check - uses mutex for atomic state transitions
@@ -20,11 +19,9 @@
             // Step 1: Check if user has auth token
             const authToken = localStorage.getItem('authToken');
             if (!authToken) {
-                console.log('[Hydration Gate] ❌ No auth token - user not logged in');
                 return { ready: false, reason: 'no-auth' };
             }
 
-            console.log('[Hydration Gate] ✅ Auth token found');
 
             // Step 2: Get userId from localStorage OR cookies
             let userId = localStorage.getItem('userId');
@@ -38,19 +35,16 @@
                         userId = value;
                         // Save to localStorage for next time
                         localStorage.setItem('userId', userId);
-                        console.log('[Hydration Gate] ✅ Synced userId from cookie to localStorage:', userId);
                         break;
                     }
                 }
             }
 
             if (!userId) {
-                console.log('[Hydration Gate] ❌ No userId - invalid state');
                 localStorage.clear();
                 return { ready: false, reason: 'no-userid' };
             }
 
-            console.log('[Hydration Gate] ✅ User ID:', userId);
 
             // Step 3: Use HydrationMutex for atomic hydration
             // Wait for mutex to load (it might not be ready immediately)
@@ -59,7 +53,6 @@
             const maxRetries = 20; // 20 * 100ms = 2 seconds max wait
             
             while (!mutex && retries < maxRetries) {
-                console.log(`[Hydration Gate] ⏳ Waiting for HydrationMutex... (${retries + 1}/${maxRetries})`);
                 await new Promise(resolve => setTimeout(resolve, 100));
                 mutex = window.HydrationMutex;
                 retries++;
@@ -70,14 +63,11 @@
                 return { ready: false, reason: 'no-mutex' };
             }
 
-            console.log('[Hydration Gate] ✅ HydrationMutex loaded');
-            console.log('[Hydration Gate] 🔒 Acquiring hydration mutex...');
 
             try {
                 const result = await mutex.acquire(userId);
 
                 if (result.success && result.state === 'READY') {
-                    console.log('[Hydration Gate] ✅ Hydration complete via mutex');
                     return { ready: true, userId, reason: 'mutex-success' };
                 } else {
                     console.error('[Hydration Gate] ❌ Mutex returned non-ready state:', result);
@@ -94,6 +84,5 @@
         }
     })();
 
-    console.log('[Hydration Gate] 📦 Hydration gate loaded - using mutex');
 
 })();

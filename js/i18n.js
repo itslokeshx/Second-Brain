@@ -20,7 +20,6 @@
             if (window.I18N_DATA) {
                 translations = window.I18N_DATA;
                 loaded = true;
-                console.log('I18n loaded from global variable.');
                 return;
             }
 
@@ -33,7 +32,6 @@
             if (xhr.status === 200) {
                 this.parseData(xhr.responseText);
                 loaded = true;
-                console.log('I18n loaded successfully.');
             } else {
                 console.error('Failed to load i18n strings:', xhr.status);
             }

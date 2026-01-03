@@ -1,7 +1,6 @@
 // ===== CRITICAL RENDER UNLOCK =====
 // main.js checks for these objects before mounting the React root.
 // If missing, it aborts rendering and disconnects.
-console.log('[Crypto Stub] Initializing mock encryption library...');
 
 window.CryptoLib = {
     encrypt: v => { return v; },

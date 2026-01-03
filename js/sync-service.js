@@ -5,8 +5,6 @@ class SyncService {
         this.baseURL = window.AppConfig
             ? window.AppConfig.getApiBaseUrl()
             : 'http://localhost:3000';
-        console.log('[Sync] Service initialized - Using centralized AuthFetch');
-        console.log('[Sync] Base URL:', this.baseURL);
     }
 
     // Sync all data
@@ -14,7 +12,6 @@ class SyncService {
         try {
             const response = await window.AuthFetch.post(`${this.baseURL}/api/sync/all`, data);
             const result = await response.json();
-            console.log('[Sync] ✅ Success:', result);
             return result;
         } catch (error) {
             console.error('[Sync] ❌ Failed:', error);
@@ -39,7 +36,6 @@ class SyncService {
         try {
             const response = await window.AuthFetch.post(`${this.baseURL}/api/sync-data`, {});
             const result = await response.json();
-            console.log('[Sync] ✅ Data loaded:', result);
             return result;
         } catch (error) {
             console.error('[Sync] ❌ Load failed:', error);
@@ -55,4 +51,3 @@ class SyncService {
 
 // Export globally
 window.SyncService = new SyncService();
-console.log('[Sync] Service ready');

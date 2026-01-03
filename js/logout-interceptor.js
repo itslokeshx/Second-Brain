@@ -10,7 +10,6 @@
 (function () {
     'use strict';
 
-    console.log('[Logout Interceptor] Installing...');
 
     // Wait for main.js to load
     const maxAttempts = 100; // 10 seconds
@@ -28,7 +27,6 @@
             return;
         }
 
-        console.log('[Logout Interceptor] ✅ SessionManager found');
         clearInterval(hookLogout);
 
         // STRATEGY: Detect when React's AccountManager clears cookies
@@ -45,11 +43,9 @@
                 if (value.includes('ACCT=') && (value.includes('ACCT=""') || value.includes('ACCT=;'))) {
                     if (!logoutDetected) {
                         logoutDetected = true;
-                        console.log('[Logout Interceptor] 🎯 React logout detected (ACCT cleared)');
 
                         // Let React finish its logout first, then call ours
                         setTimeout(() => {
-                            console.log('[Logout Interceptor] 🔄 Calling SessionManager.logout()...');
                             if (window.SessionManager && window.SessionManager.logout) {
                                 window.SessionManager.logout();
                             }
@@ -64,9 +60,6 @@
             configurable: true
         });
 
-        console.log('[Logout Interceptor] ✅ Cookie interceptor installed');
-        console.log('[Logout Interceptor] 🚀 React dialog will show naturally');
-        console.log('[Logout Interceptor] 🎨 Using React\'s beautiful logout UI');
 
     }, 100);
 

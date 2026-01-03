@@ -12,7 +12,6 @@
 (function () {
     'use strict';
 
-    console.log('[NaN Preventer] Initializing...');
 
     // ═══════════════════════════════════════════════════════════════════════
     // 🚨 REGRESSION DETECTOR: If this fires, stat gates are broken
@@ -63,7 +62,6 @@
                         const sanitizedText = sanitizeTextContent(originalText);
 
                         if (originalText !== sanitizedText) {
-                            console.log(`[NaN Preventer] Fixed: "${originalText}" → "${sanitizedText}"`);
                             node.textContent = sanitizedText;
                         }
                     } else if (node.nodeType === Node.ELEMENT_NODE) {
@@ -81,7 +79,6 @@
                             const sanitizedText = sanitizeTextContent(originalText);
 
                             if (originalText !== sanitizedText) {
-                                console.log(`[NaN Preventer] Fixed: "${originalText}" → "${sanitizedText}"`);
                                 textNode.textContent = sanitizedText;
                             }
                         }
@@ -94,7 +91,6 @@
                     const sanitizedText = sanitizeTextContent(originalText);
 
                     if (originalText !== sanitizedText) {
-                        console.log(`[NaN Preventer] Fixed: "${originalText}" → "${sanitizedText}"`);
                         mutation.target.textContent = sanitizedText;
                     }
                 }
@@ -115,7 +111,6 @@
             characterDataOldValue: true
         });
 
-        console.log('[NaN Preventer] ✅ Active - Monitoring DOM for NaN values');
 
         // Also do an initial cleanup pass
         cleanupExistingNaN();
@@ -146,7 +141,6 @@
         }
 
         if (fixCount > 0) {
-            console.log(`[NaN Preventer] 🔧 Cleaned up ${fixCount} existing NaN values`);
         }
     }
 
@@ -166,5 +160,4 @@
         cleanupExistingNaN();
     }, 2000);
 
-    console.log('[NaN Preventer] 📦 Loaded');
 })();
