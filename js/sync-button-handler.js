@@ -206,11 +206,6 @@
                     };
                 });
 
-                    projects: data.projects.length,
-                    tasks: data.tasks.length,
-                    logs: data.pomodoroLogs.length
-                });
-
                 // ✅ FALLBACK: If IndexedDB is empty, try localStorage
                 if (data.projects.length === 0) {
                     try {
@@ -238,11 +233,6 @@
                         }
                     } catch (e) { console.warn('[Sync Button] localStorage logs parse error:', e); }
                 }
-
-                    projects: data.projects.length,
-                    tasks: data.tasks.length,
-                    logs: data.pomodoroLogs.length
-                });
 
                 // ✅ PROTECTION: Ensure system projects are included before sync
                 if (window.IndexedDBGuardian && window.SYSTEM_PROJECTS) {
@@ -432,7 +422,16 @@
                     }
                 }
 
-                alert(`✅ Synced: ${result.projectsSynced || 0} projects, ${result.tasksSynced || 0} tasks, ${result.logsSynced || 0} logs`);
+                // ✅ Show premium notification
+                if (window.showSyncNotification) {
+                    window.showSyncNotification(
+                        `Synced ${result.projectsSynced || 0} projects, ${result.tasksSynced || 0} tasks, ${result.logsSynced || 0} logs`,
+                        'success',
+                        4000
+                    );
+                } else {
+                    alert(`✅ Synced: ${result.projectsSynced || 0} projects, ${result.tasksSynced || 0} tasks, ${result.logsSynced || 0} logs`);
+                }
             } catch (error) {
                 console.error('[Sync Button] ❌ Sync failed:', error);
                 // Even on error, ensure system projects exist
