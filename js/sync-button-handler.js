@@ -219,297 +219,297 @@
                 });
 
                 // console.log('[Sync Button] IndexedDB data:', {
-                projects: data.projects.length,
-                    tasks: data.tasks.length,
-                        logs: data.pomodoroLogs.length
-            });
+                //     projects: data.projects.length,
+                //     tasks: data.tasks.length,
+                //     logs: data.pomodoroLogs.length
+                // });
 
-            // ✅ FALLBACK: If IndexedDB is empty, try localStorage
-            if (data.projects.length === 0) {
-                try {
-                    const lsProjects = JSON.parse(localStorage.getItem('pomodoro-projects') || '[]');
-                    if (lsProjects.length > 0) {
-                        // console.log('[Sync Button] Using localStorage projects:', lsProjects.length);
-                        data.projects = lsProjects;
-                    }
-                } catch (e) { console.warn('[Sync Button] localStorage projects parse error:', e); }
-            }
-
-            if (data.tasks.length === 0) {
-                try {
-                    const lsTasks = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
-                    if (lsTasks.length > 0) {
-                        // console.log('[Sync Button] Using localStorage tasks:', lsTasks.length);
-                        data.tasks = lsTasks;
-                    }
-                } catch (e) { console.warn('[Sync Button] localStorage tasks parse error:', e); }
-            }
-
-            if (data.pomodoroLogs.length === 0) {
-                try {
-                    const lsLogs = JSON.parse(localStorage.getItem('pomodoro-pomodoros') || '[]');
-                    if (lsLogs.length > 0) {
-                        // console.log('[Sync Button] Using localStorage logs:', lsLogs.length);
-                        data.pomodoroLogs = lsLogs;
-                    }
-                } catch (e) { console.warn('[Sync Button] localStorage logs parse error:', e); }
-            }
-
-            // console.log('[Sync Button] Final data to sync:', {
-            projects: data.projects.length,
-                tasks: data.tasks.length,
-                    logs: data.pomodoroLogs.length
-        });
-
-        // ✅ PROTECTION: Ensure system projects are included before sync
-        if (window.IndexedDBGuardian && window.SYSTEM_PROJECTS) {
-            data.projects = window.IndexedDBGuardian.mergeWithSystemProjects(data.projects);
-            // console.log('[Sync Button] 🛡️ Merged with system projects:', data.projects.length);
-        }
-
-        // ✅ CLEANUP: Remove keystroke artifacts before syncing
-        if (data.tasks.length > 0) {
-            const initialCount = data.tasks.length;
-
-            // Filter out keystroke artifacts with STRICT Heuristics
-            data.tasks = data.tasks.filter(t => {
-                // ═══════════════════════════════════════════════════════════════════════
-                // 🔧 CRITICAL FIX: NEVER filter unsynced tasks (sync: 0)
-                // If a task has sync: 0, it MUST be synced regardless of content
-                // This prevents data loss from overly aggressive filtering
-                // ═══════════════════════════════════════════════════════════════════════
-                if (t.sync === 0) {
-                    // console.log(`[Sync Button] ✅ Including unsynced task: "${t.name}"`);
-                    return true; // ALWAYS include unsynced tasks
+                // ✅ FALLBACK: If IndexedDB is empty, try localStorage
+                if (data.projects.length === 0) {
+                    try {
+                        const lsProjects = JSON.parse(localStorage.getItem('pomodoro-projects') || '[]');
+                        if (lsProjects.length > 0) {
+                            // console.log('[Sync Button] Using localStorage projects:', lsProjects.length);
+                            data.projects = lsProjects;
+                        }
+                    } catch (e) { console.warn('[Sync Button] localStorage projects parse error:', e); }
                 }
 
-                // For already-synced tasks (sync: 1), apply artifact detection heuristics
-                // Real tasks usually have meaningful IDs or creation times, but 
-                // we focus on content structure.
-                const validName = t.name && t.name.length >= 3;
-                const hasOtherProps = (t.deadline && t.deadline !== 0) ||
-                    (t.projectId && t.projectId !== '0') ||
-                    (t.priority && t.priority > 0) ||
-                    (t.tags && t.tags.length > 0) ||
-                    (t.description && t.description.length > 0);
-
-                // 🔍 HEURISTIC 2: Legacy Compatibility
-                // Long text without props might be a quick "brain dump" task
-                // INCREASED THRESHOLD: Must be 20+ chars to avoid username poisoning ("itslokeshx" is 10)
-                const legitimateLongText = t.name && t.name.length >= 20;
-
-                // Only filter already-synced tasks that look like artifacts
-                const shouldKeep = (validName && hasOtherProps) || legitimateLongText;
-
-                if (!shouldKeep) {
-                    // console.log(`[Sync Button] 🧹 Filtering synced artifact: "${t.name}"`);
+                if (data.tasks.length === 0) {
+                    try {
+                        const lsTasks = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
+                        if (lsTasks.length > 0) {
+                            // console.log('[Sync Button] Using localStorage tasks:', lsTasks.length);
+                            data.tasks = lsTasks;
+                        }
+                    } catch (e) { console.warn('[Sync Button] localStorage tasks parse error:', e); }
                 }
 
-                return shouldKeep;
-            });
-
-            const removed = initialCount - data.tasks.length;
-            if (removed > 0) {
-                // console.log(`[Sync Button] 🧹 Sanitized ${removed} artifacts from memory before sync`);
-
-                // Update storage with cleaned data to prevent recurrence
-                try {
-                    localStorage.setItem('tasks', JSON.stringify(data.tasks));
-                } catch (e) {
-                    console.warn('[Sync Button] Cleanup storage update failed:', e);
+                if (data.pomodoroLogs.length === 0) {
+                    try {
+                        const lsLogs = JSON.parse(localStorage.getItem('pomodoro-pomodoros') || '[]');
+                        if (lsLogs.length > 0) {
+                            // console.log('[Sync Button] Using localStorage logs:', lsLogs.length);
+                            data.pomodoroLogs = lsLogs;
+                        }
+                    } catch (e) { console.warn('[Sync Button] localStorage logs parse error:', e); }
                 }
-            }
-        }
 
-        const result = await window.SyncService.syncAll({
-            projects: data.projects,
-            tasks: data.tasks,
-            pomodoroLogs: data.pomodoroLogs
-        });
+                // console.log('[Sync Button] Final data to sync:', {
+                //     projects: data.projects.length,
+                //     tasks: data.tasks.length,
+                //     logs: data.pomodoroLogs.length
+                // });
 
-        // console.log('[Sync Button] ✅ Sync completed successfully:', result);
+                // ✅ PROTECTION: Ensure system projects are included before sync
+                if (window.IndexedDBGuardian && window.SYSTEM_PROJECTS) {
+                    data.projects = window.IndexedDBGuardian.mergeWithSystemProjects(data.projects);
+                    // console.log('[Sync Button] 🛡️ Merged with system projects:', data.projects.length);
+                }
 
-        // ═══════════════════════════════════════════════════════════════════════
-        // 🔧 PHASE 3 FIX: Backend-Authoritative Dirty State
-        // Only mark items as synced if backend ACKed them
-        // ═══════════════════════════════════════════════════════════════════════
-        try {
-            // console.log('[Sync Button] 📝 Updating sync flags (backend-authoritative)...');
+                // ✅ CLEANUP: Remove keystroke artifacts before syncing
+                if (data.tasks.length > 0) {
+                    const initialCount = data.tasks.length;
 
-            // Create sets of IDs that were SENT to backend
-            const sentTaskIds = new Set(data.tasks.map(t => t.id));
-            const sentProjectIds = new Set(data.projects.map(p => p.id));
-            const sentLogIds = new Set(data.pomodoroLogs.map(l => l.id));
+                    // Filter out keystroke artifacts with STRICT Heuristics
+                    data.tasks = data.tasks.filter(t => {
+                        // ═══════════════════════════════════════════════════════════════════════
+                        // 🔧 CRITICAL FIX: NEVER filter unsynced tasks (sync: 0)
+                        // If a task has sync: 0, it MUST be synced regardless of content
+                        // This prevents data loss from overly aggressive filtering
+                        // ═══════════════════════════════════════════════════════════════════════
+                        if (t.sync === 0) {
+                            // console.log(`[Sync Button] ✅ Including unsynced task: "${t.name}"`);
+                            return true; // ALWAYS include unsynced tasks
+                        }
 
-            // Update tasks - ONLY those we sent AND backend confirmed
-            const tasks = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
-            let tasksUpdated = 0;
-            tasks.forEach(t => {
-                if (sentTaskIds.has(t.id) && result.success) {
-                    if (t.sync === 0) {
-                        t.sync = 1;
-                        tasksUpdated++;
+                        // For already-synced tasks (sync: 1), apply artifact detection heuristics
+                        // Real tasks usually have meaningful IDs or creation times, but 
+                        // we focus on content structure.
+                        const validName = t.name && t.name.length >= 3;
+                        const hasOtherProps = (t.deadline && t.deadline !== 0) ||
+                            (t.projectId && t.projectId !== '0') ||
+                            (t.priority && t.priority > 0) ||
+                            (t.tags && t.tags.length > 0) ||
+                            (t.description && t.description.length > 0);
+
+                        // 🔍 HEURISTIC 2: Legacy Compatibility
+                        // Long text without props might be a quick "brain dump" task
+                        // INCREASED THRESHOLD: Must be 20+ chars to avoid username poisoning ("itslokeshx" is 10)
+                        const legitimateLongText = t.name && t.name.length >= 20;
+
+                        // Only filter already-synced tasks that look like artifacts
+                        const shouldKeep = (validName && hasOtherProps) || legitimateLongText;
+
+                        if (!shouldKeep) {
+                            // console.log(`[Sync Button] 🧹 Filtering synced artifact: "${t.name}"`);
+                        }
+
+                        return shouldKeep;
+                    });
+
+                    const removed = initialCount - data.tasks.length;
+                    if (removed > 0) {
+                        // console.log(`[Sync Button] 🧹 Sanitized ${removed} artifacts from memory before sync`);
+
+                        // Update storage with cleaned data to prevent recurrence
+                        try {
+                            localStorage.setItem('tasks', JSON.stringify(data.tasks));
+                        } catch (e) {
+                            console.warn('[Sync Button] Cleanup storage update failed:', e);
+                        }
                     }
                 }
-            });
-            if (tasksUpdated > 0) {
-                localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
-                // console.log(`[Sync Button] ✅ Marked ${tasksUpdated} tasks as synced (backend ACKed)`);
-            }
 
-            // Update projects
-            const projects = JSON.parse(localStorage.getItem('pomodoro-projects') || '[]');
-            let projectsUpdated = 0;
-            projects.forEach(p => {
-                if (sentProjectIds.has(p.id) && result.success) {
-                    if (p.sync === 0) {
-                        p.sync = 1;
-                        projectsUpdated++;
-                    }
-                }
-            });
-            if (projectsUpdated > 0) {
-                localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
-                // console.log(`[Sync Button] ✅ Marked ${projectsUpdated} projects as synced (backend ACKed)`);
-            }
-
-            // Update logs
-            const logs = JSON.parse(localStorage.getItem('pomodoro-pomodoros') || '[]');
-            let logsUpdated = 0;
-            logs.forEach(l => {
-                if (sentLogIds.has(l.id) && result.success) {
-                    if (l.sync === 0) {
-                        l.sync = 1;
-                        logsUpdated++;
-                    }
-                }
-            });
-            if (logsUpdated > 0) {
-                localStorage.setItem('pomodoro-pomodoros', JSON.stringify(logs));
-                // console.log(`[Sync Button] ✅ Marked ${logsUpdated} logs as synced (backend ACKed)`);
-            }
-
-            // console.log('[Sync Button] ✅ Sync flags updated (backend-authoritative)');
-        } catch (e) {
-            console.warn('[Sync Button] ⚠️ Failed to update sync flags:', e);
-        }
-
-        // ═══════════════════════════════════════════════════════════════════════
-        // 🛡️ GATE C - INVARIANT 1 ENFORCEMENT: Recalculate stats after sync
-        // This ensures sync doesn't leave stale 0/NaN values in localStorage
-        // ═══════════════════════════════════════════════════════════════════════
-        try {
-            // console.log('[Sync Button] 🔧 GATE C: Recalculating stats after sync...');
-
-            // Reload fresh data from localStorage
-            const tasks = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
-            const pomodoros = JSON.parse(localStorage.getItem('pomodoro-pomodoros') || '[]');
-
-            if (tasks.length > 0 && pomodoros.length > 0 && window.SessionManager?.recalculateTaskStats) {
-                const recalculatedTasks = window.SessionManager.recalculateTaskStats(tasks, pomodoros);
-                localStorage.setItem('pomodoro-tasks', JSON.stringify(recalculatedTasks));
-                // console.log('[Sync Button] ✅ GATE C: Stats recalculated and persisted');
-            } else if (tasks.length > 0 && pomodoros.length === 0) {
-                console.warn('[Sync Button] ⚠️ GATE C: No pomodoros to recalculate - stats may be 0');
-            }
-        } catch (e) {
-            console.error('[Sync Button] ❌ GATE C: Recalculation failed:', e);
-        }
-
-        // ✅ FIX: Update Sync Timestamp in UI
-        try {
-            // Try multiple selectors for the timestamp
-            const timestampSelectors = [
-                '.UserDropdownMenu-menu-KviKX', // The one seen in logs
-                '[class*="UserDropdownMenu-menu"]',
-                '.sync-time',
-                '.last-synced'
-            ];
-
-            for (const selector of timestampSelectors) {
-                const els = document.querySelectorAll(selector);
-                els.forEach(el => {
-                    if (el.textContent.includes('Synced') || el.textContent.includes('ago')) {
-                        el.textContent = 'Last synced: Just now';
-                        el.style.color = '#4caf50'; // Green to indicate success
-                    }
+                const result = await window.SyncService.syncAll({
+                    projects: data.projects,
+                    tasks: data.tasks,
+                    pomodoroLogs: data.pomodoroLogs
                 });
+
+                // console.log('[Sync Button] ✅ Sync completed successfully:', result);
+
+                // ═══════════════════════════════════════════════════════════════════════
+                // 🔧 PHASE 3 FIX: Backend-Authoritative Dirty State
+                // Only mark items as synced if backend ACKed them
+                // ═══════════════════════════════════════════════════════════════════════
+                try {
+                    // console.log('[Sync Button] 📝 Updating sync flags (backend-authoritative)...');
+
+                    // Create sets of IDs that were SENT to backend
+                    const sentTaskIds = new Set(data.tasks.map(t => t.id));
+                    const sentProjectIds = new Set(data.projects.map(p => p.id));
+                    const sentLogIds = new Set(data.pomodoroLogs.map(l => l.id));
+
+                    // Update tasks - ONLY those we sent AND backend confirmed
+                    const tasks = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
+                    let tasksUpdated = 0;
+                    tasks.forEach(t => {
+                        if (sentTaskIds.has(t.id) && result.success) {
+                            if (t.sync === 0) {
+                                t.sync = 1;
+                                tasksUpdated++;
+                            }
+                        }
+                    });
+                    if (tasksUpdated > 0) {
+                        localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
+                        // console.log(`[Sync Button] ✅ Marked ${tasksUpdated} tasks as synced (backend ACKed)`);
+                    }
+
+                    // Update projects
+                    const projects = JSON.parse(localStorage.getItem('pomodoro-projects') || '[]');
+                    let projectsUpdated = 0;
+                    projects.forEach(p => {
+                        if (sentProjectIds.has(p.id) && result.success) {
+                            if (p.sync === 0) {
+                                p.sync = 1;
+                                projectsUpdated++;
+                            }
+                        }
+                    });
+                    if (projectsUpdated > 0) {
+                        localStorage.setItem('pomodoro-projects', JSON.stringify(projects));
+                        // console.log(`[Sync Button] ✅ Marked ${projectsUpdated} projects as synced (backend ACKed)`);
+                    }
+
+                    // Update logs
+                    const logs = JSON.parse(localStorage.getItem('pomodoro-pomodoros') || '[]');
+                    let logsUpdated = 0;
+                    logs.forEach(l => {
+                        if (sentLogIds.has(l.id) && result.success) {
+                            if (l.sync === 0) {
+                                l.sync = 1;
+                                logsUpdated++;
+                            }
+                        }
+                    });
+                    if (logsUpdated > 0) {
+                        localStorage.setItem('pomodoro-pomodoros', JSON.stringify(logs));
+                        // console.log(`[Sync Button] ✅ Marked ${logsUpdated} logs as synced (backend ACKed)`);
+                    }
+
+                    // console.log('[Sync Button] ✅ Sync flags updated (backend-authoritative)');
+                } catch (e) {
+                    console.warn('[Sync Button] ⚠️ Failed to update sync flags:', e);
+                }
+
+                // ═══════════════════════════════════════════════════════════════════════
+                // 🛡️ GATE C - INVARIANT 1 ENFORCEMENT: Recalculate stats after sync
+                // This ensures sync doesn't leave stale 0/NaN values in localStorage
+                // ═══════════════════════════════════════════════════════════════════════
+                try {
+                    // console.log('[Sync Button] 🔧 GATE C: Recalculating stats after sync...');
+
+                    // Reload fresh data from localStorage
+                    const tasks = JSON.parse(localStorage.getItem('pomodoro-tasks') || '[]');
+                    const pomodoros = JSON.parse(localStorage.getItem('pomodoro-pomodoros') || '[]');
+
+                    if (tasks.length > 0 && pomodoros.length > 0 && window.SessionManager?.recalculateTaskStats) {
+                        const recalculatedTasks = window.SessionManager.recalculateTaskStats(tasks, pomodoros);
+                        localStorage.setItem('pomodoro-tasks', JSON.stringify(recalculatedTasks));
+                        // console.log('[Sync Button] ✅ GATE C: Stats recalculated and persisted');
+                    } else if (tasks.length > 0 && pomodoros.length === 0) {
+                        console.warn('[Sync Button] ⚠️ GATE C: No pomodoros to recalculate - stats may be 0');
+                    }
+                } catch (e) {
+                    console.error('[Sync Button] ❌ GATE C: Recalculation failed:', e);
+                }
+
+                // ✅ FIX: Update Sync Timestamp in UI
+                try {
+                    // Try multiple selectors for the timestamp
+                    const timestampSelectors = [
+                        '.UserDropdownMenu-menu-KviKX', // The one seen in logs
+                        '[class*="UserDropdownMenu-menu"]',
+                        '.sync-time',
+                        '.last-synced'
+                    ];
+
+                    for (const selector of timestampSelectors) {
+                        const els = document.querySelectorAll(selector);
+                        els.forEach(el => {
+                            if (el.textContent.includes('Synced') || el.textContent.includes('ago')) {
+                                el.textContent = 'Last synced: Just now';
+                                el.style.color = '#4caf50'; // Green to indicate success
+                            }
+                        });
+                    }
+
+                    // Also update main.js internal timestamp if possible
+                    // This is a global hack to reset the "20449 days" calculation
+                    const now = new Date().getTime();
+                    if (window.f && window.f.default && window.f.default.shared) {
+                        window.f.default.shared.syncTimestamp = now;
+                    }
+
+                    // 🕒 TIME AUTHORITY FIX: Persist to localStorage
+                    // This ensures the fix survives a page reload
+                    localStorage.setItem('SyncTimestamp', now);
+                    localStorage.setItem('lastSyncTime', now); // Redundant backup
+
+                } catch (e) {
+                    console.warn('[Sync Button] Failed to update UI timestamp:', e);
+                }
+
+                // ✅ POST-SYNC INTEGRITY CHECK
+                if (window.IndexedDBGuardian) {
+                    // console.log('[Sync Button] 🔍 Validating post-sync integrity...');
+                    const integrity = await window.IndexedDBGuardian.validate();
+                    if (!integrity.valid) {
+                        console.warn('[Sync Button] ⚠️ Missing system projects after sync, reseeding...');
+                        await window.IndexedDBGuardian.forceReseed();
+                    }
+                }
+
+                alert(`✅ Synced: ${result.projectsSynced || 0} projects, ${result.tasksSynced || 0} tasks, ${result.logsSynced || 0} logs`);
+            } catch (error) {
+                console.error('[Sync Button] ❌ Sync failed:', error);
+                // Even on error, ensure system projects exist
+                if (window.IndexedDBGuardian) {
+                    await window.IndexedDBGuardian.validate().then(r => {
+                        if (!r.valid) window.IndexedDBGuardian.forceReseed();
+                    }).catch(() => { });
+                }
+                alert('Sync failed: ' + error.message);
+            } finally {
+                // Always release sync lock
+                window._syncInProgress = false;
+                // console.log('[Sync Button] 🔓 Sync lock released');
             }
-
-            // Also update main.js internal timestamp if possible
-            // This is a global hack to reset the "20449 days" calculation
-            const now = new Date().getTime();
-            if (window.f && window.f.default && window.f.default.shared) {
-                window.f.default.shared.syncTimestamp = now;
-            }
-
-            // 🕒 TIME AUTHORITY FIX: Persist to localStorage
-            // This ensures the fix survives a page reload
-            localStorage.setItem('SyncTimestamp', now);
-            localStorage.setItem('lastSyncTime', now); // Redundant backup
-
-        } catch (e) {
-            console.warn('[Sync Button] Failed to update UI timestamp:', e);
+            return;
         }
-
-        // ✅ POST-SYNC INTEGRITY CHECK
-        if (window.IndexedDBGuardian) {
-            // console.log('[Sync Button] 🔍 Validating post-sync integrity...');
-            const integrity = await window.IndexedDBGuardian.validate();
-            if (!integrity.valid) {
-                console.warn('[Sync Button] ⚠️ Missing system projects after sync, reseeding...');
-                await window.IndexedDBGuardian.forceReseed();
-            }
-        }
-
-        alert(`✅ Synced: ${result.projectsSynced || 0} projects, ${result.tasksSynced || 0} tasks, ${result.logsSynced || 0} logs`);
-    } catch (error) {
-        console.error('[Sync Button] ❌ Sync failed:', error);
-        // Even on error, ensure system projects exist
-        if (window.IndexedDBGuardian) {
-            await window.IndexedDBGuardian.validate().then(r => {
-                if (!r.valid) window.IndexedDBGuardian.forceReseed();
-            }).catch(() => { });
-        }
-        alert('Sync failed: ' + error.message);
-    } finally {
-        // Always release sync lock
-        window._syncInProgress = false;
-        // console.log('[Sync Button] 🔓 Sync lock released');
-    }
-    return;
-}
 
         // Fallback to legacy sync (main.js handles it)
         // console.log('[Sync Button] Using legacy sync system...');
     }
 
-// Keyboard shortcut: Ctrl+Shift+S (or Cmd+Shift+S on Mac)
-document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'S') {
-        e.preventDefault();
-        // console.log('[Sync Button] ⌨️ Keyboard shortcut triggered (Ctrl+Shift+S)');
+    // Keyboard shortcut: Ctrl+Shift+S (or Cmd+Shift+S on Mac)
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'S') {
+            e.preventDefault();
+            // console.log('[Sync Button] ⌨️ Keyboard shortcut triggered (Ctrl+Shift+S)');
 
-        if (window.syncService && window.syncService.isAuthenticated()) {
-            window.syncService.syncAll().then(() => {
-                // console.log('[Sync Button] ✅ Keyboard sync completed');
-            }).catch((err) => {
-                console.error('[Sync Button] ❌ Keyboard sync failed:', err);
-            });
+            if (window.syncService && window.syncService.isAuthenticated()) {
+                window.syncService.syncAll().then(() => {
+                    // console.log('[Sync Button] ✅ Keyboard sync completed');
+                }).catch((err) => {
+                    console.error('[Sync Button] ❌ Keyboard sync failed:', err);
+                });
+            }
         }
+    });
+
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initSyncButton);
+    } else {
+        initSyncButton();
     }
-});
 
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initSyncButton);
-} else {
-    initSyncButton();
-}
-
-// Also try after a short delay in case DOM is still building
-setTimeout(initSyncButton, 1000);
-setTimeout(initSyncButton, 3000);
+    // Also try after a short delay in case DOM is still building
+    setTimeout(initSyncButton, 1000);
+    setTimeout(initSyncButton, 3000);
 
     // console.log('[Sync Button Handler] ✅ Loaded (awaiting DOM ready)');
-}) ();
+})();
