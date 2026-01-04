@@ -530,6 +530,8 @@
         if (!dbName) {
             console.log('[Guardian] ⏸️ No user logged in - skipping initialization');
             console.log('[Guardian] Will initialize after user logs in');
+            // CRITICAL: Mark as initialized so guardian-loader releases main.js
+            Guardian.initialized = true;
             return;
         }
 

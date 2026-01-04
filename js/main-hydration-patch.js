@@ -49,12 +49,15 @@
             return false;
         }
 
-        // Check 3: UI is actually visible (not just login form)
+        // Check 3: UI is actually visible (Home/Task OR Login Screen)
         const hasMainUI = root.querySelector('[class*="Home"]') ||
             root.querySelector('[class*="Task"]') ||
             root.querySelector('[class*="Project"]');
 
-        return Boolean(hasMainUI);
+        // Check 4: Login Screen is visible (Found password input)
+        const hasLoginUI = root.querySelector('input[type="password"]');
+
+        return Boolean(hasMainUI || hasLoginUI);
     }
 
     /**

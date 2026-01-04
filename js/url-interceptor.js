@@ -7,7 +7,8 @@
 (function () {
     'use strict';
 
-    // ✅ DISABLED: Using local backend instead of Render
+    // ✅ ENABLED: Redirect localhost requests to Render backend
+    // This allows the local frontend to talk to the production database
     const BACKEND_URL = 'https://second-brain-backend-saxs.onrender.com';
 
     console.log('[URL Interceptor] Installing localhost → Render redirector...');

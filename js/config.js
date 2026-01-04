@@ -10,14 +10,8 @@
 
         // Get API base URL
         getApiBaseUrl: function () {
-            // Production: Use Render backend URL
-            // UPDATE THIS after deploying backend to Render!
-            if (!this.isDevelopment) {
-                return 'https://second-brain-backend-saxs.onrender.com';
-            }
-
-            // Development: backend on port 3000
-            return 'http://localhost:3000';
+            // FORCE PRODUCTION URL: We want local frontend to talk to Render backend
+            return 'https://second-brain-backend-saxs.onrender.com';
         },
 
         // Get full API URL for an endpoint
