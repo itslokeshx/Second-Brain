@@ -1,4 +1,4 @@
-const express = require('express');
+const express = require('express'); // Validation Active
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const { v4: uuidv4 } = require('uuid');
