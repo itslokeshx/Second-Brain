@@ -107,14 +107,20 @@ router.post('/all', authMiddleware, async (req, res) => {
                 await Pomodoro.findOneAndUpdate(
                     { userId, id: log.id },
                     {
-                        ...log,
-                        userId  // Override with server authority
+                        ...log,              // spread client data first
+                        userId,              // override authority
+                        ...(log.status === 'completed' && (
+                            !log.startTime || !log.endTime || !log.duration ||
+                            log.endTime <= log.startTime || log.duration <= 0
+                        )
+                            ? { status: 'cancelled', startTime: 0, endTime: 0, duration: 0 }
+                            : {})
                     },
                     {
                         upsert: true,
                         new: true,
-                        runValidators: true,  // CRITICAL: Enable schema validation
-                        context: 'query'      // Required for 'this' in validators
+                        runValidators: true,   // ENABLE schema validation
+                        context: 'query'       // REQUIRED for validators using this.status
                     }
                 );
                 results.logsSynced++;
@@ -242,14 +248,20 @@ router.post('/logs', authMiddleware, async (req, res) => {
                 await Pomodoro.findOneAndUpdate(
                     { userId, id: log.id },
                     {
-                        ...log,
-                        userId  // Override with server authority
+                        ...log,              // spread client data first
+                        userId,              // override authority
+                        ...(log.status === 'completed' && (
+                            !log.startTime || !log.endTime || !log.duration ||
+                            log.endTime <= log.startTime || log.duration <= 0
+                        )
+                            ? { status: 'cancelled', startTime: 0, endTime: 0, duration: 0 }
+                            : {})
                     },
                     {
                         upsert: true,
                         new: true,
-                        runValidators: true,  // CRITICAL: Enable schema validation
-                        context: 'query'      // Required for 'this' in validators
+                        runValidators: true,   // ENABLE schema validation
+                        context: 'query'       // REQUIRED for validators using this.status
                     }
                 );
                 syncedCount++;
