@@ -6,6 +6,7 @@ const Project = require('../models/Project');
 const Task = require('../models/Task');
 const Pomodoro = require('../models/Pomodoro');
 const Settings = require('../models/Settings');
+const { validatePomodoroTimeData } = require('../utils/pomodoroValidation');
 
 // ✅ Auth Middleware
 const authMiddleware = async (req, res, next) => {
@@ -96,6 +97,13 @@ router.post('/all', authMiddleware, async (req, res) => {
             console.log(`[Sync All] Syncing ${pomodoroLogs.length} logs...`);
 
             for (const log of pomodoroLogs) {
+                // Validate before sync
+                const validationErrors = validatePomodoroTimeData(log);
+                if (validationErrors.length > 0) {
+                    console.error(`[Sync All] ❌ Skipping invalid Pomodoro ${log.id}:`, validationErrors);
+                    continue;
+                }
+
                 await Pomodoro.findOneAndUpdate(
                     { userId, id: log.id },
                     {
@@ -219,6 +227,13 @@ router.post('/logs', authMiddleware, async (req, res) => {
 
         if (logs && Array.isArray(logs)) {
             for (const log of logs) {
+                // Validate before sync
+                const validationErrors = validatePomodoroTimeData(log);
+                if (validationErrors.length > 0) {
+                    console.error(`[Sync Logs] ❌ Skipping invalid Pomodoro ${log.id}:`, validationErrors);
+                    continue;
+                }
+
                 await Pomodoro.findOneAndUpdate(
                     { userId, id: log.id },
                     { userId, ...log },
