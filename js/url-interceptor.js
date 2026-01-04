@@ -8,7 +8,7 @@
     'use strict';
 
     // ✅ DISABLED: Using local backend instead of Render
-    const BACKEND_URL = null; // 'https://second-brain-backend-saxs.onrender.com';
+    const BACKEND_URL = 'https://second-brain-backend-saxs.onrender.com';
 
     console.log('[URL Interceptor] Installing localhost → Render redirector...');
     console.log('[URL Interceptor] Target:', BACKEND_URL || 'localhost:3000 (local)');
