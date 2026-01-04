@@ -92,41 +92,39 @@ router.post('/all', authMiddleware, async (req, res) => {
             console.log(`[Sync All] ✅ ${results.tasksSynced} tasks synced`);
         }
 
-        // ✅ 3. Sync Pomodoro Logs to SEPARATE collection
+        // ✅ 3. Sync Pomodoro Logs to SEPARATE collection - WITH FIREWALL PROTECTION
+        let logsRejected = 0;
         if (pomodoroLogs && Array.isArray(pomodoroLogs) && pomodoroLogs.length > 0) {
             console.log(`[Sync All] Syncing ${pomodoroLogs.length} logs...`);
 
             for (const log of pomodoroLogs) {
-                // Validate before sync
+                // ✅ FIREWALL: Reject corrupt pomodoros BEFORE MongoDB write
                 const validationErrors = validatePomodoroTimeData(log);
                 if (validationErrors.length > 0) {
-                    console.error(`[Sync All] ❌ Skipping invalid Pomodoro ${log.id}:`, validationErrors);
-                    continue;
+                    console.error(`[Firewall] ❌ REJECTED invalid Pomodoro ${log.id}:`, validationErrors);
+                    logsRejected++;
+                    continue; // Skip this record entirely
                 }
 
+                // Only write valid pomodoros to MongoDB
                 await Pomodoro.findOneAndUpdate(
                     { userId, id: log.id },
                     {
-                        ...log,              // spread client data first
-                        userId,              // override authority
-                        ...(log.status === 'completed' && (
-                            !log.startTime || !log.endTime || !log.duration ||
-                            log.endTime <= log.startTime || log.duration <= 0
-                        )
-                            ? { status: 'cancelled', startTime: 0, endTime: 0, duration: 0 }
-                            : {})
+                        ...log,
+                        userId
                     },
                     {
                         upsert: true,
                         new: true,
-                        runValidators: true,   // ENABLE schema validation
-                        context: 'query'       // REQUIRED for validators using this.status
+                        runValidators: true,
+                        context: 'query'
                     }
                 );
                 results.logsSynced++;
             }
-            console.log(`[Sync All] ✅ ${results.logsSynced} logs synced`);
+            console.log(`[Sync All] ✅ ${results.logsSynced} logs synced, ${logsRejected} rejected`);
         }
+        results.logsRejected = logsRejected;
 
         // ✅ 4. Sync Settings to SEPARATE collection
         if (settings && typeof settings === 'object' && Object.keys(settings).length > 0) {
@@ -229,39 +227,36 @@ router.post('/tasks', authMiddleware, async (req, res) => {
     }
 });
 
-// 3. Logs (Pomodoro)
+// 3. Logs (Pomodoro) - WITH FIREWALL PROTECTION
 router.post('/logs', authMiddleware, async (req, res) => {
     try {
-        const { logs } = req.body; // Frontend sends 'logs' locally, but collection is pomodorologs
+        const { logs } = req.body;
         const userId = req.userId;
         let syncedCount = 0;
+        let rejectedCount = 0;
 
         if (logs && Array.isArray(logs)) {
             for (const log of logs) {
-                // Validate before sync
+                // ✅ FIREWALL: Reject corrupt pomodoros BEFORE MongoDB write
                 const validationErrors = validatePomodoroTimeData(log);
                 if (validationErrors.length > 0) {
-                    console.error(`[Sync Logs] ❌ Skipping invalid Pomodoro ${log.id}:`, validationErrors);
-                    continue;
+                    console.error(`[Firewall] ❌ REJECTED invalid Pomodoro ${log.id}:`, validationErrors);
+                    rejectedCount++;
+                    continue; // Skip this record entirely
                 }
 
+                // Only write valid pomodoros to MongoDB
                 await Pomodoro.findOneAndUpdate(
                     { userId, id: log.id },
                     {
-                        ...log,              // spread client data first
-                        userId,              // override authority
-                        ...(log.status === 'completed' && (
-                            !log.startTime || !log.endTime || !log.duration ||
-                            log.endTime <= log.startTime || log.duration <= 0
-                        )
-                            ? { status: 'cancelled', startTime: 0, endTime: 0, duration: 0 }
-                            : {})
+                        ...log,
+                        userId
                     },
                     {
                         upsert: true,
                         new: true,
-                        runValidators: true,   // ENABLE schema validation
-                        context: 'query'       // REQUIRED for validators using this.status
+                        runValidators: true,
+                        context: 'query'
                     }
                 );
                 syncedCount++;
@@ -273,6 +268,8 @@ router.post('/logs', authMiddleware, async (req, res) => {
         res.json({
             success: true,
             logs: latestLogs,
+            syncedCount,
+            rejectedCount,
             syncTime: new Date().toISOString()
         });
     } catch (error) {

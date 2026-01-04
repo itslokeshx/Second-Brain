@@ -60,4 +60,44 @@ const validatePomodoroTimeData = (pomodoro) => {
     return errors;
 };
 
-module.exports = { validatePomodoroTimeData };
+/**
+ * ✅ FIREWALL MODE: Strict validation that throws on invalid data
+ * Use this in sync endpoints to REJECT corrupt pomodoros before MongoDB write
+ * 
+ * @param {Object} pomodoro - Pomodoro object to validate
+ * @throws {Error} If validation fails
+ */
+const rejectInvalidPomodoro = (pomodoro) => {
+    const errors = validatePomodoroTimeData(pomodoro);
+
+    if (errors.length > 0) {
+        const errorMsg = `Invalid Pomodoro (id: ${pomodoro.id || 'unknown'}): ${errors.join(', ')}`;
+        throw new Error(errorMsg);
+    }
+};
+
+/**
+ * ✅ Check if a pomodoro is corrupt (completed with zero timestamps)
+ * This is the specific pattern that causes NaN cascades
+ * 
+ * @param {Object} pomodoro - Pomodoro object to check
+ * @returns {boolean} True if corrupt
+ */
+const isCorruptPomodoro = (pomodoro) => {
+    if (!pomodoro || pomodoro.status !== 'completed') {
+        return false;
+    }
+
+    return (
+        !pomodoro.startTime || pomodoro.startTime <= 0 ||
+        !pomodoro.endTime || pomodoro.endTime <= 0 ||
+        !pomodoro.duration || pomodoro.duration <= 0 ||
+        pomodoro.endTime <= pomodoro.startTime
+    );
+};
+
+module.exports = {
+    validatePomodoroTimeData,
+    rejectInvalidPomodoro,
+    isCorruptPomodoro
+};

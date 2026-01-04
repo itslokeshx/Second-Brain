@@ -578,31 +578,44 @@ app.post('/api/sync/all', verifySession, async (req, res) => {
             console.log(`[Sync All] Tasks synced: ${tasksSynced}`);
         }
 
-        // Sync Pomodoro Logs - WITH VALIDATION
+        // Sync Pomodoro Logs - WITH FIREWALL PROTECTION
+        let logsRejected = 0;
         if (pomodoroLogs.length > 0) {
+            const { validatePomodoroTimeData, isCorruptPomodoro } = require('./utils/pomodoroValidation');
+
             for (const log of pomodoroLogs) {
+                // ✅ FIREWALL: Reject corrupt pomodoros BEFORE MongoDB write
+                if (isCorruptPomodoro(log)) {
+                    console.error(`[Firewall] ❌ REJECTED corrupt Pomodoro ${log.id}: status=completed with zero timestamps`);
+                    logsRejected++;
+                    continue; // Skip this record entirely
+                }
+
+                // Additional validation for all statuses
+                const errors = validatePomodoroTimeData(log);
+                if (errors.length > 0) {
+                    console.error(`[Firewall] ❌ REJECTED invalid Pomodoro ${log.id}:`, errors);
+                    logsRejected++;
+                    continue; // Skip this record entirely
+                }
+
+                // Only write valid pomodoros to MongoDB
                 await Pomodoro.findOneAndUpdate(
                     { id: log.id, userId: userId },
                     {
-                        ...log,              // spread client data first
-                        userId,              // override authority
-                        ...(log.status === 'completed' && (
-                            !log.startTime || !log.endTime || !log.duration ||
-                            log.endTime <= log.startTime || log.duration <= 0
-                        )
-                            ? { status: 'cancelled', startTime: 0, endTime: 0, duration: 0 }
-                            : {})
+                        ...log,
+                        userId
                     },
                     {
                         upsert: true,
                         new: true,
-                        runValidators: true,   // ENABLE schema validation
-                        context: 'query'       // REQUIRED for validators using this.status
+                        runValidators: true,
+                        context: 'query'
                     }
                 );
                 logsSynced++;
             }
-            console.log(`[Sync All] Logs synced: ${logsSynced}`);
+            console.log(`[Sync All] Logs synced: ${logsSynced}, rejected: ${logsRejected}`);
         }
 
         console.log(`[Sync All] ✅ Complete - P:${projectsSynced} T:${tasksSynced} L:${logsSynced}`);
@@ -612,7 +625,8 @@ app.post('/api/sync/all', verifySession, async (req, res) => {
             message: 'Data synced to MongoDB',
             projectsSynced,
             tasksSynced,
-            logsSynced
+            logsSynced,
+            logsRejected: logsRejected || 0
         });
 
     } catch (error) {

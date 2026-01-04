@@ -15,7 +15,7 @@ router.get('/', protect, async (req, res) => {
     }
 });
 
-// @desc    Sync logs (Bulk upsert)
+// @desc    Sync logs (Bulk upsert) - WITH FIREWALL PROTECTION
 // @route   POST /api/pomodoro-logs/sync
 // @access  Private
 router.post('/sync', protect, async (req, res) => {
@@ -26,22 +26,40 @@ router.post('/sync', protect, async (req, res) => {
     }
 
     try {
-        const ops = data.map(log => {
-            return {
+        const { validatePomodoroTimeData } = require('../utils/pomodoroValidation');
+        const ops = [];
+        let rejectedCount = 0;
+
+        for (const log of data) {
+            // ✅ FIREWALL: Validate before adding to bulk operation
+            const errors = validatePomodoroTimeData(log);
+            if (errors.length > 0) {
+                console.error(`[Firewall] ❌ REJECTED invalid Pomodoro ${log.id}:`, errors);
+                rejectedCount++;
+                continue; // Skip this record entirely
+            }
+
+            ops.push({
                 updateOne: {
                     filter: { id: log.id, userId: req.user._id },
                     update: { ...log, userId: req.user._id },
                     upsert: true
                 }
-            };
-        });
+            });
+        }
 
         if (ops.length > 0) {
             await Pomodoro.bulkWrite(ops);
         }
 
         const allLogs = await Pomodoro.find({ userId: req.user._id });
-        res.json(allLogs);
+
+        res.json({
+            success: true,
+            logs: allLogs,
+            syncedCount: ops.length,
+            rejectedCount
+        });
 
     } catch (error) {
         console.error(error);
