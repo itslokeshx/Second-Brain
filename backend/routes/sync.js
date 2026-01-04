@@ -107,10 +107,15 @@ router.post('/all', authMiddleware, async (req, res) => {
                 await Pomodoro.findOneAndUpdate(
                     { userId, id: log.id },
                     {
-                        userId,
-                        ...log
+                        ...log,
+                        userId  // Override with server authority
                     },
-                    { upsert: true, new: true }
+                    {
+                        upsert: true,
+                        new: true,
+                        runValidators: true,  // CRITICAL: Enable schema validation
+                        context: 'query'      // Required for 'this' in validators
+                    }
                 );
                 results.logsSynced++;
             }
@@ -236,8 +241,16 @@ router.post('/logs', authMiddleware, async (req, res) => {
 
                 await Pomodoro.findOneAndUpdate(
                     { userId, id: log.id },
-                    { userId, ...log },
-                    { upsert: true, new: true }
+                    {
+                        ...log,
+                        userId  // Override with server authority
+                    },
+                    {
+                        upsert: true,
+                        new: true,
+                        runValidators: true,  // CRITICAL: Enable schema validation
+                        context: 'query'      // Required for 'this' in validators
+                    }
                 );
                 syncedCount++;
             }
