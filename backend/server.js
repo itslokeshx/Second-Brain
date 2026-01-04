@@ -1,4 +1,4 @@
-const express = require('express'); // Validation Active + runValidators Enabled
+const express = require('express'); // FIXED: bulkWrite bypass + validation enabled
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const { v4: uuidv4 } = require('uuid');
@@ -578,17 +578,30 @@ app.post('/api/sync/all', verifySession, async (req, res) => {
             console.log(`[Sync All] Tasks synced: ${tasksSynced}`);
         }
 
-        // Sync Pomodoro Logs
+        // Sync Pomodoro Logs - WITH VALIDATION
         if (pomodoroLogs.length > 0) {
-            const ops = pomodoroLogs.map(l => ({
-                updateOne: {
-                    filter: { id: l.id, userId: userId },
-                    update: { $set: { ...l, userId: userId } },
-                    upsert: true
-                }
-            }));
-            const result = await Pomodoro.bulkWrite(ops);
-            logsSynced = result.upsertedCount + result.modifiedCount;
+            for (const log of pomodoroLogs) {
+                await Pomodoro.findOneAndUpdate(
+                    { id: log.id, userId: userId },
+                    {
+                        ...log,              // spread client data first
+                        userId,              // override authority
+                        ...(log.status === 'completed' && (
+                            !log.startTime || !log.endTime || !log.duration ||
+                            log.endTime <= log.startTime || log.duration <= 0
+                        )
+                            ? { status: 'cancelled', startTime: 0, endTime: 0, duration: 0 }
+                            : {})
+                    },
+                    {
+                        upsert: true,
+                        new: true,
+                        runValidators: true,   // ENABLE schema validation
+                        context: 'query'       // REQUIRED for validators using this.status
+                    }
+                );
+                logsSynced++;
+            }
             console.log(`[Sync All] Logs synced: ${logsSynced}`);
         }
 
