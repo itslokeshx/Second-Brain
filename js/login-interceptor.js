@@ -78,7 +78,7 @@
 
                             // Show success message
                             if (window.showNotification) {
-                                window.showNotification('Registration successful! Please login.', 'success', 3000);
+                                window.showNotification('Registration successful! Please login.', 'success', 2000);
                             }
 
                             // ✅ CRITICAL: Clear ALL cookies to prevent auto-login
@@ -91,6 +91,13 @@
                             }
                             console.log('[Login Interceptor] 🧹 Cookies cleared - user must login manually');
 
+                            // ✅ Reload page immediately to ensure clean state
+                            // Use setTimeout(0) to ensure cookies are fully cleared before reload
+                            console.log('[Login Interceptor] 🔄 Reloading page immediately...');
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 100); // Minimal delay to ensure cookies are cleared
+
                             // DO NOT CALL originalOnLoad - this prevents main.js from logging in
                             return;
                         }
@@ -100,18 +107,12 @@
                             window.showNotification('Login successful!', 'success', 2000);
                         }
 
-                        // ✅ CRITICAL: Trigger SessionManager to initialize Guardian + Mutex
-                        // Without this, Guardian/Mutex stay uninitialized after UI login
-                        // causing sync to fail with "Hydration not ready" error
-                        setTimeout(() => {
-                            if (window.SessionManager && window.SessionManager.checkLoginStatus) {
-                                console.log('[Login Interceptor] 🔄 Triggering SessionManager.checkLoginStatus()...');
-                                window.SessionManager.checkLoginStatus();
-                            }
-                        }, 500); // Small delay to let cookies settle
+                        // ✅ LOGIN: Reload page immediately for clean UI render
+                        console.log('[Login Interceptor] 🔄 Reloading page immediately...');
+                        window.location.reload();
 
-                        // ✅ NO RELOAD - Let main.js render the UI naturally
-                        console.log('[Login Interceptor] Allowing main.js to render UI...');
+                        // DO NOT CALL originalOnLoad - reload will handle everything
+                        return;
                     }
                 } catch (e) {
                     console.error('[Login Interceptor] Error parsing response:', e);
