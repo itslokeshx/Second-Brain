@@ -215,19 +215,6 @@
             orderingRule: 0,
             order: -2020,
             color: '#4A90D9'
-        },
-
-        // ═══════════════════════════════════════════════════════════════════
-        // LEGACY/COMPATIBILITY IDs (keep for backward compatibility)
-        // ═══════════════════════════════════════════════════════════════════
-        {
-            ...baseProject,
-            id: '0',
-            name: 'Tasks',
-            type: 1000,     // l.project = 1e3 = 1000 (regular project)
-            deadline: 0,
-            order: 100,
-            color: '#4A90D9'
         }
     ];
 
