@@ -6,6 +6,9 @@
 
 **🔧 Independent re-engineering of the Focus To-Do UI into an open offline-first architecture**
 
+🌐 **Live App:**
+👉 [https://second-brain-hub.vercel.app/](https://second-brain-hub.vercel.app/)
+
 </div>
 
 ---
@@ -35,7 +38,6 @@ Second Brain is a **personal productivity vault**, not a subscription service.
 | ☁️ Free unlimited cloud backup | Yes                |
 | 🛡️ Corruption-safe sync       | Triple-layer guard |
 | 💳 Subscription                | Never              |
-| 🔒 Vendor lock-in              | None               |
 | 👤 Data ownership              | 100% yours         |
 
 ---
@@ -158,7 +160,10 @@ MIT
 
 ---
 
-## 🧠 Final Words
+<div align="center">
 
-Second Brain is not a todo app.
-It is a **personal productivity operating system built to preserve your life’s work.**
+### Made with ❤️ by **Loki**
+
+⭐ If you find this useful, consider giving the repository a star!
+
+</div>
