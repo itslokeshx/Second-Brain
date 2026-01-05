@@ -68,95 +68,101 @@ Second Brain is a **personal productivity vault**, not a subscription service.
 
 ## 🛡️ Bulletproof Persistence Engine
 
-Second Brain includes a **three-layer corruption prevention system**:
-
 | Layer                  | Purpose                           |
 | ---------------------- | --------------------------------- |
 | 🧱 Write Interceptor   | Blocks destructive overwrites     |
 | 🔁 Atomic Cursor Merge | Prevents race-condition sync bugs |
 | ⏳ Debounce Guard       | Stops rapid-fire corruption       |
 
-This prevents schema drift, hydration loops, and sync-time data loss.
+---
+
+## 🏗️ Architecture & File Structure
+
+### High-Level Architecture
+
+
+```
+UI (React bundle)
+   ↓
+Integrity Guard Layer
+   ↓
+IndexedDB (Primary Store)
+localStorage (Backup)
+   ↓
+Sync Orchestrator
+   ↓
+Node.js API
+   ↓
+MongoDB Cloud
+```
 
 ---
 
-## 🏗️ System Architecture
+### 📁 Project Structure
 
 ```
-🖥️ UI (React bundle)
-      ↓
-🛡️ Integrity Guard Layer
-      ↓
-📦 IndexedDB (primary local store)
-📦 localStorage (secondary backup)
-      ↓
-🔄 Sync Orchestrator
-      ↓
-🧠 Node.js API
-      ↓
-☁️ MongoDB Cloud
+Second-Brain/
+├── backend/           # Express + MongoDB API
+├── js/                # Frontend runtime & sync engine
+├── css/               # UI styles
+├── assets/            # Fonts, audio, images
+├── index.html
+├── main.css
+└── vercel.json / render.yaml
 ```
+
+---
+
+### 🎨 Frontend Runtime Flow
+
+1. Load HTML
+2. Initialize protection guards
+3. Validate IndexedDB
+4. Hydrate Redux
+5. Render UI
+6. App works offline
+
+---
+
+### 🔧 Backend Request Flow
+
+Request → CORS → Session → CookieParser → Auth → Routes → Response
+
 
 ---
 
 ## 🛠️ Tech Stack
 
-### Frontend
+**Frontend**
 
-* ⚙️ Vanilla JS + bundled React
-* 📦 IndexedDB
-* 🧰 localStorage (fallback)
+* React (bundled)
+* Redux
+* IndexedDB
+* localStorage
 
-### Backend
+**Backend**
 
-* 🧠 Node.js
-* 🚏 Express
-* 🗄️ MongoDB + Mongoose
-* 🔐 Session-based authentication
-
----
-
-## 🚀 Installation
-
-```bash
-git clone https://github.com/yourname/second-brain
-cd backend
-npm install
-npm run dev
-```
-
-Serve frontend:
-
-```bash
-npx serve .
-```
-
-Open:
-
-```
-http://localhost:8000
-```
+* Node.js
+* Express
+* MongoDB
+* Mongoose
+* bcrypt
+* express-session
 
 ---
 
 ## ⚖️ Attribution
 
-The UI layer is based on the Focus To-Do client.
-All persistence, sync, backend and integrity systems are original.
+UI based on Focus To-Do client.
+All persistence, sync, backend, and integrity systems are original.
 
 ---
 
 ## 👤 Who This Is For
 
-* 🎓 Students protecting long-term study history
-* 👨‍💻 Developers who value local-first systems
-* 😤 Anyone tired of losing data to subscriptions
-
----
-
-## 📄 License
-
-MIT
+- 🎯 People who take productivity seriously  
+- 🧠 Users who want permanent ownership of their data  
+- 😤 Anyone tired of losing productivity data
 
 ---
 
@@ -164,6 +170,7 @@ MIT
 
 ### Made with ❤️ by **Loki**
 
-⭐ If you find this useful, consider giving the repository a star!
+⭐ Star the repo if this helped you!
 
 </div>
+
