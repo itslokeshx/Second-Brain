@@ -78,6 +78,10 @@
                         // ✅ REGISTER: Immediate reload to render UI
                         if (isRegister) {
                             console.log('[Login Interceptor] 🔄 Registration complete - reloading page...');
+
+                            // ✅ CRITICAL: Clear the flag so next login will trigger reload
+                            sessionStorage.removeItem('reloaded-after-login');
+
                             setTimeout(() => {
                                 window.location.reload();
                             }, 1000); // 1 second delay to show success message
