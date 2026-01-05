@@ -112,8 +112,7 @@
                             window.location.reload();
                         }, 1000); // 1 second delay to show success message and let cookies settle
 
-                        // DO NOT CALL originalOnLoad - reload will handle everything
-                        return;
+
                     }
                 } catch (e) {
                     console.error('[Login Interceptor] Error parsing response:', e);
