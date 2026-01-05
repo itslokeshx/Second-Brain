@@ -92,16 +92,17 @@
                 if (data.status === 0 && data.success !== false && data.acct && data.uid) {
                     loginSuccessful = true;
                     console.log('[Cookie Protector] ✅ Login successful - cookies will be allowed');
+
+                    // Reset after 10 seconds to give main.js time to initialize
+                    setTimeout(() => {
+                        loginInProgress = false;
+                    }, 10000);
                 } else {
                     loginSuccessful = false;
-                    console.log('[Cookie Protector] ❌ Login FAILED - cookies will be BLOCKED');
+                    loginInProgress = false; // ✅ FIX: Reset immediately on failure to allow retry
+                    console.log('[Cookie Protector] ❌ Login FAILED - resetting state for retry');
                     console.log('[Cookie Protector] Response:', data);
                 }
-
-                // Reset after 10 seconds to give main.js time to initialize
-                setTimeout(() => {
-                    loginInProgress = false;
-                }, 10000);
             }
         } catch (e) {
             console.error('[Cookie Protector] Error parsing response:', e);
