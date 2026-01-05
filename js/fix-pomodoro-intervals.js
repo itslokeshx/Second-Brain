@@ -1,21 +1,10 @@
-// ═══════════════════════════════════════════════════════════════════════
-// 🔧 POMODORO INTERVAL FIX
-// ═══════════════════════════════════════════════════════════════════════
-// 
-// This script normalizes all tasks to have the default 25-minute pomodoro interval
-// Run this in the browser console to fix tasks with incorrect intervals
-// ═══════════════════════════════════════════════════════════════════════
-
 (function () {
     'use strict';
 
-    console.log('[Pomo Interval Fix] 📦 Loaded');
-    console.log('[Pomo Interval Fix] Run window.fixPomodoroIntervals() to normalize all task intervals to 25 minutes');
+
 
     window.fixPomodoroIntervals = function () {
-        console.log('═══════════════════════════════════════════════════════════');
-        console.log('🔧 FIXING POMODORO INTERVALS');
-        console.log('═══════════════════════════════════════════════════════════\n');
+
 
         const DEFAULT_INTERVAL = 1500; // 25 minutes in seconds
 
@@ -27,14 +16,12 @@
             if (!task.pomodoroInterval || task.pomodoroInterval !== DEFAULT_INTERVAL) {
                 const oldInterval = task.pomodoroInterval || 0;
                 task.pomodoroInterval = DEFAULT_INTERVAL;
-                console.log(`✅ Fixed task "${task.name}": ${oldInterval}s → ${DEFAULT_INTERVAL}s`);
                 fixedCount++;
             }
         });
 
         if (fixedCount > 0) {
             localStorage.setItem('pomodoro-tasks', JSON.stringify(tasks));
-            console.log(`\n✅ Fixed ${fixedCount} task(s) in localStorage`);
 
             // Dispatch storage event to trigger UI update
             window.dispatchEvent(new StorageEvent('storage', {
@@ -43,19 +30,12 @@
                 url: window.location.href
             }));
 
-            console.log('✅ Dispatched storage event to update UI');
-        } else {
-            console.log('\n✅ All tasks already have correct intervals (1500s = 25min)');
         }
 
         // Fix IndexedDB
-        console.log('\n🔄 Fixing IndexedDB...');
-
         const userId = localStorage.getItem('userId');
         if (!userId) {
-            console.error('❌ No userId found in localStorage');
-            console.log('💡 localStorage was fixed, but IndexedDB requires userId');
-            console.log('🔄 Please refresh the page to complete the fix');
+
             return;
         }
 
@@ -81,11 +61,7 @@
                 });
 
                 transaction.oncomplete = function () {
-                    console.log(`✅ Fixed ${idbFixedCount} task(s) in IndexedDB`);
-                    console.log('\n═══════════════════════════════════════════════════════════');
-                    console.log('✅ ALL FIXES COMPLETE');
-                    console.log('🔄 Please refresh the page to see changes');
-                    console.log('═══════════════════════════════════════════════════════════\n');
+
                 };
             };
         };

@@ -503,7 +503,6 @@
     <script src="js/login-interceptor.js"></script>
     <script src="js/fix-json-only.js?v=2000"></script>
     <script src="js/cookie-protector.js?v=3000"></script>
-    <script src="js/cookie-injector.js?v=2001"></script>
     <script src="js/cookie-patcher.js?v=3002"></script>
     <script src="js/main-patcher.js?v=2003"></script>
     <script src="js/config.js"></script>
@@ -537,25 +536,16 @@
 
     <script>
         (async () => {
-            console.log('[Loader] Waiting for hydration...');
             const result = await window.__HYDRATION_COMPLETE__;
 
-            console.log('[Loader] Hydration result:', result);
-
-            console.log('[Loader] Loading main.js...');
-
-            // Load hydration patch BEFORE main.js
             const patchScript = document.createElement('script');
             patchScript.src = 'js/main-hydration-patch.js';
             document.body.appendChild(patchScript);
 
-            // Then load main.js
             const script = document.createElement('script');
             script.type = 'text/javascript';
             script.src = 'js/main.js';
             script.onload = () => {
-                console.log('[Loader] ✅ main.js loaded');
-
                 const fixerScript = document.createElement('script');
                 fixerScript.src = 'js/username-display-fixer.js?v=1000';
                 document.body.appendChild(fixerScript);

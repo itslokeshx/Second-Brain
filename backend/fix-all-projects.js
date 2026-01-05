@@ -1,14 +1,4 @@
-#!/usr/bin/env node
-/**
- * Fix ALL project fields in MongoDB
- * ═══════════════════════════════════════════════════════════════════════════
- * Ensures all projects have the required fields for main.js IndexedDB queries:
- * - state: 0 or 1 (required for state index)
- * - order: number (required for sorting)
- * - sync: 1 (synced)
- * - type: number (NOT string "0")
- * ═══════════════════════════════════════════════════════════════════════════
- */
+
 
 const mongoose = require('mongoose');
 require('dotenv').config();

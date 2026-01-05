@@ -169,12 +169,6 @@ const handleAuth = async (req, res, isLogin = false) => {
         // Get client IP
         const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
 
-        // RATE LIMITING DISABLED - Unlimited login attempts allowed
-        // const rateCheck = checkRateLimit(clientIp);
-        // if (!rateCheck.allowed) {
-        //     console.log(`[Auth] ❌ Rate limit exceeded for IP: ${clientIp}`);
-        //     return res.json({ status: 1, success: false, message: rateCheck.message });
-        // }
 
         const { account, password } = req.body;
 
@@ -266,8 +260,7 @@ const handleAuth = async (req, res, isLogin = false) => {
         console.log(`  Session ID: ${req.sessionID}`);
         console.log(`  Session Data:`, req.session.user);
 
-        // ✅ SET COOKIES - Remove domain to allow JavaScript access
-        // ✅ CRITICAL: Set PID=0 (default project ID) - main.js requires this or it crashes
+
         res.setHeader('Set-Cookie', [
             `ACCT=${encodeURIComponent(user.email)}; Path=/; HttpOnly=false; SameSite=Lax; Max-Age=86400`,
             `NAME=${encodeURIComponent(user.name)}; Path=/; HttpOnly=false; SameSite=Lax; Max-Age=86400`,
@@ -312,10 +305,7 @@ const verifySession = async (req, res, next) => {
     // Fallback to token
     let token = req.headers['x-session-token'] || req.headers['authorization']?.replace('Bearer ', '');
     if (token) {
-        // ✅ FIX: Remove signature prefix from signed cookies (handle double-signing)
-        // Express-session signs cookies with 's:' prefix
-        // Sometimes tokens are double-signed: "s:s:sessionId.sig.sig"
-        // We need to extract until we get the raw session ID
+
         while (token.startsWith('s:')) {
             token = token.substring(2).split('.')[0]; // Remove 's:' and signature
             console.log('[Auth] Extracted layer, token now:', token.substring(0, 20) + '...');
@@ -440,16 +430,11 @@ const syncHandler = async (req, res) => {
 
             console.log(`[Sync] ✅ Loaded: ${projects.length} projects, ${tasks.length} tasks, ${pomodoros.length} pomodoros`);
 
-            // ... (rest of the logic will need to be refactored or copied)
-            // better to just use the existing function if possible, but I need to extract it first.
-            // OR just map both routes to the same inline function.
 
-            // Actually, I can't easily extract the inline function without rewriting a huge block.
-            // I'll just change the app.post line to handle both or mount it on a variable.
         }
-        // ...
+
     } catch (e) {
-        // ...
+
     }
 }
 
@@ -493,13 +478,11 @@ app.post(['/v64/sync', '/api/sync-data'], verifySession, async (req, res) => {
             };
         });
 
-        // ✅ REMOVED: Phantom project injection
-        // Frontend handles default project creation via data-sanitizer.js
-        // Server should NOT inject defaults as it creates duplicates
+
 
         const projectIds = new Set(normalizedProjects.map(p => String(p.id)));
 
-        // 2. Fix Orphaned Tasks
+
         const normalizedTasks = tasks.map(t => {
             const pid = String(t.parentId || t.projectId || '');
             const targetPid = projectIds.has(pid) ? pid : '0'; // Fallback to Inbox

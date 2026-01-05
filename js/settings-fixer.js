@@ -2,7 +2,6 @@
 (function () {
     'use strict';
 
-    console.log('[Settings Fixer] Initializing...');
 
     // Monitor for settings page opening
     const observer = new MutationObserver(() => {
@@ -12,7 +11,6 @@
         usernameInputs.forEach(input => {
             // If input value contains garbage characters
             if (input.value && (input.value.includes('�') || input.value.includes('%G'))) {
-                console.log('[Settings Fixer] Found corrupted input, fixing...');
 
                 // Get username from cookies
                 const cookies = document.cookie.split(';').reduce((acc, c) => {
@@ -24,7 +22,6 @@
                 // Set to username from NAME cookie
                 if (cookies.NAME) {
                     input.value = cookies.NAME;
-                    console.log('[Settings Fixer] ✅ Fixed input to:', cookies.NAME);
                 }
             }
         });
@@ -70,11 +67,9 @@
         buttons.forEach(button => {
             // If button text is exactly an email address, change it to "Change"
             if (button.textContent && button.textContent.trim().includes('@') && button.textContent.trim().includes('.')) {
-                console.log('[Settings Fixer] Fixing button text from:', button.textContent);
                 button.textContent = 'Change';
             }
         });
     }, 500);
 
-    console.log('[Settings Fixer] ✅ Active');
 })();

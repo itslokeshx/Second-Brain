@@ -2,7 +2,6 @@
 (function () {
     'use strict';
 
-    console.log('[Login Interceptor] Initializing...');
 
     // Intercept XMLHttpRequest to catch login responses
     const originalOpen = XMLHttpRequest.prototype.open;
@@ -49,7 +48,6 @@
                             const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
                             document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
                         }
-                        console.log('[Login Interceptor] 🧹 Cookies cleared to prevent bypass');
 
                         // Show error notification
                         if (window.showNotification) {
@@ -70,11 +68,9 @@
                         const isRegister = url.includes('/register');
                         const actionType = isRegister ? 'Registration' : 'Login';
 
-                        console.log(`[Login Interceptor] ✅ ${actionType} successful`);
 
                         // ✅ REGISTER: Prevent auto-login, force manual login
                         if (isRegister) {
-                            console.log('[Login Interceptor] 🔒 Registration complete - preventing auto-login');
 
                             // Show success message
                             if (window.showNotification) {
@@ -89,10 +85,8 @@
                                 const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
                                 document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
                             }
-                            console.log('[Login Interceptor] 🧹 Cookies cleared - user must login manually');
 
                             // ✅ Reload page after 1 seconds to ensure clean state
-                            console.log('[Login Interceptor] 🔄 Reloading page in 1 seconds...');
                             setTimeout(() => {
                                 window.location.reload();
                             }, 1000); // 1 second delay to show success message and ensure cookies are cleared
@@ -107,7 +101,6 @@
                         }
 
                         // ✅ LOGIN: Reload page after 1 seconds for clean UI render
-                        console.log('[Login Interceptor] 🔄 Reloading page in 2 seconds...');
                         setTimeout(() => {
                             window.location.reload();
                         }, 1000); // 1 second delay to show success message and let cookies settle
@@ -149,5 +142,4 @@
         return originalSend.apply(this, args);
     };
 
-    console.log('[Login Interceptor] ✅ Active - Showing notifications for login attempts');
 })();

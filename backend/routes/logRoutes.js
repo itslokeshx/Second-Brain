@@ -3,9 +3,7 @@ const router = express.Router();
 const Pomodoro = require('../models/Pomodoro');
 const { protect } = require('../middleware/authMiddleware');
 
-// @desc    Get all logs
-// @route   GET /api/pomodoro-logs
-// @access  Private
+
 router.get('/', protect, async (req, res) => {
     try {
         const logs = await Pomodoro.find({ userId: req.user._id });
@@ -15,9 +13,7 @@ router.get('/', protect, async (req, res) => {
     }
 });
 
-// @desc    Sync logs (Bulk upsert) - WITH FIREWALL PROTECTION
-// @route   POST /api/pomodoro-logs/sync
-// @access  Private
+
 router.post('/sync', protect, async (req, res) => {
     const { data } = req.body;
 
@@ -31,12 +27,11 @@ router.post('/sync', protect, async (req, res) => {
         let rejectedCount = 0;
 
         for (const log of data) {
-            // ✅ FIREWALL: Validate before adding to bulk operation
             const errors = validatePomodoroTimeData(log);
             if (errors.length > 0) {
                 console.error(`[Firewall] ❌ REJECTED invalid Pomodoro ${log.id}:`, errors);
                 rejectedCount++;
-                continue; // Skip this record entirely
+                continue;
             }
 
             ops.push({

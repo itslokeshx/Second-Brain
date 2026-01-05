@@ -1,8 +1,3 @@
-#!/usr/bin/env node
-/**
- * Fix project types in MongoDB
- * Ensures project '0' has type 1000 (regular project)
- */
 
 const mongoose = require('mongoose');
 require('dotenv').config();

@@ -1,6 +1,5 @@
 const crypto = require('crypto');
 
-// Shared legacy session store
 if (!global.sessions) {
     global.sessions = new Map();
 }

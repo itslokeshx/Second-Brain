@@ -1,6 +1,5 @@
 (function () {
-    console.log('[JSON Fix] DISABLED - Authentication security priority');
-    console.log('[JSON Fix] All response faking disabled to ensure proper authentication');
+
 
     // COMPLETELY DISABLED - No more faking responses
     // This ensures authentication cannot be bypassed
@@ -17,5 +16,4 @@
         return originalParse(text, ...args);
     };
 
-    console.log('[JSON Fix] ✅ Minimal mode - No response faking, auth will work properly');
 })();

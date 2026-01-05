@@ -9,7 +9,6 @@ const settingsSchema = new mongoose.Schema({
         index: true
     },
 
-    // ✅ Matches localStorage settings structure
     BgMusic: {
         type: String,
         default: ''

@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
 const scheduleSchema = new mongoose.Schema({
-    // User reference
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -9,27 +8,19 @@ const scheduleSchema = new mongoose.Schema({
         index: true
     },
 
-    // Original ID from IndexedDB
     id: { type: String, required: true },
     objType: { type: String, default: 'SCHEDULE' },
 
-    // Task reference
     taskId: { type: String, default: '' },
 
-    // Schedule details
     startTime: { type: Number, default: 0 },
     endTime: { type: Number, default: 0 },
     allDay: { type: Boolean, default: false },
-
-    // Recurring
     rrule: { type: String, default: '' },
 
-    // State & Sync
     state: { type: Number, default: 0 },
     sync: { type: Number, default: 0 },
     deleted: { type: Boolean, default: false },
-
-    // Timestamps
     creationDate: { type: Number, default: () => Date.now() },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }

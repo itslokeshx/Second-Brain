@@ -3,9 +3,7 @@ const router = express.Router();
 const Task = require('../models/Task');
 const { protect } = require('../middleware/authMiddleware');
 
-// @desc    Get all tasks
-// @route   GET /api/tasks
-// @access  Private
+
 router.get('/', protect, async (req, res) => {
     try {
         const tasks = await Task.find({ userId: req.user._id, isDeleted: false });
@@ -15,9 +13,7 @@ router.get('/', protect, async (req, res) => {
     }
 });
 
-// @desc    Sync tasks (Bulk upsert)
-// @route   POST /api/tasks/sync
-// @access  Private
+
 router.post('/sync', protect, async (req, res) => {
     const { data } = req.body;
 

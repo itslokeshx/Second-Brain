@@ -11,10 +11,6 @@ const {
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-please-change';
 
-// ═══════════════════════════════════════════════════════════════════════════
-// SYSTEM PROJECT HELPERS - Used to ensure hydration-critical projects exist
-// ═══════════════════════════════════════════════════════════════════════════
-
 function getSystemProjectName(id) {
     const names = {
         'today': 'Today',
@@ -40,32 +36,30 @@ function getSystemProjectName(id) {
 }
 
 function getSystemProjectType(id) {
-    // CORRECT type values from main.js:
-    // l.project = 1000, l.today = 4000, l.tomorrow = 4001, etc.
+
     const types = {
-        'today': 4000,      // l.today = 4e3
-        'tomorrow': 4001,   // l.tomorrow
-        'next7days': 4004,  // l.next7Days
-        'someday': 4003,    // l.someday
-        'completed': 7003,  // l.history
-        'history': 7003,    // l.history
-        'all': 7000,        // l.all = 7e3
-        'calendar': 7001,   // l.calendar
-        'overdue': 4006,    // l.overdue
-        'search': 7002,     // l.search
-        'week': 4007,       // l.thisWeek
-        'planned': 4002,    // l.scheduled
-        'upcoming': 4002,   // l.scheduled
-        'myday': 4000,      // Same as today
-        'inbox': 1000,      // l.project = 1e3
-        '0': 1000,          // Regular project
-        'default': 1000,    // Regular project
-        'focus': 1000       // Regular project
+        'today': 4000,
+        'tomorrow': 4001,
+        'next7days': 4004,
+        'someday': 4003,
+        'completed': 7003,
+        'history': 7003,
+        'all': 7000,
+        'calendar': 7001,
+        'overdue': 4006,
+        'search': 7002,
+        'week': 4007,
+        'planned': 4002,
+        'upcoming': 4002,
+        'myday': 4000,
+        'inbox': 1000,
+        '0': 1000,
+        'default': 1000,
+        'focus': 1000
     };
-    return types[id] || 1000;  // Default to regular project type
+    return types[id] || 1000;
 }
 
-// Normalize auth/session payloads to the exact fields the legacy frontend reads
 const buildLegacyPayload = (user, jsessionId, overrides = {}) => {
     const now = Date.now();
     const uid = user ? user._id.toString() : (overrides.uid || overrides.pid || '');
@@ -100,9 +94,7 @@ const buildLegacyPayload = (user, jsessionId, overrides = {}) => {
     return { ...base, ...overrides };
 };
 
-// Extract user identity from bearer token, body, or query params
 async function resolveUser(req) {
-    // 0) Session cookie/header/body jsessionId
     const candidateJSession = req.body?.jsessionId || req.headers['x-jsessionid'] || (req.cookies && req.cookies.JSESSIONID);
     if (candidateJSession) {
         const session = getSession(candidateJSession);
@@ -112,7 +104,6 @@ async function resolveUser(req) {
         }
     }
 
-    // 1) Authorization: Bearer <jwt>
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
         const raw = authHeader.slice(7);
@@ -121,11 +112,10 @@ async function resolveUser(req) {
             const user = await User.findById(decoded.userId || decoded.id);
             if (user) return { user, jsessionId: '' };
         } catch (e) {
-            // fall through
+
         }
     }
 
-    // 2) Legacy fields in body/query
     const body = req.body || {};
     const query = req.query || {};
     const acct = body.acct || query.acct;
@@ -142,7 +132,6 @@ async function resolveUser(req) {
         if (user) return { user, jsessionId };
     }
 
-    // 3) Fallback to provided identity
     return {
         user: acct || uid ? {
             _id: uid || acct,
@@ -153,16 +142,14 @@ async function resolveUser(req) {
     };
 }
 
-// --- AUTH HANDLERS ---
+
 
 router.post('/v63/user/login', async (req, res) => {
     try {
-        // Legacy frontend uses 'account', modern uses 'email'
         const email = req.body.email || req.body.username || req.body.account;
         const password = req.body.password || req.body.pwd;
 
         if (!email || !password) {
-            // Legacy expects status -1 for errors
             return res.json({ status: -1, errMsg: 'Missing credentials' });
         }
 
@@ -222,26 +209,20 @@ router.post('/v63/user/logout', (req, res) => {
     res.json({ status: 0, success: true });
 });
 
-// --- CRITICAL SYNC FIX ---
 router.all('/v64/sync', async (req, res) => {
     console.log(`[Legacy Sync] Request received from ${req.ip}`);
 
-    // Legacy app uses Unix Timestamp in SECONDS
-    const now = Date.now(); // milliseconds expected by legacy UI for last-sync math
+    const now = Date.now();
     const cookieHeader = req.headers.cookie || '';
 
-    // ✅ FIX: Check multiple cookie sources for session ID
     const jsessionIdMatch = cookieHeader.match(/JSESSIONID=([^;]+)/);
     const tokenMatch = cookieHeader.match(/secondbrain\.token=([^;]+)/);
 
     let jsessionId = req.body?.jsessionId || req.headers['x-jsessionid'] || (req.cookies && req.cookies.JSESSIONID);
 
-    // If JSESSIONID is literally "undefined", try secondbrain.token
     if (!jsessionId || jsessionId === 'undefined') {
         jsessionId = (req.cookies && req.cookies['secondbrain.token']) || (tokenMatch ? tokenMatch[1] : null);
     }
-
-    // Last resort: try regex matches
     if (!jsessionId || jsessionId === 'undefined') {
         jsessionId = (jsessionIdMatch ? jsessionIdMatch[1] : null) || (tokenMatch ? tokenMatch[1] : null);
     }
@@ -260,7 +241,6 @@ router.all('/v64/sync', async (req, res) => {
         return res.json({ status: 1, success: false });
     }
 
-    // ✅ LOAD ACTUAL DATA FROM MONGODB
     const Project = require('../models/Project');
     const Task = require('../models/Task');
     const Pomodoro = require('../models/Pomodoro');
@@ -273,8 +253,6 @@ router.all('/v64/sync', async (req, res) => {
 
     console.log(`[Legacy Sync] ✅ Loaded: ${projects.length} projects, ${tasks.length} tasks, ${pomodoros.length} pomodoros`);
 
-    // ✅ HYDRATION PROTECTION: Ensure system projects are always present
-    // Without these, frontend React gate at main.js:117550 blocks render
     const SYSTEM_PROJECT_IDS = ['today', 'tomorrow', 'inbox', '0', 'all', 'completed',
         'calendar', 'search', 'week', 'planned', 'someday', 'overdue', 'next7days',
         'default', 'myday', 'history', 'upcoming', 'focus'];
@@ -323,22 +301,19 @@ router.all('/v64/sync', async (req, res) => {
     res.json(response);
 });
 
-// --- STUBS (Prevent 404 Crashes) ---
 router.get('/v64/user/config', async (req, res) => {
     const cookieHeader = req.headers.cookie || '';
 
-    // ✅ FIX: Check multiple cookie sources
     const jsessionIdMatch = cookieHeader.match(/JSESSIONID=([^;]+)/);
     const tokenMatch = cookieHeader.match(/secondbrain\.token=([^;]+)/);
 
     let jsessionId = (req.cookies && req.cookies.JSESSIONID);
 
-    // If JSESSIONID is "undefined", try secondbrain.token
+
     if (!jsessionId || jsessionId === 'undefined') {
         jsessionId = (req.cookies && req.cookies['secondbrain.token']) || (tokenMatch ? tokenMatch[1] : null);
     }
 
-    // Last resort: regex
     if (!jsessionId || jsessionId === 'undefined') {
         jsessionId = (jsessionIdMatch ? jsessionIdMatch[1] : null) || (tokenMatch ? tokenMatch[1] : null);
     }
@@ -348,7 +323,6 @@ router.get('/v64/user/config', async (req, res) => {
         return res.json({ status: 1, success: false });
     }
 
-    // ✅ LOAD ACTUAL USER FROM MONGODB
     const user = await User.findById(session.uid);
 
     attachSessionCookie(res, jsessionId);

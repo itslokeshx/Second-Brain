@@ -3,9 +3,7 @@ const router = express.Router();
 const Project = require('../models/Project');
 const { protect } = require('../middleware/authMiddleware');
 
-// @desc    Get all projects
-// @route   GET /api/projects
-// @access  Private
+
 router.get('/', protect, async (req, res) => {
     try {
         const projects = await Project.find({ userId: req.user._id, isDeleted: false });
@@ -15,11 +13,9 @@ router.get('/', protect, async (req, res) => {
     }
 });
 
-// @desc    Sync projects (Bulk upsert)
-// @route   POST /api/projects/sync
-// @access  Private
+
 router.post('/sync', protect, async (req, res) => {
-    const { data } = req.body; // Array of projects
+    const { data } = req.body;
 
     if (!data || !Array.isArray(data)) {
         return res.status(400).json({ message: 'Invalid data format. Expected array.' });
@@ -40,7 +36,6 @@ router.post('/sync', protect, async (req, res) => {
             await Project.bulkWrite(ops);
         }
 
-        // Return all projects for the user to ensure client is up to date
         const allProjects = await Project.find({ userId: req.user._id, isDeleted: false });
         res.json(allProjects);
 

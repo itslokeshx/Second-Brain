@@ -8,7 +8,6 @@
 (function () {
     'use strict';
 
-    console.log('[UI Cleanup] Applying patches v2...');
 
     function applyCleanup() {
         const style = document.createElement('style');
@@ -36,7 +35,6 @@
         `;
 
         document.head.appendChild(style);
-        console.log('[UI Cleanup] ✅ CSS patches applied');
 
         hideMenuItems();
     }
@@ -76,7 +74,6 @@
             subtree: true
         });
 
-        console.log('[UI Cleanup] ✅ Menu item observer installed');
     }
 
     if (document.readyState === 'loading') {
@@ -85,6 +82,5 @@
         applyCleanup();
     }
 
-    console.log('[UI Cleanup] 📦 Patch v2 loaded');
 
 })();

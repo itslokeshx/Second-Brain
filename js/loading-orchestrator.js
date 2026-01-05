@@ -1,24 +1,6 @@
-/**
- * Loading Orchestrator - State-Aware Loading System
- * ═══════════════════════════════════════════════════════════════════════════
- * Manages all loading phases with real state detection (NO timeouts)
- * 
- * Phases:
- * - nav: Browser navigation load
- * - authReload: Post-login reload
- * - hydrate: main.js hydration & IndexedDB sync
- * - logout: Logout reload
- * 
- * Loader visible if ANY phase is true
- * ═══════════════════════════════════════════════════════════════════════════
- */
-
 (function () {
     'use strict';
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // GLOBAL STATE
-    // ═══════════════════════════════════════════════════════════════════════
 
     const state = {
         phases: {
@@ -31,13 +13,8 @@
         initialized: false
     };
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // CORE API
-    // ═══════════════════════════════════════════════════════════════════════
 
-    /**
-     * Set phase state and update loader visibility
-     */
+
     function setPhase(phaseName, value) {
         if (!(phaseName in state.phases)) {
             console.warn('[Loader] Unknown phase:', phaseName);
@@ -48,7 +25,6 @@
         state.phases[phaseName] = Boolean(value);
 
         if (oldValue !== state.phases[phaseName]) {
-            console.log(`[Loader] Phase "${phaseName}": ${oldValue} → ${state.phases[phaseName]}`);
             update();
         }
     }
@@ -70,10 +46,8 @@
 
         if (shouldShow) {
             state.loaderElement.classList.add('visible');
-            console.log('[Loader] 🔄 Showing loader', state.phases);
         } else {
             state.loaderElement.classList.remove('visible');
-            console.log('[Loader] ✅ Hiding loader (all phases complete)');
         }
     }
 
@@ -137,7 +111,6 @@
     function setupHydrationDetector() {
         // Listen for hydration complete event from main.js
         window.addEventListener('SB_HYDRATION_DONE', () => {
-            console.log('[Loader] Hydration complete event received');
             setPhase('hydrate', false);
         });
     }
@@ -155,7 +128,6 @@
                     document.querySelector('input[type="password"]');
 
                 if (loginForm) {
-                    console.log('[Loader] Login form detected - logout complete');
                     setPhase('logout', false);
                 } else {
                     // Keep checking
@@ -182,7 +154,6 @@
     function init() {
         if (state.initialized) return;
 
-        console.log('[Loader] 🚀 Initializing loading orchestrator...');
 
         // Get loader element
         state.loaderElement = document.getElementById('sb-loader');
@@ -199,7 +170,6 @@
         setupLogoutDetector();
 
         state.initialized = true;
-        console.log('[Loader] ✅ Orchestrator ready');
 
         // Initial update
         update();
@@ -212,9 +182,6 @@
         init();
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // GLOBAL API
-    // ═══════════════════════════════════════════════════════════════════════
 
     window.__SB_LOADER = {
         phases: state.phases,
@@ -225,6 +192,5 @@
         update
     };
 
-    console.log('[Loader] 📦 Loading orchestrator loaded');
 
 })();

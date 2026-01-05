@@ -3,13 +3,11 @@
 (function () {
     'use strict';
 
-    console.log('[Main Patcher] Initializing SECURITY MODE...');
 
     // Wait for main.js to load and define its RSA/decrypt functions
     const patchInterval = setInterval(() => {
         // Look for JSEncrypt or any decrypt function in window
         if (window.JSEncrypt || window.le || window.decrypt) {
-            console.log('[Main Patcher] Found encryption library, patching...');
 
             // Patch JSEncrypt if it exists
             if (window.JSEncrypt && window.JSEncrypt.prototype) {
@@ -21,7 +19,6 @@
                     }
                     return originalDecrypt.call(this, str);
                 };
-                console.log('[Main Patcher] ✅ Patched JSEncrypt.decrypt');
             }
 
             // Patch any global decrypt function
@@ -33,7 +30,6 @@
                     }
                     return originalDecrypt(str);
                 };
-                console.log('[Main Patcher] ✅ Patched global decrypt');
             }
 
             clearInterval(patchInterval);
@@ -44,10 +40,8 @@
     setTimeout(() => {
         clearInterval(patchInterval);
         if (!window.JSEncrypt?.prototype?.decrypt) {
-            console.log('[Main Patcher] Timeout - encryption library may not exist');
         }
     }, 5000);
 
-    // DON'T override cookie descriptor - let cookie-protector handle it
-    console.log('[Main Patcher] ✅ Ready - Cookie protection delegated to cookie-protector.js');
+
 })();

@@ -13,7 +13,6 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    // ✅ CRITICAL: Simple string, no encoding issues
     name: {
         type: String,
         required: true,
@@ -21,11 +20,7 @@ const userSchema = new mongoose.Schema({
             return this.email.split('@')[0];
         }
     },
-    // ❌ REMOVED: Don't store data in user document
-    // projects: Array,
-    // tasks: Array,
-    // pomodoroLogs: Array,
-    // settings: Object,
+
 
     createdAt: {
         type: Date,
@@ -41,7 +36,6 @@ const userSchema = new mongoose.Schema({
     }
 });
 
-// Encrypt password before saving
 userSchema.pre('save', async function (next) {
     if (!this.isModified('password')) return next();
     const salt = await bcrypt.genSalt(10);
@@ -49,7 +43,6 @@ userSchema.pre('save', async function (next) {
     next();
 });
 
-// Match password method
 userSchema.methods.matchPassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };

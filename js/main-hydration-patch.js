@@ -1,40 +1,11 @@
-/**
- * Main.js Hydration Patch
- * ═══════════════════════════════════════════════════════════════════════════
- * Patches main.js to integrate with loading orchestrator
- * 
- * This script:
- * 1. Sets hydration phase to true when main.js starts
- * 2. Detects when React finishes rendering
- * 3. Dispatches SB_HYDRATION_DONE event to hide loader
- * ═══════════════════════════════════════════════════════════════════════════
- */
-
 (function () {
     'use strict';
 
-    console.log('[Main Patch] Installing hydration detection...');
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // PHASE START: Set hydration phase when main.js loads
-    // ═══════════════════════════════════════════════════════════════════════
 
     if (window.__SB_LOADER) {
         window.__SB_LOADER.setPhase('hydrate', true);
-        console.log('[Main Patch] ✅ Hydration phase started');
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // PHASE END: Detect when React finishes rendering
-    // ═══════════════════════════════════════════════════════════════════════
-
-    /**
-     * Detect React render completion
-     * We check for:
-     * 1. React root element has children
-     * 2. IndexedDB has data
-     * 3. localStorage has projects
-     */
     function checkHydrationComplete() {
         const root = document.getElementById('root');
 
@@ -65,7 +36,6 @@
      */
     function pollHydration() {
         if (checkHydrationComplete()) {
-            console.log('[Main Patch] ✅ Hydration complete - dispatching event');
             window.dispatchEvent(new Event('SB_HYDRATION_DONE'));
         } else {
             // Keep checking (max 10 seconds)
@@ -84,6 +54,5 @@
     // This ensures hydration phase overlaps with nav phase
     requestAnimationFrame(pollHydration);
 
-    console.log('[Main Patch] ✅ Hydration detection installed');
 
 })();

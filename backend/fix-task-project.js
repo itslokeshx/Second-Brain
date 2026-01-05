@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-// Connect to MongoDB
+
 mongoose.connect('mongodb://localhost:27017/second-brain')
     .then(async () => {
         console.log('✅ Connected to MongoDB');

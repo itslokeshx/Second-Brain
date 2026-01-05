@@ -8,7 +8,7 @@ const Pomodoro = require('../models/Pomodoro');
 const Settings = require('../models/Settings');
 const { validatePomodoroTimeData } = require('../utils/pomodoroValidation');
 
-// ✅ Auth Middleware
+
 const authMiddleware = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
@@ -35,7 +35,7 @@ const authMiddleware = async (req, res, next) => {
     }
 };
 
-// ✅ COMPLETE SYNC ENDPOINT
+
 router.post('/all', authMiddleware, async (req, res) => {
     console.log('[Sync All] Request from user:', req.userId);
     console.log('[Sync All] Body keys:', Object.keys(req.body));
@@ -54,7 +54,6 @@ router.post('/all', authMiddleware, async (req, res) => {
             timestamp: new Date().toISOString()
         };
 
-        // ✅ 1. Sync Projects to SEPARATE collection
         if (projects && Array.isArray(projects) && projects.length > 0) {
             console.log(`[Sync All] Syncing ${projects.length} projects...`);
 
@@ -73,7 +72,6 @@ router.post('/all', authMiddleware, async (req, res) => {
             console.log(`[Sync All] ✅ ${results.projectsSynced} projects synced`);
         }
 
-        // ✅ 2. Sync Tasks to SEPARATE collection
         if (tasks && Array.isArray(tasks) && tasks.length > 0) {
             console.log(`[Sync All] Syncing ${tasks.length} tasks...`);
 
@@ -92,21 +90,18 @@ router.post('/all', authMiddleware, async (req, res) => {
             console.log(`[Sync All] ✅ ${results.tasksSynced} tasks synced`);
         }
 
-        // ✅ 3. Sync Pomodoro Logs to SEPARATE collection - WITH FIREWALL PROTECTION
         let logsRejected = 0;
         if (pomodoroLogs && Array.isArray(pomodoroLogs) && pomodoroLogs.length > 0) {
             console.log(`[Sync All] Syncing ${pomodoroLogs.length} logs...`);
 
             for (const log of pomodoroLogs) {
-                // ✅ FIREWALL: Reject corrupt pomodoros BEFORE MongoDB write
                 const validationErrors = validatePomodoroTimeData(log);
                 if (validationErrors.length > 0) {
                     console.error(`[Firewall] ❌ REJECTED invalid Pomodoro ${log.id}:`, validationErrors);
                     logsRejected++;
-                    continue; // Skip this record entirely
+                    continue;
                 }
 
-                // Only write valid pomodoros to MongoDB
                 await Pomodoro.findOneAndUpdate(
                     { userId, id: log.id },
                     {
@@ -126,7 +121,6 @@ router.post('/all', authMiddleware, async (req, res) => {
         }
         results.logsRejected = logsRejected;
 
-        // ✅ 4. Sync Settings to SEPARATE collection
         if (settings && typeof settings === 'object' && Object.keys(settings).length > 0) {
             console.log('[Sync All] Syncing settings...');
 
@@ -145,7 +139,6 @@ router.post('/all', authMiddleware, async (req, res) => {
             console.log('[Sync All] ✅ Settings synced');
         }
 
-        // ✅ 5. Update user's last sync time
         await User.findByIdAndUpdate(userId, {
             lastSyncTime: new Date()
         });
@@ -162,9 +155,6 @@ router.post('/all', authMiddleware, async (req, res) => {
     }
 });
 
-// ✅ GRANULAR SYNC ENDPOINTS (Required by frontend SyncService)
-
-// 1. Projects
 router.post('/projects', authMiddleware, async (req, res) => {
     try {
         const { projects } = req.body;
@@ -182,7 +172,6 @@ router.post('/projects', authMiddleware, async (req, res) => {
             }
         }
 
-        // Return latest projects to client
         const latestProjects = await Project.find({ userId }).select('-_id -__v -userId').lean();
 
         res.json({

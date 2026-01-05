@@ -1,15 +1,8 @@
-/**
- * Guardian Loader - BLOCKING WRAPPER
- * ═══════════════════════════════════════════════════════════════════════════
- * This script BLOCKS main.js from loading until IndexedDB is seeded.
- * It creates a global promise that main.js waits for before hydrating React.
- * ═══════════════════════════════════════════════════════════════════════════
- */
+
 
 (function () {
     'use strict';
 
-    console.log('[Guardian Loader] 🚦 Blocking main.js until IndexedDB is ready...');
 
     // Create a blocking promise
     window.__GUARDIAN_READY__ = new Promise(async (resolve) => {
@@ -27,7 +20,6 @@
                         resolved = true;
                         clearInterval(checkInit);
                         if (timeoutId) clearTimeout(timeoutId); // Cancel timeout
-                        console.log('[Guardian Loader] ✅ IndexedDB ready - releasing main.js');
                         resolve(true);
                     }
                 }, 50);
@@ -53,10 +45,9 @@
         // Check if this is main.js webpack bundle
         if (!mainJsBlocked && args.length > 0) {
             mainJsBlocked = true;
-            console.log('[Guardian Loader] 🚦 Intercepted main.js - waiting for Guardian...');
 
             window.__GUARDIAN_READY__.then(() => {
-                console.log('[Guardian Loader] ✅ Executing main.js now');
+
                 if (originalDefine) {
                     originalDefine.apply(this, args);
                 }

@@ -1,26 +1,17 @@
-/**
- * i18n.js
- * Handles loading of translation files and provides getMessage functionality.
- * Simulates the Chrome Extension i18n API.
- */
 
 (function () {
     var translations = {};
     var loaded = false;
 
     window.I18n = {
-        /**
-         * Loads translation strings synchronously from the strings file.
-         * Implementation uses XHR to ensure it blocks until loaded, essential for 
-         * usage in main.js immediate execution.
-         */
+
         init: function () {
             if (loaded) return;
 
             if (window.I18N_DATA) {
                 translations = window.I18N_DATA;
                 loaded = true;
-                console.log('I18n loaded from global variable.');
+
                 return;
             }
 
@@ -33,7 +24,6 @@
             if (xhr.status === 200) {
                 this.parseData(xhr.responseText);
                 loaded = true;
-                console.log('I18n loaded successfully.');
             } else {
                 console.error('Failed to load i18n strings:', xhr.status);
             }
