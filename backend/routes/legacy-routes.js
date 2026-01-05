@@ -351,6 +351,7 @@ router.get('/v61/user/groups', (req, res) => res.json({ status: 0, success: true
 router.get('/v61/group/more', (req, res) => res.json({ status: 0, success: true }));
 router.get('/v62/user/point', (req, res) => res.json({ status: 0, success: true, points: 0 }));
 router.all('/v63/exception-report', (req, res) => res.json({ status: 0, success: true }));
+router.all('/v61/user', (req, res) => res.json({ status: 0, success: true }));
 router.all('/v63/user', (req, res) => res.json({ status: 0, success: true }));
 
 module.exports = router;

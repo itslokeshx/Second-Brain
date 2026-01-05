@@ -359,6 +359,14 @@ app.get('/v60/property', (req, res) => {
     res.json({ status: 0, success: true });
 });
 
+app.all('/v61/user', (req, res) => {
+    res.json({ status: 0, success: true });
+});
+
+app.all('/v63/user', (req, res) => {
+    res.json({ status: 0, success: true });
+});
+
 app.get('/undefined', (req, res) => {
     res.status(200).send(''); // Prevent 404 for undefined
 });
