@@ -66,29 +66,12 @@
                         // DO NOT CALL originalOnLoad - this prevents main.js from proceeding
                         return;
                     } else {
-                        // Detect if this is a register or login request
-                        const isRegister = url.includes('/register');
-                        const actionType = isRegister ? 'Registration' : 'Login';
-
-                        console.log(`[Login Interceptor] ✅ ${actionType} successful`);
+                        console.log('[Login Interceptor] ✅ Login successful');
                         if (window.showNotification) {
-                            window.showNotification(`${actionType} successful!`, 'success', 2000);
+                            window.showNotification('Login successful!', 'success', 2000);
                         }
 
-                        // ✅ REGISTER: Immediate reload to render UI
-                        if (isRegister) {
-                            console.log('[Login Interceptor] 🔄 Registration complete - reloading page...');
-
-                            // ✅ CRITICAL: Clear the flag so next login will trigger reload
-                            sessionStorage.removeItem('reloaded-after-login');
-
-                            setTimeout(() => {
-                                window.location.reload();
-                            }, 1000); // 1 second delay to show success message
-                            return; // Stop here, reload will handle everything
-                        }
-
-                        // ✅ LOGIN: Trigger SessionManager to initialize Guardian + Mutex
+                        // ✅ CRITICAL: Trigger SessionManager to initialize Guardian + Mutex
                         // Without this, Guardian/Mutex stay uninitialized after UI login
                         // causing sync to fail with "Hydration not ready" error
                         setTimeout(() => {
@@ -98,7 +81,7 @@
                             }
                         }, 500); // Small delay to let cookies settle
 
-                        // ✅ NO RELOAD for login - Let main.js render the UI naturally
+                        // ✅ NO RELOAD - Let main.js render the UI naturally
                         console.log('[Login Interceptor] Allowing main.js to render UI...');
                     }
                 } catch (e) {
