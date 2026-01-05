@@ -578,42 +578,42 @@ app.post('/api/sync/all', verifySession, async (req, res) => {
             console.log(`[Sync All] Tasks synced: ${tasksSynced}`);
         }
 
-        // Sync Pomodoro Logs - WITH FIREWALL PROTECTION
+        // Sync Pomodoro Logs - STRICT SCHEMA ENFORCEMENT
         let logsRejected = 0;
         if (pomodoroLogs.length > 0) {
-            const { validatePomodoroTimeData, isCorruptPomodoro } = require('./utils/pomodoroValidation');
+            const FORBIDDEN_FIELDS = ['startTime', 'endTime', 'duration', 'status', 'createdAt'];
+            const REQUIRED_FIELDS = ['id', 'creationDate', 'endDate', 'interval', 'pomodoroInterval', 'state', 'taskId'];
 
             for (const log of pomodoroLogs) {
-                // ✅ FIREWALL: Reject corrupt pomodoros BEFORE MongoDB write
-                if (isCorruptPomodoro(log)) {
-                    console.error(`[Firewall] ❌ REJECTED corrupt Pomodoro ${log.id}: status=completed with zero timestamps`);
+                // ✅ FIREWALL: Reject forbidden fields from old corrupt schema
+                const hasForbidden = FORBIDDEN_FIELDS.some(field => log[field] !== undefined);
+                if (hasForbidden) {
+                    const foundFields = FORBIDDEN_FIELDS.filter(f => log[f] !== undefined);
+                    console.error(`[Firewall] ❌ REJECTED Pomodoro ${log.id}: contains forbidden fields: ${foundFields.join(', ')}`);
                     logsRejected++;
-                    continue; // Skip this record entirely
+                    continue;
                 }
 
-                // Additional validation for all statuses
-                const errors = validatePomodoroTimeData(log);
-                if (errors.length > 0) {
-                    console.error(`[Firewall] ❌ REJECTED invalid Pomodoro ${log.id}:`, errors);
+                // ✅ FIREWALL: Reject missing required fields
+                const missingFields = REQUIRED_FIELDS.filter(field => log[field] === undefined);
+                if (missingFields.length > 0) {
+                    console.error(`[Firewall] ❌ REJECTED Pomodoro ${log.id}: missing required fields: ${missingFields.join(', ')}`);
                     logsRejected++;
-                    continue; // Skip this record entirely
+                    continue;
                 }
 
-                // Only write valid pomodoros to MongoDB
-                await Pomodoro.findOneAndUpdate(
-                    { id: log.id, userId: userId },
-                    {
-                        ...log,
-                        userId
-                    },
-                    {
-                        upsert: true,
-                        new: true,
-                        runValidators: true,
-                        context: 'query'
-                    }
-                );
-                logsSynced++;
+                // ✅ Write to MongoDB (exact mirror of IndexedDB)
+                try {
+                    await Pomodoro.findOneAndUpdate(
+                        { id: log.id, userId: userId },
+                        { ...log, userId },
+                        { upsert: true, new: true, runValidators: true }
+                    );
+                    logsSynced++;
+                } catch (error) {
+                    console.error(`[Firewall] ❌ REJECTED Pomodoro ${log.id}: validation error: ${error.message}`);
+                    logsRejected++;
+                }
             }
             console.log(`[Sync All] Logs synced: ${logsSynced}, rejected: ${logsRejected}`);
         }
@@ -697,6 +697,59 @@ app.get('/health', (req, res) => {
 app.get('/undefined', (req, res) => {
     console.warn('[Warning] Request to /undefined - likely a frontend bug');
     res.status(404).json({ error: 'Invalid route' });
+});
+
+// 🔥 ADMIN ENDPOINT: Wipe Corrupt Pomodoros & Verify Schema
+app.post('/admin/wipe-pomodoros', async (req, res) => {
+    try {
+        console.log('🔥 [Admin] Wiping corrupt Pomodoro collection...');
+
+        // Get direct collection access
+        const PomodoroCollection = mongoose.connection.collection('pomodoros');
+
+        // Count existing documents
+        const count = await PomodoroCollection.countDocuments();
+        console.log(`[Admin] Found ${count} Pomodoro documents`);
+
+        // Delete all documents
+        const result = await PomodoroCollection.deleteMany({});
+        console.log(`[Admin] ✅ Deleted ${result.deletedCount} corrupt Pomodoro documents`);
+
+        // Verify schema
+        const schema = Pomodoro.schema.obj;
+        const schemaInfo = {
+            hasCorrectFields: {
+                creationDate: !!schema.creationDate,
+                endDate: !!schema.endDate,
+                interval: !!schema.interval,
+                pomodoroInterval: !!schema.pomodoroInterval,
+                state: !!schema.state,
+                taskId: !!schema.taskId
+            },
+            hasForbiddenFields: {
+                startTime: !!schema.startTime,
+                endTime: !!schema.endTime,
+                duration: !!schema.duration,
+                status: !!schema.status
+            }
+        };
+
+        console.log('[Admin] Schema verification:', schemaInfo);
+
+        res.json({
+            success: true,
+            message: 'Pomodoro collection wiped successfully',
+            deletedCount: result.deletedCount,
+            schema: schemaInfo
+        });
+
+    } catch (error) {
+        console.error('[Admin] ❌ Error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
 });
 
 // MongoDB Connection
