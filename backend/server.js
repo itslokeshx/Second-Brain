@@ -40,13 +40,13 @@ app.use((req, res, next) => {
 app.use(session({
     name: 'secondbrain.sid',
     secret: process.env.SESSION_SECRET || 'second-brain-secret-key-2025',
-    resave: true, // ✅ FORCE session save on every request
-    saveUninitialized: true, // ✅ FORCE cookie creation immediately
+    resave: false, // ✅ Only save session if modified
+    saveUninitialized: false, // ✅ CRITICAL FIX: Don't create session until login
     store: new (MongoStore.default || MongoStore)({
         mongoUrl: MONGODB_URI,
         ttl: 24 * 60 * 60,
         autoRemove: 'native',
-        touchAfter: 0 // ✅ Update session on every request
+        touchAfter: 24 * 60 * 60 // Only update session once per day (reduces DB writes)
     }),
     cookie: {
         httpOnly: false, // Allow JavaScript access for session management
