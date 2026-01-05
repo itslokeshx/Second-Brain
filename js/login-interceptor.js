@@ -91,12 +91,11 @@
                             }
                             console.log('[Login Interceptor] 🧹 Cookies cleared - user must login manually');
 
-                            // ✅ Reload page immediately to ensure clean state
-                            // Use setTimeout(0) to ensure cookies are fully cleared before reload
-                            console.log('[Login Interceptor] 🔄 Reloading page immediately...');
+                            // ✅ Reload page after 1 seconds to ensure clean state
+                            console.log('[Login Interceptor] 🔄 Reloading page in 1 seconds...');
                             setTimeout(() => {
                                 window.location.reload();
-                            }, 100); // Minimal delay to ensure cookies are cleared
+                            }, 1000); // 1 second delay to show success message and ensure cookies are cleared
 
                             // DO NOT CALL originalOnLoad - this prevents main.js from logging in
                             return;
@@ -107,9 +106,11 @@
                             window.showNotification('Login successful!', 'success', 2000);
                         }
 
-                        // ✅ LOGIN: Reload page immediately for clean UI render
-                        console.log('[Login Interceptor] 🔄 Reloading page immediately...');
-                        window.location.reload();
+                        // ✅ LOGIN: Reload page after 1 seconds for clean UI render
+                        console.log('[Login Interceptor] 🔄 Reloading page in 2 seconds...');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000); // 1 second delay to show success message and let cookies settle
 
                         // DO NOT CALL originalOnLoad - reload will handle everything
                         return;
