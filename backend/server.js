@@ -28,6 +28,15 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/second
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
 
+// ✅ CRITICAL FIX: Exclude /health from session middleware
+// Keep-alive pings create 17,280+ empty sessions per day without this
+app.use((req, res, next) => {
+    if (req.path === '/health') {
+        return next('route'); // Skip all middleware, go straight to route handler
+    }
+    next();
+});
+
 app.use(session({
     name: 'secondbrain.sid',
     secret: process.env.SESSION_SECRET || 'second-brain-secret-key-2025',
@@ -82,6 +91,11 @@ app.use(cookieParser());
 
 // ✅ DUAL-MODE AUTH: Cookie OR Token
 app.use((req, res, next) => {
+    // Skip logging for /health endpoint (too noisy)
+    if (req.path === '/health') {
+        return next();
+    }
+
     // Check for token in header (fallback)
     const token = req.headers['x-session-token'] || req.headers['authorization']?.replace('Bearer ', '');
 
