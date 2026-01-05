@@ -60,20 +60,11 @@
                             );
                         }
 
-                        // ✅ FIX: Re-enable form elements so user can retry
-                        setTimeout(() => {
-                            const buttons = document.querySelectorAll('button, input[type="submit"]');
-                            buttons.forEach(btn => btn.disabled = false);
-                            const inputs = document.querySelectorAll('input[type="text"], input[type="password"], input[type="email"]');
-                            inputs.forEach(input => input.disabled = false);
-                            console.log('[Login Interceptor] ✅ Form re-enabled for retry');
-                        }, 100);
-
                         // ✅ NO RELOAD - Let user retry login
                         console.warn('[Login Interceptor] Login failed. User can retry.');
 
-                        // ✅ FIX: Still call original handler to let main.js clean up its state
-                        // This ensures the form doesn't stay stuck in "submitting" state
+                        // DO NOT CALL originalOnLoad - this prevents main.js from proceeding
+                        return;
                     } else {
                         // Detect if this is a register or login request
                         const isRegister = url.includes('/register');
