@@ -66,7 +66,36 @@
                         // DO NOT CALL originalOnLoad - this prevents main.js from proceeding
                         return;
                     } else {
-                        console.log('[Login Interceptor] ✅ Login successful');
+                        // Detect if this is a register or login request
+                        const isRegister = url.includes('/register');
+                        const actionType = isRegister ? 'Registration' : 'Login';
+
+                        console.log(`[Login Interceptor] ✅ ${actionType} successful`);
+
+                        // ✅ REGISTER: Prevent auto-login, force manual login
+                        if (isRegister) {
+                            console.log('[Login Interceptor] 🔒 Registration complete - preventing auto-login');
+
+                            // Show success message
+                            if (window.showNotification) {
+                                window.showNotification('Registration successful! Please login.', 'success', 3000);
+                            }
+
+                            // ✅ CRITICAL: Clear ALL cookies to prevent auto-login
+                            const cookies = document.cookie.split(';');
+                            for (let i = 0; i < cookies.length; i++) {
+                                const cookie = cookies[i];
+                                const eqPos = cookie.indexOf('=');
+                                const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+                                document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+                            }
+                            console.log('[Login Interceptor] 🧹 Cookies cleared - user must login manually');
+
+                            // DO NOT CALL originalOnLoad - this prevents main.js from logging in
+                            return;
+                        }
+
+                        // ✅ LOGIN: Show success and proceed
                         if (window.showNotification) {
                             window.showNotification('Login successful!', 'success', 2000);
                         }
